@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Zap, BarChart3, GitBranch, Settings } from 'lucide-react';
+import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, AlertCircle } from 'lucide-react';
 import PromptEditor from './PromptEditor';
 import ModelOutput from './ModelOutput';
 import PromptScore from './PromptScore';
@@ -9,14 +9,20 @@ import VariableManager from './VariableManager';
 import MultiModelRunner from './MultiModelRunner';
 import VersionComparison from './VersionComparison';
 import Analytics from './Analytics';
+import ApiKeySetup from './ApiKeySetup';
 import { usePromptVersions } from '../hooks/usePromptVersions';
 import { Model, Variable, PromptScore as PromptScoreType } from '../types';
+import { OpenAIService } from '../services/openai';
 
 const PromptForge = () => {
   const [activeTab, setActiveTab] = useState<'editor' | 'analytics' | 'compare'>('editor');
   const [variables, setVariables] = useState<Variable[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [selectedVersionsForComparison, setSelectedVersionsForComparison] = useState<string[]>([]);
+  const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
+  const [currentOutput, setCurrentOutput] = useState<string>('');
+  const [currentModel, setCurrentModel] = useState<string>('gpt-3.5-turbo');
+  const [systemMessage, setSystemMessage] = useState<string>('');
 
   const {
     versions,
@@ -32,17 +38,32 @@ const PromptForge = () => {
   const currentVersion = getCurrentVersion();
   const currentRuns = getRunsForVersion(currentVersionId);
 
+  // Check if API key is configured on mount
+  useEffect(() => {
+    const checkApiKey = () => {
+      const storedKey = localStorage.getItem('openai_api_key');
+      if (storedKey) {
+        (window as any).__OPENAI_API_KEY__ = storedKey;
+        setApiKeyConfigured(true);
+      } else {
+        setApiKeyConfigured(OpenAIService.isConfigured());
+      }
+    };
+
+    checkApiKey();
+  }, []);
+
   const models: Model[] = [
     { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', enabled: true },
-    { id: 'gpt-3.5', name: 'GPT-3.5 Turbo', description: 'Fast and efficient', provider: 'OpenAI', enabled: true },
-    { id: 'claude-3', name: 'Claude 3', description: 'Anthropic\'s latest', provider: 'Anthropic', enabled: true },
-    { id: 'gemini-pro', name: 'Gemini Pro', description: 'Google\'s advanced model', provider: 'Google', enabled: true },
-    { id: 'llama-2', name: 'Llama 2', description: 'Meta\'s open source model', provider: 'Meta', enabled: true }
+    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient', provider: 'OpenAI', enabled: true },
+    { id: 'gpt-4-turbo-preview', name: 'GPT-4 Turbo', description: 'Latest GPT-4 with improved performance', provider: 'OpenAI', enabled: true },
   ];
 
   const handlePromptChange = (newPrompt: string) => {
-    // Update current version
-    const updatedVersion = { ...currentVersion, content: newPrompt };
+    // Update current version content
+    const updatedVersions = versions.map(v => 
+      v.id === currentVersionId ? { ...v, content: newPrompt } : v
+    );
     // In a real app, this would update the version in the store
   };
 
@@ -75,49 +96,66 @@ const PromptForge = () => {
     return result;
   };
 
-  const generateMockScore = (): PromptScoreType => ({
-    relevance: Math.floor(Math.random() * 3) + 8,
-    clarity: Math.floor(Math.random() * 3) + 7,
-    creativity: Math.floor(Math.random() * 4) + 6,
-    overall: 0, // Will be calculated
-    critique: `This prompt demonstrates good structure and clear intent. Consider adding more specific context or examples to further improve clarity and effectiveness.`
-  });
-
   const handleRunModels = async (selectedModels: string[]) => {
     if (!currentVersion.content.trim()) return;
     
     setIsRunning(true);
     
-    const processedPrompt = replaceVariables(currentVersion.content);
-    
-    // Simulate running multiple models
-    for (const modelId of selectedModels) {
-      const startTime = Date.now();
+    try {
+      const processedPrompt = replaceVariables(currentVersion.content);
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      // Run models using OpenAI API
+      const responses = await OpenAIService.runMultipleModels(
+        processedPrompt, 
+        selectedModels,
+        systemMessage || undefined
+      );
       
-      const executionTime = Date.now() - startTime;
-      const score = generateMockScore();
-      score.overall = Math.round(((score.relevance + score.clarity + score.creativity) / 3) * 10) / 10;
-      
-      const simulatedOutput = `Response from ${modelId.toUpperCase()}:\n\nThis is a simulated response based on your prompt: "${processedPrompt.substring(0, 100)}..."\n\nIn a real implementation, this would be the actual AI response from ${modelId}. The response would be contextually relevant and follow the instructions provided in your prompt.`;
-      
-      addRun({
-        versionId: currentVersionId,
-        modelId,
-        output: simulatedOutput,
-        score,
-        executionTime,
-        tokenUsage: {
-          input: Math.floor(Math.random() * 200) + 50,
-          output: Math.floor(Math.random() * 500) + 100,
-          total: 0 // Will be calculated
+      // Process each response
+      for (const [modelId, response] of Object.entries(responses)) {
+        try {
+          // Get AI evaluation of the prompt
+          const evaluation = await OpenAIService.evaluatePrompt(
+            processedPrompt,
+            response.content
+          );
+
+          const score: PromptScoreType = {
+            relevance: evaluation.relevance,
+            clarity: evaluation.clarity,
+            creativity: evaluation.creativity,
+            overall: Math.round(((evaluation.relevance + evaluation.clarity + evaluation.creativity) / 3) * 10) / 10,
+            critique: evaluation.critique
+          };
+
+          addRun({
+            versionId: currentVersionId,
+            modelId,
+            output: response.content,
+            score,
+            executionTime: response.executionTime,
+            tokenUsage: {
+              input: response.usage.prompt_tokens,
+              output: response.usage.completion_tokens,
+              total: response.usage.total_tokens
+            }
+          });
+
+          // Update current output for the first model
+          if (selectedModels[0] === modelId) {
+            setCurrentOutput(response.content);
+            setCurrentModel(modelId);
+          }
+        } catch (error) {
+          console.error(`Error processing response for ${modelId}:`, error);
         }
-      });
+      }
+    } catch (error) {
+      console.error('Error running models:', error);
+      // Show error to user
+    } finally {
+      setIsRunning(false);
     }
-    
-    setIsRunning(false);
   };
 
   const handleCreateVersion = (title: string, message: string) => {
@@ -132,6 +170,15 @@ const PromptForge = () => {
       setVariables(versionVariables);
     }
   };
+
+  const handleApiKeySet = () => {
+    setApiKeyConfigured(true);
+  };
+
+  // Show API key setup if not configured
+  if (!apiKeyConfigured) {
+    return <ApiKeySetup onApiKeySet={handleApiKeySet} />;
+  }
 
   const tabs = [
     { id: 'editor' as const, name: 'Editor', icon: Zap },
@@ -204,6 +251,24 @@ const PromptForge = () => {
                 onAddVariable={handleAddVariable}
                 onRemoveVariable={handleRemoveVariable}
               />
+
+              {/* System Message */}
+              <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex items-center space-x-2">
+                    <Settings className="w-5 h-5 text-gray-700" />
+                    <span className="font-semibold text-gray-900">System Message</span>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <textarea
+                    value={systemMessage}
+                    onChange={(e) => setSystemMessage(e.target.value)}
+                    placeholder="Optional system message to set context for the AI..."
+                    className="w-full h-24 p-3 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-black text-sm"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Main Content */}
@@ -223,9 +288,19 @@ const PromptForge = () => {
                 runs={currentRuns}
               />
 
-              {/* Model Outputs */}
+              {/* Current Output */}
+              {(currentOutput || isRunning) && (
+                <ModelOutput 
+                  output={currentOutput} 
+                  isRunning={isRunning}
+                  selectedModel={currentModel}
+                />
+              )}
+
+              {/* Recent Runs */}
               {currentRuns.length > 0 && (
                 <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Recent Runs</h3>
                   {currentRuns.slice(-3).map((run) => (
                     <div key={run.id} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <ModelOutput 
@@ -256,6 +331,17 @@ const PromptForge = () => {
                   );
                 }}
               />
+
+              {/* API Status */}
+              <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
+                <div className="flex items-center space-x-2 text-green-600">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm font-medium">OpenAI API Connected</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Real AI responses enabled
+                </p>
+              </div>
             </div>
           </div>
         )}

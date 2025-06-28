@@ -1,5 +1,5 @@
-import React from 'react';
-import { Bot, Copy, Check, Award, Target, Eye, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bot, Copy, Check, Award, Target, Eye, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ModelOutputProps {
   output: string;
@@ -25,6 +25,7 @@ const ModelOutput: React.FC<ModelOutputProps> = ({
   onShowFullReport 
 }) => {
   const [copied, setCopied] = React.useState(false);
+  const [showFullResponse, setShowFullResponse] = useState(false);
 
   const handleCopy = async () => {
     if (output) {
@@ -46,7 +47,12 @@ const ModelOutput: React.FC<ModelOutputProps> = ({
     return '#dc2626';
   };
 
-  const CircularProgress = ({ value, size = 32, strokeWidth = 3 }: { value: number; size?: number; strokeWidth?: number }) => {
+  const CircularProgress = ({ value, size = 32, strokeWidth = 3, label }: { 
+    value: number; 
+    size?: number; 
+    strokeWidth?: number;
+    label?: string;
+  }) => {
     const radius = (size - strokeWidth) / 2;
     const circumference = radius * 2 * Math.PI;
     const offset = circumference - (value / 10) * circumference;
@@ -58,7 +64,7 @@ const ModelOutput: React.FC<ModelOutputProps> = ({
             cx={size / 2}
             cy={size / 2}
             r={radius}
-            stroke="#e5e7eb"
+            stroke="#f3f4f6"
             strokeWidth={strokeWidth}
             fill="none"
           />
@@ -72,12 +78,22 @@ const ModelOutput: React.FC<ModelOutputProps> = ({
             strokeDasharray={circumference}
             strokeDashoffset={offset}
             strokeLinecap="round"
-            className="transition-all duration-300"
+            className="transition-all duration-700 ease-out"
+            style={{
+              animation: 'draw 1s ease-out forwards'
+            }}
           />
         </svg>
-        <span className={`absolute text-xs font-bold ${getScoreColor(value)}`}>
-          {value}
-        </span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className={`text-xs font-bold ${getScoreColor(value)}`}>
+            {value}
+          </span>
+          {label && (
+            <span className="text-xs text-gray-500 font-medium">
+              {label}
+            </span>
+          )}
+        </div>
       </div>
     );
   };
@@ -94,12 +110,12 @@ const ModelOutput: React.FC<ModelOutputProps> = ({
             <div>
               <h3 className="text-sm font-semibold text-black">{selectedModel.toUpperCase()}</h3>
               {score && (
-                <div className="flex items-center space-x-2 mt-1">
-                  <CircularProgress value={score.overall} size={24} strokeWidth={2} />
-                  <div className="flex items-center space-x-1">
-                    <CircularProgress value={score.relevance} size={16} strokeWidth={2} />
-                    <CircularProgress value={score.clarity} size={16} strokeWidth={2} />
-                    <CircularProgress value={score.creativity} size={16} strokeWidth={2} />
+                <div className="flex items-center space-x-3 mt-2">
+                  <CircularProgress value={score.overall} size={32} strokeWidth={3} label="Overall" />
+                  <div className="flex items-center space-x-2">
+                    <CircularProgress value={score.relevance} size={20} strokeWidth={2} />
+                    <CircularProgress value={score.clarity} size={20} strokeWidth={2} />
+                    <CircularProgress value={score.creativity} size={20} strokeWidth={2} />
                   </div>
                   {onShowFullReport && (
                     <button
@@ -150,10 +166,28 @@ const ModelOutput: React.FC<ModelOutputProps> = ({
           ) : output ? (
             <div className="bg-gray-50 rounded-md p-3 border border-gray-200">
               <div className="prose prose-gray max-w-none">
-                <pre className="whitespace-pre-wrap font-sans text-xs text-gray-800 leading-relaxed line-clamp-4">
+                <pre className={`whitespace-pre-wrap font-sans text-xs text-gray-800 leading-relaxed ${showFullResponse ? '' : 'line-clamp-4'}`}>
                   {output}
                 </pre>
               </div>
+              {output.length > 200 && (
+                <button
+                  onClick={() => setShowFullResponse(!showFullResponse)}
+                  className="flex items-center space-x-1 mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  {showFullResponse ? (
+                    <>
+                      <ChevronUp className="w-3 h-3" />
+                      <span>Show Less</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-3 h-3" />
+                      <span>Show Full Response</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           ) : (
             <div className="h-24 flex items-center justify-center text-gray-500">

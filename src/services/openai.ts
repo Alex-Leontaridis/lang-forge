@@ -1,12 +1,5 @@
 import OpenAI from 'openai';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  organization: import.meta.env.VITE_OPENAI_ORG_ID,
-  dangerouslyAllowBrowser: true // Note: In production, use a backend proxy
-});
-
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -31,6 +24,27 @@ export interface PromptEvaluation {
 }
 
 export class OpenAIService {
+  private static client: OpenAI | null = null;
+
+  static initialize(apiKey: string): void {
+    this.client = new OpenAI({
+      apiKey,
+      dangerouslyAllowBrowser: true // Note: In production, use a backend proxy
+    });
+  }
+
+  private static getClient(): OpenAI {
+    if (!this.client) {
+      // Try to get API key from window global or environment
+      const apiKey = (window as any).__OPENAI_API_KEY__ || import.meta.env.VITE_OPENAI_API_KEY;
+      if (!apiKey) {
+        throw new Error('OpenAI client not initialized. Please set up your API key first.');
+      }
+      this.initialize(apiKey);
+    }
+    return this.client!;
+  }
+
   static async runPrompt(
     prompt: string,
     model: string = 'gpt-3.5-turbo',
@@ -39,6 +53,7 @@ export class OpenAIService {
     const startTime = Date.now();
     
     try {
+      const client = this.getClient();
       const messages: ChatMessage[] = [];
       
       if (systemMessage) {
@@ -47,7 +62,7 @@ export class OpenAIService {
       
       messages.push({ role: 'user', content: prompt });
 
-      const response = await openai.chat.completions.create({
+      const response = await client.chat.completions.create({
         model,
         messages,
         temperature: 0.7,
@@ -95,7 +110,8 @@ Respond in this JSON format:
 }`;
 
     try {
-      const response = await openai.chat.completions.create({
+      const client = this.getClient();
+      const response = await client.chat.completions.create({
         model: 'gpt-4',
         messages: [
           { role: 'user', content: evaluationPrompt }
@@ -171,6 +187,6 @@ Respond in this JSON format:
   }
 
   static isConfigured(): boolean {
-    return !!import.meta.env.VITE_OPENAI_API_KEY;
+    return !!((window as any).__OPENAI_API_KEY__ || import.meta.env.VITE_OPENAI_API_KEY);
   }
 }

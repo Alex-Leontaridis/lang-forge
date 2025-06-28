@@ -44,6 +44,7 @@ const PromptForge = () => {
       const storedKey = localStorage.getItem('openai_api_key');
       if (storedKey) {
         (window as any).__OPENAI_API_KEY__ = storedKey;
+        OpenAIService.initialize(storedKey);
         setApiKeyConfigured(true);
       } else {
         setApiKeyConfigured(OpenAIService.isConfigured());

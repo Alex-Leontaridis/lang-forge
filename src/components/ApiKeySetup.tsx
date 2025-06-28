@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Key, AlertCircle, CheckCircle, ExternalLink } from 'lucide-react';
+import { OpenAIService } from '../services/openai';
 
 interface ApiKeySetupProps {
   onApiKeySet: () => void;
@@ -25,6 +26,9 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySet }) => {
     setError('');
 
     try {
+      // Initialize the OpenAI service with the provided API key
+      OpenAIService.initialize(apiKey);
+      
       // Store the API key in localStorage (in production, use more secure storage)
       localStorage.setItem('openai_api_key', apiKey);
       

@@ -15,7 +15,7 @@ import ReactFlow, {
   MiniMap,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { ArrowLeft, Plus, Play, Save, Zap, Download, Upload, BarChart3, Activity } from 'lucide-react';
+import { ArrowLeft, Plus, Play, Save, Zap, Download, Upload, BarChart3, Activity, FileCode, ChevronDown } from 'lucide-react';
 import PromptNodeComponent from './PromptNodeComponent';
 import LiveChainVisualization from './LiveChainVisualization';
 import { PromptNode as PromptNodeType, PromptScore } from '../types';
@@ -31,6 +31,7 @@ const PromptChainCanvas = () => {
   const [chainName, setChainName] = useState('Untitled Chain');
   const [showVisualization, setShowVisualization] = useState(false);
   const [executionHistory, setExecutionHistory] = useState<any[]>([]);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -459,6 +460,320 @@ const PromptChainCanvas = () => {
     reader.readAsText(file);
   };
 
+  // Export functions
+  const exportToLangChainPython = () => {
+    const code = generateLangChainPythonCode();
+    downloadFile(`${chainName.replace(/\s+/g, '_')}_langchain.py`, code);
+  };
+
+  const exportToLangChainJS = () => {
+    const code = generateLangChainJSCode();
+    downloadFile(`${chainName.replace(/\s+/g, '_')}_langchain.js`, code);
+  };
+
+  const exportToOpenAISDK = () => {
+    const code = generateOpenAISDKCode();
+    downloadFile(`${chainName.replace(/\s+/g, '_')}_openai.py`, code);
+  };
+
+  const exportToJSON = () => {
+    const config = generateJSONConfig();
+    downloadFile(`${chainName.replace(/\s+/g, '_')}_config.json`, JSON.stringify(config, null, 2));
+  };
+
+  const downloadFile = (filename: string, content: string) => {
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const generateLangChainPythonCode = () => {
+    const sortedNodes = getTopologicalOrder().map(id => nodes.find(n => n.id === id)).filter(Boolean);
+    
+    return `"""
+${chainName} - Generated LangChain Python Code
+Auto-generated from PromptForge Canvas
+"""
+
+from langchain.llms import OpenAI
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import PromptTemplate
+from langchain.chains import LLMChain, SequentialChain
+from langchain.schema import BaseOutputParser
+import os
+
+# Initialize models
+${sortedNodes.map(node => {
+  const modelMap = {
+    'gpt-4': 'ChatOpenAI(model_name="gpt-4", temperature=',
+    'gpt-3.5-turbo': 'ChatOpenAI(model_name="gpt-3.5-turbo", temperature=',
+    'claude-3': 'ChatOpenAI(model_name="claude-3", temperature=',
+    'gemini-pro': 'ChatOpenAI(model_name="gemini-pro", temperature=',
+    'llama-2': 'ChatOpenAI(model_name="llama-2", temperature='
+  };
+  return `${node.id}_llm = ${modelMap[node.data.model] || 'ChatOpenAI(temperature='}${node.data.temperature || 0.7})`;
+}).join('\n')}
+
+# Define prompt templates
+${sortedNodes.map(node => `${node.id}_prompt = PromptTemplate(
+    input_variables=[${extractVariables(node.data.prompt).map(v => `"${v}"`).join(', ')}],
+    template="${node.data.prompt.replace(/"/g, '\\"')}"
+)`).join('\n\n')}
+
+# Create chains
+${sortedNodes.map(node => `${node.id}_chain = LLMChain(
+    llm=${node.id}_llm,
+    prompt=${node.id}_prompt,
+    output_key="${node.id}_output"
+)`).join('\n\n')}
+
+# Execute chain
+def run_chain(**kwargs):
+    """Execute the complete prompt chain"""
+    results = {}
+    
+${sortedNodes.map(node => `    # Execute ${node.data.title}
+    ${node.id}_result = ${node.id}_chain.run(**kwargs, **results)
+    results["${node.id}_output"] = ${node.id}_result
+    print(f"${node.data.title}: {${node.id}_result}")
+`).join('\n')}
+    
+    return results
+
+# Example usage
+if __name__ == "__main__":
+    # Set your OpenAI API key
+    os.environ["OPENAI_API_KEY"] = "your-api-key-here"
+    
+    # Run the chain with initial inputs
+    results = run_chain(
+        # Add your input variables here
+        # example_var="example_value"
+    )
+    
+    print("\\nFinal Results:", results)
+`;
+  };
+
+  const generateLangChainJSCode = () => {
+    const sortedNodes = getTopologicalOrder().map(id => nodes.find(n => n.id === id)).filter(Boolean);
+    
+    return `/**
+ * ${chainName} - Generated LangChain JavaScript Code
+ * Auto-generated from PromptForge Canvas
+ */
+
+import { OpenAI } from "langchain/llms/openai";
+import { ChatOpenAI } from "langchain/chat_models/openai";
+import { PromptTemplate } from "langchain/prompts";
+import { LLMChain, SequentialChain } from "langchain/chains";
+
+// Initialize models
+${sortedNodes.map(node => {
+  const modelMap = {
+    'gpt-4': 'new ChatOpenAI({ modelName: "gpt-4", temperature: ',
+    'gpt-3.5-turbo': 'new ChatOpenAI({ modelName: "gpt-3.5-turbo", temperature: ',
+    'claude-3': 'new ChatOpenAI({ modelName: "claude-3", temperature: ',
+    'gemini-pro': 'new ChatOpenAI({ modelName: "gemini-pro", temperature: ',
+    'llama-2': 'new ChatOpenAI({ modelName: "llama-2", temperature: '
+  };
+  return `const ${node.id}Llm = ${modelMap[node.data.model] || 'new ChatOpenAI({ temperature: '}${node.data.temperature || 0.7} });`;
+}).join('\n')}
+
+// Define prompt templates
+${sortedNodes.map(node => `const ${node.id}Prompt = new PromptTemplate({
+  inputVariables: [${extractVariables(node.data.prompt).map(v => `"${v}"`).join(', ')}],
+  template: \`${node.data.prompt}\`
+});`).join('\n\n')}
+
+// Create chains
+${sortedNodes.map(node => `const ${node.id}Chain = new LLMChain({
+  llm: ${node.id}Llm,
+  prompt: ${node.id}Prompt,
+  outputKey: "${node.id}Output"
+});`).join('\n\n')}
+
+// Execute chain
+export async function runChain(inputs = {}) {
+  const results = { ...inputs };
+  
+${sortedNodes.map(node => `  // Execute ${node.data.title}
+  const ${node.id}Result = await ${node.id}Chain.call(results);
+  results["${node.id}Output"] = ${node.id}Result.text;
+  console.log("${node.data.title}:", ${node.id}Result.text);
+`).join('\n')}
+  
+  return results;
+}
+
+// Example usage
+async function main() {
+  // Set your OpenAI API key in environment variables
+  // process.env.OPENAI_API_KEY = "your-api-key-here";
+  
+  const results = await runChain({
+    // Add your input variables here
+    // exampleVar: "example value"
+  });
+  
+  console.log("Final Results:", results);
+}
+
+// Uncomment to run
+// main().catch(console.error);
+`;
+  };
+
+  const generateOpenAISDKCode = () => {
+    const sortedNodes = getTopologicalOrder().map(id => nodes.find(n => n.id === id)).filter(Boolean);
+    
+    return `"""
+${chainName} - Generated OpenAI SDK Python Code
+Auto-generated from PromptForge Canvas
+"""
+
+import openai
+import os
+from typing import Dict, Any
+
+# Set your OpenAI API key
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+class PromptChain:
+    def __init__(self):
+        self.results = {}
+    
+    def format_prompt(self, template: str, variables: Dict[str, Any]) -> str:
+        """Format prompt template with variables"""
+        formatted = template
+        for key, value in variables.items():
+            formatted = formatted.replace(f"{{{{{key}}}}}", str(value))
+        return formatted
+    
+${sortedNodes.map(node => `    def ${node.id}_step(self, **kwargs) -> str:
+        """${node.data.title}"""
+        prompt = "${node.data.prompt.replace(/"/g, '\\"')}"
+        formatted_prompt = self.format_prompt(prompt, {**kwargs, **self.results})
+        
+        response = openai.ChatCompletion.create(
+            model="${node.data.model}",
+            messages=[
+                {"role": "user", "content": formatted_prompt}
+            ],
+            temperature=${node.data.temperature || 0.7}
+        )
+        
+        result = response.choices[0].message.content
+        self.results["${node.id}_output"] = result
+        print(f"${node.data.title}: {result}")
+        return result
+`).join('\n')}
+    
+    def run_chain(self, **initial_inputs) -> Dict[str, Any]:
+        """Execute the complete prompt chain"""
+        self.results = {**initial_inputs}
+        
+${sortedNodes.map(node => `        # Execute ${node.data.title}
+        self.${node.id}_step(**self.results)`).join('\n')}
+        
+        return self.results
+
+# Example usage
+if __name__ == "__main__":
+    # Initialize the chain
+    chain = PromptChain()
+    
+    # Run the chain with initial inputs
+    results = chain.run_chain(
+        # Add your input variables here
+        # example_var="example_value"
+    )
+    
+    print("\\nFinal Results:", results)
+`;
+  };
+
+  const generateJSONConfig = () => {
+    const sortedNodes = getTopologicalOrder().map(id => nodes.find(n => n.id === id)).filter(Boolean);
+    
+    return {
+      name: chainName,
+      description: `Prompt chain configuration for ${chainName}`,
+      version: "1.0.0",
+      nodes: sortedNodes.map(node => ({
+        id: node.id,
+        title: node.data.title,
+        type: "prompt",
+        config: {
+          prompt: node.data.prompt,
+          model: node.data.model,
+          temperature: node.data.temperature || 0.7,
+          variables: extractVariables(node.data.prompt),
+          condition: node.data.condition || null
+        },
+        position: node.position
+      })),
+      edges: edges.map(edge => ({
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle || "default",
+        targetHandle: edge.targetHandle || "default",
+        label: edge.label || null
+      })),
+      metadata: {
+        createdAt: new Date().toISOString(),
+        totalNodes: nodes.length,
+        totalEdges: edges.length,
+        exportedFrom: "PromptForge Canvas"
+      }
+    };
+  };
+
+  const extractVariables = (prompt: string): string[] => {
+    const variableRegex = /\{\{([^}]+)\}\}/g;
+    const matches = [...prompt.matchAll(variableRegex)];
+    return [...new Set(matches.map(match => match[1].trim()))];
+  };
+
+  const exportOptions = [
+    {
+      id: 'langchain-python',
+      name: 'LangChain Python',
+      description: 'Export as LangChain Python code',
+      color: 'bg-green-600',
+      icon: '🐍',
+      action: exportToLangChainPython
+    },
+    {
+      id: 'langchain-js',
+      name: 'LangChain JS',
+      description: 'Export as LangChain JavaScript code',
+      color: 'bg-yellow-600',
+      icon: '🟨',
+      action: exportToLangChainJS
+    },
+    {
+      id: 'openai-sdk',
+      name: 'OpenAI SDK',
+      description: 'Export as OpenAI Python SDK code',
+      color: 'bg-black',
+      icon: '🤖',
+      action: exportToOpenAISDK
+    },
+    {
+      id: 'json-config',
+      name: 'JSON Config',
+      description: 'Export as JSON configuration',
+      color: 'bg-blue-600',
+      icon: '📄',
+      action: exportToJSON
+    }
+  ];
+
   const proOptions = { hideAttribution: true };
 
   return (
@@ -498,6 +813,46 @@ const PromptChainCanvas = () => {
             <Activity className="w-4 h-4" />
             <span>Live Viz</span>
           </button>
+
+          {/* Export Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              <FileCode className="w-4 h-4" />
+              <span>Export</span>
+              <ChevronDown className="w-4 h-4" />
+            </button>
+
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                <div className="p-2">
+                  <div className="text-xs font-medium text-gray-500 px-3 py-2 uppercase tracking-wide">
+                    Export Formats
+                  </div>
+                  {exportOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      onClick={() => {
+                        option.action();
+                        setShowExportMenu(false);
+                      }}
+                      className="w-full flex items-center space-x-3 px-3 py-3 hover:bg-gray-50 rounded-lg transition-colors text-left"
+                    >
+                      <div className={`w-8 h-8 ${option.color} rounded-lg flex items-center justify-center text-white text-sm`}>
+                        {option.icon}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{option.name}</div>
+                        <div className="text-xs text-gray-500">{option.description}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           <input
             type="file"
@@ -605,6 +960,14 @@ const PromptChainCanvas = () => {
           </div>
         )}
       </div>
+
+      {/* Click outside to close export menu */}
+      {showExportMenu && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setShowExportMenu(false)}
+        />
+      )}
     </div>
   );
 };

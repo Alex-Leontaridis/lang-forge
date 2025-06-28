@@ -476,6 +476,11 @@ const PromptChainCanvas = () => {
     downloadFile(`${chainName.replace(/\s+/g, '_')}_openai.py`, code);
   };
 
+  const exportToLangGraph = () => {
+    // Implementation for exporting to LangGraph
+    console.log('Export to LangGraph');
+  };
+
   const exportToJSON = () => {
     const config = generateJSONConfig();
     downloadFile(`${chainName.replace(/\s+/g, '_')}_config.json`, JSON.stringify(config, null, 2));
@@ -761,8 +766,16 @@ if __name__ == "__main__":
       name: 'OpenAI SDK',
       description: 'Export as OpenAI Python SDK code',
       color: 'bg-black',
-      icon: '🤖',
+      icon: <img src={require('./logos/openai.png')} alt="OpenAI" className="w-5 h-5 inline" />,
       action: exportToOpenAISDK
+    },
+    {
+      id: 'langgraph',
+      name: 'LangGraph',
+      description: 'Export as LangGraph code',
+      color: 'bg-orange-600',
+      icon: <img src={require('./logos/langgraph.png')} alt="LangGraph" className="w-5 h-5 inline" />,
+      action: exportToLangGraph
     },
     {
       id: 'json-config',

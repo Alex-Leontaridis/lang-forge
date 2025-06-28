@@ -86,7 +86,8 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
                       onChange={() => handleModelToggle(model.id)}
                       className="rounded border-gray-300 text-black focus:ring-black"
                     />
-                    <span className="font-medium text-gray-900">{model.name}</span>
+                    <img src={model.logo} alt={model.name + ' logo'} className="w-5 h-5 rounded" />
+                    <span className="font-medium text-gray-900 text-xs">{model.name}</span>
                   </div>
                   
                   {status === 'completed' && (

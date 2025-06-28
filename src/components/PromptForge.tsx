@@ -38,11 +38,17 @@ const PromptForge = () => {
   const currentRuns = getRunsForVersion(currentVersionId);
 
   const models: Model[] = [
-    { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', enabled: true },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient', provider: 'OpenAI', enabled: true },
-    { id: 'claude-3', name: 'Claude 3', description: 'Anthropic\'s latest', provider: 'Anthropic', enabled: true },
-    { id: 'gemini-pro', name: 'Gemini Pro', description: 'Google\'s advanced model', provider: 'Google', enabled: true },
-    { id: 'llama-2', name: 'Llama 2', description: 'Meta\'s open source model', provider: 'Meta', enabled: true }
+    { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', logo: require('./logos/openai.png'), enabled: true },
+    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient', provider: 'OpenAI', logo: require('./logos/openai.png'), enabled: true },
+    { id: 'claude-3', name: 'Claude 3', description: 'Anthropic model', provider: 'Anthropic', logo: require('./logos/anthropic.png'), enabled: true },
+    { id: 'gemini-pro', name: 'Gemini Pro', description: 'Google advanced model', provider: 'Google', logo: require('./logos/google.png'), enabled: true },
+    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', description: 'Google Gemma 2 9B IT', provider: 'Google', logo: require('./logos/google.png'), enabled: true },
+    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', description: 'Meta Llama 3.1 8B Instant', provider: 'Meta', logo: require('./logos/meta.png'), enabled: true },
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', description: 'Meta Llama 3.3 70B Versatile', provider: 'Meta', logo: require('./logos/meta.png'), enabled: true },
+    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', description: 'Meta Llama Guard 4 12B', provider: 'Meta', logo: require('./logos/meta.png'), enabled: true },
+    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', description: 'DeepSeek R1 Distill Llama 70B', provider: 'DeepSeek', logo: require('./logos/deepseek.png'), enabled: true },
+    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', description: 'Alibaba Qwen QWQ 32B', provider: 'Alibaba', logo: require('./logos/alibaba.png'), enabled: true },
+    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', description: 'Hugging Face Distil Whisper Large v3 EN', provider: 'HuggingFace', logo: require('./logos/huggingface.png'), enabled: true },
   ];
 
   const handlePromptChange = (newPrompt: string) => {

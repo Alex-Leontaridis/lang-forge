@@ -37,6 +37,7 @@ export interface Model {
   description: string;
   provider: string;
   enabled: boolean;
+  logo?: string;
 }
 
 export interface Variable {

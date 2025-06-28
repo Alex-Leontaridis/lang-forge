@@ -34,11 +34,17 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const models = [
-    { id: 'gpt-4', name: 'GPT-4', color: 'bg-purple-500' },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5', color: 'bg-green-500' },
-    { id: 'claude-3', name: 'Claude 3', color: 'bg-orange-500' },
-    { id: 'gemini-pro', name: 'Gemini Pro', color: 'bg-blue-500' },
-    { id: 'llama-2', name: 'Llama 2', color: 'bg-red-500' }
+    { id: 'gpt-4', name: 'GPT-4', logo: require('./logos/openai.png') },
+    { id: 'gpt-3.5-turbo', name: 'GPT-3.5', logo: require('./logos/openai.png') },
+    { id: 'claude-3', name: 'Claude 3', logo: require('./logos/anthropic.png') },
+    { id: 'gemini-pro', name: 'Gemini Pro', logo: require('./logos/google.png') },
+    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', logo: require('./logos/google.png') },
+    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', logo: require('./logos/meta.png') },
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', logo: require('./logos/meta.png') },
+    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', logo: require('./logos/meta.png') },
+    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', logo: require('./logos/deepseek.png') },
+    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', logo: require('./logos/alibaba.png') },
+    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', logo: require('./logos/huggingface.png') },
   ];
 
   const selectedModel = models.find(m => m.id === data.model) || models[0];
@@ -161,7 +167,7 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
             <select
               value={data.model}
               onChange={(e) => handleModelChange(e.target.value)}
-              className="text-xs bg-transparent border-none outline-none text-gray-600 font-medium"
+              className="text-xs bg-transparent border-none outline-none text-gray-600 font-medium flex items-center"
             >
               {models.map((model) => (
                 <option key={model.id} value={model.id}>

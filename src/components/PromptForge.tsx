@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow } from 'lucide-react';
 import PromptEditor from './PromptEditor';
 import ModelOutput from './ModelOutput';
 import PromptScore from './PromptScore';
@@ -22,7 +22,6 @@ const PromptForge = () => {
   const [currentModel, setCurrentModel] = useState<string>('gpt-3.5-turbo');
   const [systemMessage, setSystemMessage] = useState<string>('');
   const [showFullScoreReport, setShowFullScoreReport] = useState<string | null>(null);
-  const [showFullResponses, setShowFullResponses] = useState(false);
 
   const {
     versions,
@@ -370,52 +369,6 @@ This response represents the collaborative nature of open-source AI development,
                       />
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* Full Responses Section */}
-              {currentRuns.length > 0 && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">Full Responses</h3>
-                    <button
-                      onClick={() => setShowFullResponses(!showFullResponses)}
-                      className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-                    >
-                      {showFullResponses ? (
-                        <>
-                          <ChevronUp className="w-4 h-4" />
-                          <span>Hide Full Responses</span>
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="w-4 h-4" />
-                          <span>Show Full Responses</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  
-                  {showFullResponses && (
-                    <div className="space-y-6">
-                      {currentRuns.slice(-3).map((run) => (
-                        <div key={`full-${run.id}`} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                          <div className="lg:col-span-2">
-                            <ModelOutput 
-                              output={run.output} 
-                              isRunning={false}
-                              selectedModel={run.modelId}
-                            />
-                          </div>
-                          {run.score && (
-                            <div>
-                              <PromptScore score={run.score} />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               )}
 

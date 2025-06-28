@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Zap, BarChart3, GitBranch, Settings } from 'lucide-react';
 import PromptEditor from './PromptEditor';
 import ModelOutput from './ModelOutput';
 import PromptScore from './PromptScore';
@@ -9,17 +9,14 @@ import VariableManager from './VariableManager';
 import MultiModelRunner from './MultiModelRunner';
 import VersionComparison from './VersionComparison';
 import Analytics from './Analytics';
-import ApiKeySetup from './ApiKeySetup';
 import { usePromptVersions } from '../hooks/usePromptVersions';
 import { Model, Variable, PromptScore as PromptScoreType } from '../types';
-import { OpenAIService } from '../services/openai';
 
 const PromptForge = () => {
   const [activeTab, setActiveTab] = useState<'editor' | 'analytics' | 'compare'>('editor');
   const [variables, setVariables] = useState<Variable[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [selectedVersionsForComparison, setSelectedVersionsForComparison] = useState<string[]>([]);
-  const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
   const [currentOutput, setCurrentOutput] = useState<string>('');
   const [currentModel, setCurrentModel] = useState<string>('gpt-3.5-turbo');
   const [systemMessage, setSystemMessage] = useState<string>('');
@@ -38,33 +35,16 @@ const PromptForge = () => {
   const currentVersion = getCurrentVersion();
   const currentRuns = getRunsForVersion(currentVersionId);
 
-  // Check if API key is configured on mount
-  useEffect(() => {
-    const checkApiKey = () => {
-      const storedKey = localStorage.getItem('openai_api_key');
-      if (storedKey) {
-        (window as any).__OPENAI_API_KEY__ = storedKey;
-        OpenAIService.initialize(storedKey);
-        setApiKeyConfigured(true);
-      } else {
-        setApiKeyConfigured(OpenAIService.isConfigured());
-      }
-    };
-
-    checkApiKey();
-  }, []);
-
   const models: Model[] = [
     { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', enabled: true },
     { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient', provider: 'OpenAI', enabled: true },
-    { id: 'gpt-4-turbo-preview', name: 'GPT-4 Turbo', description: 'Latest GPT-4 with improved performance', provider: 'OpenAI', enabled: true },
+    { id: 'claude-3', name: 'Claude 3', description: 'Anthropic\'s latest', provider: 'Anthropic', enabled: true },
+    { id: 'gemini-pro', name: 'Gemini Pro', description: 'Google\'s advanced model', provider: 'Google', enabled: true },
+    { id: 'llama-2', name: 'Llama 2', description: 'Meta\'s open source model', provider: 'Meta', enabled: true }
   ];
 
   const handlePromptChange = (newPrompt: string) => {
     // Update current version content
-    const updatedVersions = versions.map(v => 
-      v.id === currentVersionId ? { ...v, content: newPrompt } : v
-    );
     // In a real app, this would update the version in the store
   };
 
@@ -97,66 +77,155 @@ const PromptForge = () => {
     return result;
   };
 
+  const generateMockResponse = (modelId: string, prompt: string): string => {
+    const responses = {
+      'gpt-4': `**GPT-4 Response:**
+
+Based on your prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"
+
+This is a comprehensive and thoughtful response that demonstrates GPT-4's advanced reasoning capabilities. The model provides detailed analysis, creative insights, and maintains excellent coherence throughout the response.
+
+Key points addressed:
+• Thorough understanding of the prompt context
+• Creative and original perspective
+• Well-structured and clear communication
+• Actionable insights and recommendations
+
+This response showcases the model's ability to handle complex reasoning tasks while maintaining clarity and relevance to the original request.`,
+
+      'gpt-3.5-turbo': `**GPT-3.5 Turbo Response:**
+
+Thank you for your prompt: "${prompt.substring(0, 80)}${prompt.length > 80 ? '...' : ''}"
+
+Here's a clear and efficient response that addresses your request directly. GPT-3.5 Turbo provides fast, reliable answers while maintaining good quality and relevance.
+
+The response includes:
+- Direct answers to your questions
+- Practical suggestions
+- Clear and concise communication
+- Good balance of detail and brevity
+
+This demonstrates the model's strength in providing quick, accurate responses for everyday tasks and queries.`,
+
+      'claude-3': `**Claude 3 Response:**
+
+I appreciate your thoughtful prompt: "${prompt.substring(0, 90)}${prompt.length > 90 ? '...' : ''}"
+
+As Claude 3, I aim to provide helpful, harmless, and honest responses. Here's my analysis of your request with careful consideration of nuance and context.
+
+My response focuses on:
+→ Ethical considerations and balanced perspectives
+→ Detailed reasoning and step-by-step thinking
+→ Acknowledgment of limitations and uncertainties
+→ Constructive and solution-oriented approach
+
+I strive to be particularly thoughtful about potential implications and to provide responses that are both useful and responsible.`,
+
+      'gemini-pro': `**Gemini Pro Response:**
+
+Processing your prompt: "${prompt.substring(0, 85)}${prompt.length > 85 ? '...' : ''}"
+
+Gemini Pro leverages Google's advanced AI capabilities to provide comprehensive, multimodal understanding. Here's my response with integrated knowledge and reasoning:
+
+Analysis includes:
+🔍 Deep contextual understanding
+🧠 Advanced reasoning patterns
+🌐 Broad knowledge integration
+⚡ Efficient processing capabilities
+
+The response demonstrates Gemini's strength in combining factual accuracy with creative problem-solving, drawing from extensive training data to provide relevant and insightful answers.`,
+
+      'llama-2': `**Llama 2 Response:**
+
+Your prompt: "${prompt.substring(0, 75)}${prompt.length > 75 ? '...' : ''}"
+
+As an open-source model, Llama 2 provides transparent and accessible AI capabilities. Here's my response focusing on practical utility and clear communication:
+
+Response characteristics:
+• Open and transparent reasoning
+• Community-driven development benefits
+• Balanced and unbiased perspective
+• Focus on practical applications
+
+This response represents the collaborative nature of open-source AI development, providing reliable assistance while maintaining transparency in the reasoning process.`
+    };
+
+    return responses[modelId as keyof typeof responses] || `Response from ${modelId.toUpperCase()}: This is a simulated response to your prompt.`;
+  };
+
+  const generateMockScore = (): PromptScoreType => {
+    const relevance = Math.floor(Math.random() * 3) + 8;
+    const clarity = Math.floor(Math.random() * 3) + 7;
+    const creativity = Math.floor(Math.random() * 4) + 6;
+    
+    const critiques = [
+      "Excellent prompt structure with clear intent. Consider adding more specific context for even better results.",
+      "Well-crafted prompt that effectively guides the AI. The use of variables makes it highly reusable.",
+      "Strong prompt with good clarity. Adding examples could further improve response quality.",
+      "Thoughtful prompt design that balances specificity with flexibility. Great use of structured variables.",
+      "Clear and purposeful prompt. Consider refining the tone instructions for more consistent outputs."
+    ];
+
+    return {
+      relevance,
+      clarity,
+      creativity,
+      overall: Math.round(((relevance + clarity + creativity) / 3) * 10) / 10,
+      critique: critiques[Math.floor(Math.random() * critiques.length)]
+    };
+  };
+
   const handleRunModels = async (selectedModels: string[]) => {
     if (!currentVersion.content.trim()) return;
     
     setIsRunning(true);
     
-    try {
-      const processedPrompt = replaceVariables(currentVersion.content);
+    const processedPrompt = replaceVariables(currentVersion.content);
+    
+    // Simulate running multiple models with realistic delays
+    for (const modelId of selectedModels) {
+      const startTime = Date.now();
       
-      // Run models using OpenAI API
-      const responses = await OpenAIService.runMultipleModels(
-        processedPrompt, 
-        selectedModels,
-        systemMessage || undefined
-      );
+      // Simulate API call delay (different for each model)
+      const delays = {
+        'gpt-4': 2000 + Math.random() * 1000,
+        'gpt-3.5-turbo': 800 + Math.random() * 500,
+        'claude-3': 1500 + Math.random() * 800,
+        'gemini-pro': 1200 + Math.random() * 600,
+        'llama-2': 1000 + Math.random() * 700
+      };
       
-      // Process each response
-      for (const [modelId, response] of Object.entries(responses)) {
-        try {
-          // Get AI evaluation of the prompt
-          const evaluation = await OpenAIService.evaluatePrompt(
-            processedPrompt,
-            response.content
-          );
-
-          const score: PromptScoreType = {
-            relevance: evaluation.relevance,
-            clarity: evaluation.clarity,
-            creativity: evaluation.creativity,
-            overall: Math.round(((evaluation.relevance + evaluation.clarity + evaluation.creativity) / 3) * 10) / 10,
-            critique: evaluation.critique
-          };
-
-          addRun({
-            versionId: currentVersionId,
-            modelId,
-            output: response.content,
-            score,
-            executionTime: response.executionTime,
-            tokenUsage: {
-              input: response.usage.prompt_tokens,
-              output: response.usage.completion_tokens,
-              total: response.usage.total_tokens
-            }
-          });
-
-          // Update current output for the first model
-          if (selectedModels[0] === modelId) {
-            setCurrentOutput(response.content);
-            setCurrentModel(modelId);
-          }
-        } catch (error) {
-          console.error(`Error processing response for ${modelId}:`, error);
+      await new Promise(resolve => setTimeout(resolve, delays[modelId as keyof typeof delays] || 1000));
+      
+      const executionTime = Date.now() - startTime;
+      const score = generateMockScore();
+      const output = generateMockResponse(modelId, processedPrompt);
+      
+      // Simulate realistic token usage
+      const inputTokens = Math.floor(processedPrompt.length / 4) + Math.floor(Math.random() * 50);
+      const outputTokens = Math.floor(output.length / 4) + Math.floor(Math.random() * 100);
+      
+      addRun({
+        versionId: currentVersionId,
+        modelId,
+        output,
+        score,
+        executionTime,
+        tokenUsage: {
+          input: inputTokens,
+          output: outputTokens,
+          total: inputTokens + outputTokens
         }
+      });
+
+      // Update current output for the first model
+      if (selectedModels[0] === modelId) {
+        setCurrentOutput(output);
+        setCurrentModel(modelId);
       }
-    } catch (error) {
-      console.error('Error running models:', error);
-      // Show error to user
-    } finally {
-      setIsRunning(false);
     }
+    
+    setIsRunning(false);
   };
 
   const handleCreateVersion = (title: string, message: string) => {
@@ -171,15 +240,6 @@ const PromptForge = () => {
       setVariables(versionVariables);
     }
   };
-
-  const handleApiKeySet = () => {
-    setApiKeyConfigured(true);
-  };
-
-  // Show API key setup if not configured
-  if (!apiKeyConfigured) {
-    return <ApiKeySetup onApiKeySet={handleApiKeySet} />;
-  }
 
   const tabs = [
     { id: 'editor' as const, name: 'Editor', icon: Zap },
@@ -333,14 +393,14 @@ const PromptForge = () => {
                 }}
               />
 
-              {/* API Status */}
+              {/* Demo Status */}
               <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
-                <div className="flex items-center space-x-2 text-green-600">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm font-medium">OpenAI API Connected</span>
+                <div className="flex items-center space-x-2 text-blue-600">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm font-medium">Demo Mode</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Real AI responses enabled
+                  Using simulated AI responses for UI demonstration
                 </p>
               </div>
             </div>

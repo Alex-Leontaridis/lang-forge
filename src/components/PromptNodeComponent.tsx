@@ -34,26 +34,11 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const models = [
-    { id: 'gpt-4', name: 'GPT-4', logo: '/src/components/logos/openai.png' },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5', logo: '/src/components/logos/openai.png' },
-    { id: 'claude-3', name: 'Claude 3', logo: '/src/components/logos/anthropic.png' },
-    { id: 'gemini-pro', name: 'Gemini Pro', logo: '/src/components/logos/google.png' },
-    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', logo: '/src/components/logos/google.png' },
-    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp', logo: '/src/components/logos/google.png' },
-    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp', logo: '/src/components/logos/google.png' },
-    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT', logo: '/src/components/logos/google.png' },
-    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', logo: '/src/components/logos/meta.png' },
-    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', logo: '/src/components/logos/meta.png' },
-    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', logo: '/src/components/logos/meta.png' },
-    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', logo: '/src/components/logos/deepseek.png' },
-    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528', logo: '/src/components/logos/deepseek.png' },
-    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B', logo: '/src/components/logos/deepseek.png' },
-    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base', logo: '/src/components/logos/deepseek.png' },
-    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', logo: '/src/components/logos/alibaba.png' },
-    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', logo: '/src/components/logos/huggingface.png' },
-    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B', logo: '/src/components/logos/nvidia.png' },
-    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', logo: '/src/components/logos/mistral.png' },
-    { id: 'minimax/minimax-m1', name: 'MiniMax M1', logo: '/src/components/logos/minimax.png' },
+    { id: 'gpt-4', name: 'GPT-4', color: 'bg-purple-500' },
+    { id: 'gpt-3.5-turbo', name: 'GPT-3.5', color: 'bg-green-500' },
+    { id: 'claude-3', name: 'Claude 3', color: 'bg-orange-500' },
+    { id: 'gemini-pro', name: 'Gemini Pro', color: 'bg-blue-500' },
+    { id: 'llama-2', name: 'Llama 2', color: 'bg-red-500' }
   ];
 
   const selectedModel = models.find(m => m.id === data.model) || models[0];
@@ -176,7 +161,7 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
             <select
               value={data.model}
               onChange={(e) => handleModelChange(e.target.value)}
-              className="text-xs bg-transparent border-none outline-none text-gray-600 font-medium flex items-center"
+              className="text-xs bg-transparent border-none outline-none text-gray-600 font-medium"
             >
               {models.map((model) => (
                 <option key={model.id} value={model.id}>

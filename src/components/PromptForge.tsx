@@ -21,7 +21,6 @@ const PromptForge = () => {
   const [currentOutput, setCurrentOutput] = useState<string>('');
   const [currentModel, setCurrentModel] = useState<string>('gpt-3.5-turbo');
   const [systemMessage, setSystemMessage] = useState<string>('');
-  const [showFullScoreReport, setShowFullScoreReport] = useState<string | null>(null);
 
   const {
     versions,
@@ -38,26 +37,11 @@ const PromptForge = () => {
   const currentRuns = getRunsForVersion(currentVersionId);
 
   const models: Model[] = [
-    { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', logo: '/src/components/logos/openai.png', enabled: true },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient', provider: 'OpenAI', logo: '/src/components/logos/openai.png', enabled: true },
-    { id: 'claude-3', name: 'Claude 3', description: 'Anthropic model', provider: 'Anthropic', logo: '/src/components/logos/anthropic.png', enabled: true },
-    { id: 'gemini-pro', name: 'Gemini Pro', description: 'Google advanced model', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
-    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', description: 'Google Gemma 2 9B IT', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
-    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp', description: 'Google Gemini 2.5 Pro Exp', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
-    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp', description: 'Google Gemini 2.0 Flash Exp', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
-    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT', description: 'Google Gemma 3 12B IT', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
-    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', description: 'Meta Llama 3.1 8B Instant', provider: 'Meta', logo: '/src/components/logos/meta.png', enabled: true },
-    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', description: 'Meta Llama 3.3 70B Versatile', provider: 'Meta', logo: '/src/components/logos/meta.png', enabled: true },
-    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', description: 'Meta Llama Guard 4 12B', provider: 'Meta', logo: '/src/components/logos/meta.png', enabled: true },
-    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', description: 'DeepSeek R1 Distill Llama 70B', provider: 'DeepSeek', logo: '/src/components/logos/deepseek.png', enabled: true },
-    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528', description: 'DeepSeek R1 0528', provider: 'DeepSeek', logo: '/src/components/logos/deepseek.png', enabled: true },
-    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B', description: 'DeepSeek R1 0528 Qwen3 8B', provider: 'DeepSeek', logo: '/src/components/logos/deepseek.png', enabled: true },
-    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base', description: 'DeepSeek V3 Base', provider: 'DeepSeek', logo: '/src/components/logos/deepseek.png', enabled: true },
-    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', description: 'Alibaba Qwen QWQ 32B', provider: 'Alibaba', logo: '/src/components/logos/alibaba.png', enabled: true },
-    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', description: 'Hugging Face Distil Whisper Large v3 EN', provider: 'HuggingFace', logo: '/src/components/logos/huggingface.png', enabled: true },
-    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B', description: 'Nvidia Llama 3.3 Nemotron Super 49B', provider: 'Nvidia', logo: '/src/components/logos/nvidia.png', enabled: true },
-    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', description: 'Mistral Small 3.2 24B Instruct', provider: 'Mistral', logo: '/src/components/logos/mistral.png', enabled: true },
-    { id: 'minimax/minimax-m1', name: 'MiniMax M1', description: 'MiniMax M1', provider: 'MiniMax', logo: '/src/components/logos/minimax.png', enabled: true },
+    { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', enabled: true },
+    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient', provider: 'OpenAI', enabled: true },
+    { id: 'claude-3', name: 'Claude 3', description: 'Anthropic\'s latest', provider: 'Anthropic', enabled: true },
+    { id: 'gemini-pro', name: 'Gemini Pro', description: 'Google\'s advanced model', provider: 'Google', enabled: true },
+    { id: 'llama-2', name: 'Llama 2', description: 'Meta\'s open source model', provider: 'Meta', enabled: true }
   ];
 
   const handlePromptChange = (newPrompt: string) => {
@@ -367,26 +351,6 @@ This response represents the collaborative nature of open-source AI development,
                 runs={currentRuns}
               />
 
-              {/* Recent Runs Grid */}
-              {currentRuns.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Recent Runs</h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {currentRuns.slice(-6).map((run) => (
-                      <ModelOutput 
-                        key={run.id}
-                        output={run.output} 
-                        isRunning={false}
-                        selectedModel={run.modelId}
-                        score={run.score}
-                        compact={true}
-                        onShowFullReport={() => setShowFullScoreReport(run.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Current Output */}
               {(currentOutput || isRunning) && (
                 <ModelOutput 
@@ -394,6 +358,25 @@ This response represents the collaborative nature of open-source AI development,
                   isRunning={isRunning}
                   selectedModel={currentModel}
                 />
+              )}
+
+              {/* Recent Runs */}
+              {currentRuns.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Recent Runs</h3>
+                  {currentRuns.slice(-3).map((run) => (
+                    <div key={run.id} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <ModelOutput 
+                        output={run.output} 
+                        isRunning={false}
+                        selectedModel={run.modelId}
+                      />
+                      {run.score && (
+                        <PromptScore score={run.score} />
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 
@@ -449,31 +432,6 @@ This response represents the collaborative nature of open-source AI development,
           />
         )}
       </div>
-
-      {/* Full Score Report Modal */}
-      {showFullScoreReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full">
-            {(() => {
-              const run = currentRuns.find(r => r.id === showFullScoreReport);
-              return run?.score ? (
-                <PromptScore 
-                  score={run.score} 
-                  compact={false}
-                />
-              ) : null;
-            })()}
-            <div className="p-4 border-t border-gray-200">
-              <button
-                onClick={() => setShowFullScoreReport(null)}
-                className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

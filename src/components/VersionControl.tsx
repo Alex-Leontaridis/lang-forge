@@ -30,10 +30,34 @@ const VersionControl: React.FC<VersionControlProps> = ({
   };
 
   const formatDate = (date: Date) => {
-    return new Intl.RelativeTimeFormatter('en', { numeric: 'auto' }).format(
-      Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
-      'day'
-    );
+    // Check if Intl.RelativeTimeFormatter is available
+    if (typeof Intl !== 'undefined' && Intl.RelativeTimeFormatter) {
+      try {
+        return new Intl.RelativeTimeFormatter('en', { numeric: 'auto' }).format(
+          Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+          'day'
+        );
+      } catch (error) {
+        // Fall through to fallback implementation
+      }
+    }
+    
+    // Fallback implementation
+    const now = new Date();
+    const diffInMs = date.getTime() - now.getTime();
+    const diffInDays = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
+    
+    if (diffInDays === 0) {
+      return 'today';
+    } else if (diffInDays === -1) {
+      return 'yesterday';
+    } else if (diffInDays === 1) {
+      return 'tomorrow';
+    } else if (diffInDays < 0) {
+      return `${Math.abs(diffInDays)} days ago`;
+    } else {
+      return `in ${diffInDays} days`;
+    }
   };
 
   return (

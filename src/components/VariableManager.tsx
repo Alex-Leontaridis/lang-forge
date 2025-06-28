@@ -1,5 +1,5 @@
 import React from 'react';
-import { Variable2, Plus, X } from 'lucide-react';
+import { Variable as Variable2, Plus, X } from 'lucide-react';
 import { Variable } from '../types';
 
 interface VariableManagerProps {

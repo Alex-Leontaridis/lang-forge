@@ -226,6 +226,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs }) => {
         </div>
       </div>
     </div>
+  )
   );
 };
 

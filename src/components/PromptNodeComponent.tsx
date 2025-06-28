@@ -11,7 +11,12 @@ import {
   Clock,
   Zap,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  GitBranch,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Thermometer
 } from 'lucide-react';
 import { PromptNode, PromptScore } from '../types';
 
@@ -26,6 +31,7 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
   const [tempTitle, setTempTitle] = useState(data.title);
   const [isExpanded, setIsExpanded] = useState(true);
   const [isOutputExpanded, setIsOutputExpanded] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const models = [
     { id: 'gpt-4', name: 'GPT-4', color: 'bg-purple-500' },
@@ -55,10 +61,31 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
     data.onUpdate(id, { model });
   };
 
+  const handleTemperatureChange = (temperature: number) => {
+    data.onUpdate(id, { temperature });
+  };
+
+  const handleConditionChange = (condition: string) => {
+    data.onUpdate(id, { condition });
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 8) return 'text-green-600 bg-green-50';
     if (score >= 6) return 'text-yellow-600 bg-yellow-50';
     return 'text-red-600 bg-red-50';
+  };
+
+  const getExecutionStatusIcon = () => {
+    if (data.isRunning) {
+      return <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />;
+    }
+    if (data.error) {
+      return <XCircle className="w-4 h-4 text-red-500" />;
+    }
+    if (data.output) {
+      return <CheckCircle className="w-4 h-4 text-green-500" />;
+    }
+    return <AlertTriangle className="w-4 h-4 text-gray-400" />;
   };
 
   const extractVariables = (prompt: string) => {
@@ -111,6 +138,7 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
           )}
           
           <div className="flex items-center space-x-1">
+            {getExecutionStatusIcon()}
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="text-gray-400 hover:text-gray-600"
@@ -126,21 +154,46 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
           </div>
         </div>
 
-        {/* Model Selector */}
-        <div className="flex items-center space-x-2">
-          <div className={`w-2 h-2 rounded-full ${selectedModel.color}`}></div>
-          <select
-            value={data.model}
-            onChange={(e) => handleModelChange(e.target.value)}
-            className="text-xs bg-transparent border-none outline-none text-gray-600 font-medium"
-          >
-            {models.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.name}
-              </option>
-            ))}
-          </select>
+        {/* Model Selector and Temperature */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className={`w-2 h-2 rounded-full ${selectedModel.color}`}></div>
+            <select
+              value={data.model}
+              onChange={(e) => handleModelChange(e.target.value)}
+              className="text-xs bg-transparent border-none outline-none text-gray-600 font-medium"
+            >
+              {models.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex items-center space-x-1 text-xs text-gray-500">
+            <Thermometer className="w-3 h-3" />
+            <span>{data.temperature || 0.7}</span>
+          </div>
         </div>
+
+        {/* Execution Metrics */}
+        {(data.executionTime || data.tokenUsage) && (
+          <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+            {data.executionTime && (
+              <div className="flex items-center space-x-1">
+                <Clock className="w-3 h-3" />
+                <span>{(data.executionTime / 1000).toFixed(1)}s</span>
+              </div>
+            )}
+            {data.tokenUsage && (
+              <div className="flex items-center space-x-1">
+                <Zap className="w-3 h-3" />
+                <span>{data.tokenUsage.total} tokens</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {isExpanded && (
@@ -171,6 +224,59 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
               </div>
             )}
 
+            {/* Advanced Settings */}
+            <div className="mt-3">
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center space-x-1 text-xs text-gray-600 hover:text-gray-800"
+              >
+                <span>Advanced Settings</span>
+                {showAdvanced ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
+              
+              {showAdvanced && (
+                <div className="mt-2 space-y-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  {/* Temperature */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Temperature: {data.temperature || 0.7}
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="2"
+                      step="0.1"
+                      value={data.temperature || 0.7}
+                      onChange={(e) => handleTemperatureChange(parseFloat(e.target.value))}
+                      className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>Focused</span>
+                      <span>Balanced</span>
+                      <span>Creative</span>
+                    </div>
+                  </div>
+
+                  {/* Conditional Logic */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Condition (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={data.condition || ''}
+                      onChange={(e) => handleConditionChange(e.target.value)}
+                      placeholder="e.g., {{score}} > 7"
+                      className="w-full p-2 text-xs bg-white border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black"
+                    />
+                    <div className="text-xs text-gray-500 mt-1">
+                      Use conditions like: {{score}} > 7, {{sentiment}} == "positive"
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Run Button */}
             <button
               onClick={() => data.onRun(id)}
@@ -181,6 +287,19 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
               <span>{data.isRunning ? 'Running...' : 'Run'}</span>
             </button>
           </div>
+
+          {/* Error Display */}
+          {data.error && (
+            <div className="px-4 pb-4">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center space-x-2 mb-1">
+                  <XCircle className="w-4 h-4 text-red-500" />
+                  <span className="text-sm font-medium text-red-700">Error</span>
+                </div>
+                <p className="text-xs text-red-600">{data.error}</p>
+              </div>
+            </div>
+          )}
 
           {/* Output Section */}
           {(data.output || data.isRunning) && (
@@ -244,34 +363,39 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
                     </div>
                   </div>
                 )}
-
-                {/* Metadata */}
-                {data.output && (
-                  <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center space-x-1">
-                        <Clock className="w-3 h-3" />
-                        <span>~2.1s</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Zap className="w-3 h-3" />
-                        <span>{Math.floor(data.output.length / 4)} tokens</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
         </>
       )}
 
-      {/* Output Handle */}
+      {/* Conditional Output Handles */}
       <Handle
         type="source"
         position={Position.Right}
+        id="default"
         className="w-3 h-3 bg-gray-400 border-2 border-white"
+        style={{ top: '50%' }}
       />
+      
+      {data.condition && (
+        <>
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="true"
+            className="w-3 h-3 bg-green-500 border-2 border-white"
+            style={{ top: '35%' }}
+          />
+          <Handle
+            type="source"
+            position={Position.Right}
+            id="false"
+            className="w-3 h-3 bg-red-500 border-2 border-white"
+            style={{ top: '65%' }}
+          />
+        </>
+      )}
     </div>
   );
 };

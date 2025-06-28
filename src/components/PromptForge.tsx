@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Zap, BarChart3, GitBranch, Settings } from 'lucide-react';
+import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow } from 'lucide-react';
 import PromptEditor from './PromptEditor';
 import ModelOutput from './ModelOutput';
 import PromptScore from './PromptScore';
@@ -9,11 +9,12 @@ import VariableManager from './VariableManager';
 import MultiModelRunner from './MultiModelRunner';
 import VersionComparison from './VersionComparison';
 import Analytics from './Analytics';
+import PromptChainCanvas from './PromptChainCanvas';
 import { usePromptVersions } from '../hooks/usePromptVersions';
 import { Model, Variable, PromptScore as PromptScoreType } from '../types';
 
 const PromptForge = () => {
-  const [activeTab, setActiveTab] = useState<'editor' | 'analytics' | 'compare'>('editor');
+  const [activeTab, setActiveTab] = useState<'editor' | 'analytics' | 'compare' | 'canvas'>('editor');
   const [variables, setVariables] = useState<Variable[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [selectedVersionsForComparison, setSelectedVersionsForComparison] = useState<string[]>([]);
@@ -243,6 +244,7 @@ This response represents the collaborative nature of open-source AI development,
 
   const tabs = [
     { id: 'editor' as const, name: 'Editor', icon: Zap },
+    { id: 'canvas' as const, name: 'Canvas', icon: Workflow },
     { id: 'analytics' as const, name: 'Analytics', icon: BarChart3 },
     { id: 'compare' as const, name: 'Compare', icon: GitBranch }
   ];
@@ -294,7 +296,7 @@ This response represents the collaborative nature of open-source AI development,
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className={activeTab === 'canvas' ? '' : 'max-w-7xl mx-auto px-6 py-8'}>
         {activeTab === 'editor' && (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Left Sidebar */}
@@ -405,6 +407,10 @@ This response represents the collaborative nature of open-source AI development,
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === 'canvas' && (
+          <PromptChainCanvas />
         )}
 
         {activeTab === 'analytics' && (

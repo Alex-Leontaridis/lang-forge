@@ -15,8 +15,9 @@ import ReactFlow, {
   MiniMap,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { ArrowLeft, Plus, Play, Save, Zap, Download, Upload } from 'lucide-react';
+import { ArrowLeft, Plus, Play, Save, Zap, Download, Upload, BarChart3, Activity } from 'lucide-react';
 import PromptNodeComponent from './PromptNodeComponent';
+import LiveChainVisualization from './LiveChainVisualization';
 import { PromptNode as PromptNodeType, PromptScore } from '../types';
 
 const nodeTypes = {
@@ -28,10 +29,33 @@ const PromptChainCanvas = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isRunningChain, setIsRunningChain] = useState(false);
   const [chainName, setChainName] = useState('Untitled Chain');
+  const [showVisualization, setShowVisualization] = useState(false);
+  const [executionHistory, setExecutionHistory] = useState<any[]>([]);
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
+    (params: Connection) => {
+      // Handle conditional connections
+      const sourceNode = nodes.find(n => n.id === params.source);
+      if (sourceNode?.data.condition && params.sourceHandle) {
+        const edge = {
+          ...params,
+          label: params.sourceHandle === 'true' ? 'True' : params.sourceHandle === 'false' ? 'False' : '',
+          style: { 
+            stroke: params.sourceHandle === 'true' ? '#10b981' : params.sourceHandle === 'false' ? '#ef4444' : '#6b7280',
+            strokeWidth: 2
+          },
+          labelStyle: { 
+            fontSize: 12, 
+            fontWeight: 600,
+            fill: params.sourceHandle === 'true' ? '#10b981' : params.sourceHandle === 'false' ? '#ef4444' : '#6b7280'
+          }
+        };
+        setEdges((eds) => addEdge(edge, eds));
+      } else {
+        setEdges((eds) => addEdge(params, eds));
+      }
+    },
+    [setEdges, nodes]
   );
 
   const addPromptNode = useCallback(() => {
@@ -46,9 +70,11 @@ const PromptChainCanvas = () => {
         title: `Prompt ${nodes.length + 1}`,
         prompt: '',
         model: 'gpt-3.5-turbo',
+        temperature: 0.7,
         output: '',
         isRunning: false,
         variables: {},
+        condition: '',
         onUpdate: (id: string, updates: Partial<PromptNodeType>) => {
           setNodes((nds) =>
             nds.map((node) =>
@@ -70,17 +96,19 @@ const PromptChainCanvas = () => {
     setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
   }, [setNodes, setEdges]);
 
-  const generateMockResponse = (prompt: string, model: string): string => {
+  const generateMockResponse = (prompt: string, model: string, temperature: number): string => {
+    const tempVariation = temperature > 1.5 ? 'highly creative' : temperature > 1.0 ? 'creative' : temperature > 0.5 ? 'balanced' : 'focused';
+    
     const responses = {
-      'gpt-4': `**GPT-4 Analysis:**\n\n${prompt.substring(0, 50)}...\n\nThis is a comprehensive response that demonstrates advanced reasoning. The analysis includes detailed insights, creative perspectives, and maintains excellent coherence throughout.\n\n• Thorough contextual understanding\n• Creative and original insights\n• Well-structured communication\n• Actionable recommendations`,
+      'gpt-4': `**GPT-4 Response (${tempVariation}):**\n\n${prompt.substring(0, 50)}...\n\nThis is a comprehensive response that demonstrates advanced reasoning. The analysis includes detailed insights, creative perspectives, and maintains excellent coherence throughout.\n\n• Thorough contextual understanding\n• Creative and original insights\n• Well-structured communication\n• Actionable recommendations`,
       
-      'gpt-3.5-turbo': `**GPT-3.5 Response:**\n\n${prompt.substring(0, 40)}...\n\nHere's a clear and efficient response that addresses your request directly. This provides practical, well-structured information with good balance of detail and brevity.\n\n- Direct answers to key points\n- Practical suggestions\n- Clear communication`,
+      'gpt-3.5-turbo': `**GPT-3.5 Response (${tempVariation}):**\n\n${prompt.substring(0, 40)}...\n\nHere's a clear and efficient response that addresses your request directly. This provides practical, well-structured information with good balance of detail and brevity.\n\n- Direct answers to key points\n- Practical suggestions\n- Clear communication`,
       
-      'claude-3': `**Claude 3 Analysis:**\n\n${prompt.substring(0, 45)}...\n\nI'll provide a thoughtful response with careful consideration of nuance and context. My analysis focuses on:\n\n→ Balanced perspectives\n→ Detailed reasoning\n→ Ethical considerations\n→ Solution-oriented approach`,
+      'claude-3': `**Claude 3 Analysis (${tempVariation}):**\n\n${prompt.substring(0, 45)}...\n\nI'll provide a thoughtful response with careful consideration of nuance and context. My analysis focuses on:\n\n→ Balanced perspectives\n→ Detailed reasoning\n→ Ethical considerations\n→ Solution-oriented approach`,
       
-      'gemini-pro': `**Gemini Pro Response:**\n\n${prompt.substring(0, 42)}...\n\nLeveraging advanced AI capabilities for comprehensive understanding:\n\n🔍 Deep contextual analysis\n🧠 Advanced reasoning patterns\n🌐 Broad knowledge integration\n⚡ Efficient processing`,
+      'gemini-pro': `**Gemini Pro Response (${tempVariation}):**\n\n${prompt.substring(0, 42)}...\n\nLeveraging advanced AI capabilities for comprehensive understanding:\n\n🔍 Deep contextual analysis\n🧠 Advanced reasoning patterns\n🌐 Broad knowledge integration\n⚡ Efficient processing`,
       
-      'llama-2': `**Llama 2 Response:**\n\n${prompt.substring(0, 38)}...\n\nAs an open-source model, providing transparent and accessible AI capabilities:\n\n• Open reasoning process\n• Community-driven benefits\n• Balanced perspective\n• Practical applications`
+      'llama-2': `**Llama 2 Response (${tempVariation}):**\n\n${prompt.substring(0, 38)}...\n\nAs an open-source model, providing transparent and accessible AI capabilities:\n\n• Open reasoning process\n• Community-driven benefits\n• Balanced perspective\n• Practical applications`
     };
 
     return responses[model as keyof typeof responses] || `Response from ${model.toUpperCase()}: This is a simulated response to your prompt.`;
@@ -106,6 +134,41 @@ const PromptChainCanvas = () => {
       overall: Math.round(((relevance + clarity + creativity) / 3) * 10) / 10,
       critique: critiques[Math.floor(Math.random() * critiques.length)]
     };
+  };
+
+  const evaluateCondition = (condition: string, nodeData: any): boolean => {
+    if (!condition) return true;
+    
+    try {
+      // Simple condition evaluation
+      // In a real app, you'd want a more robust expression parser
+      const score = nodeData.score?.overall || 0;
+      const sentiment = 'positive'; // Mock sentiment
+      
+      // Replace variables in condition
+      let evaluatedCondition = condition
+        .replace(/\{\{score\}\}/g, score.toString())
+        .replace(/\{\{sentiment\}\}/g, `"${sentiment}"`);
+      
+      // Simple evaluation for common patterns
+      if (evaluatedCondition.includes('>')) {
+        const [left, right] = evaluatedCondition.split('>').map(s => s.trim());
+        return parseFloat(left) > parseFloat(right);
+      }
+      if (evaluatedCondition.includes('<')) {
+        const [left, right] = evaluatedCondition.split('<').map(s => s.trim());
+        return parseFloat(left) < parseFloat(right);
+      }
+      if (evaluatedCondition.includes('==')) {
+        const [left, right] = evaluatedCondition.split('==').map(s => s.trim().replace(/"/g, ''));
+        return left === right;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error evaluating condition:', error);
+      return true;
+    }
   };
 
   const replaceVariables = (prompt: string, nodeId: string): string => {
@@ -140,38 +203,95 @@ const PromptChainCanvas = () => {
     const node = nodes.find(n => n.id === nodeId);
     if (!node || !node.data.prompt.trim()) return;
 
+    const startTime = Date.now();
+
     // Set node as running
     setNodes((nds) =>
       nds.map((n) =>
         n.id === nodeId
-          ? { ...n, data: { ...n.data, isRunning: true, output: '' } }
+          ? { ...n, data: { ...n.data, isRunning: true, output: '', error: undefined } }
           : n
       )
     );
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+    try {
+      // Simulate API delay based on model and temperature
+      const baseDelay = {
+        'gpt-4': 2000,
+        'gpt-3.5-turbo': 800,
+        'claude-3': 1500,
+        'gemini-pro': 1200,
+        'llama-2': 1000
+      }[node.data.model] || 1000;
+      
+      const temperatureDelay = (node.data.temperature || 0.7) * 500;
+      const totalDelay = baseDelay + temperatureDelay + Math.random() * 1000;
+      
+      await new Promise(resolve => setTimeout(resolve, totalDelay));
 
-    const processedPrompt = replaceVariables(node.data.prompt, nodeId);
-    const output = generateMockResponse(processedPrompt, node.data.model);
-    const score = generateMockScore();
+      const processedPrompt = replaceVariables(node.data.prompt, nodeId);
+      const output = generateMockResponse(processedPrompt, node.data.model, node.data.temperature || 0.7);
+      const score = generateMockScore();
+      const executionTime = Date.now() - startTime;
 
-    // Update node with results
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.id === nodeId
-          ? { 
-              ...n, 
-              data: { 
-                ...n.data, 
-                isRunning: false, 
-                output,
-                score 
-              } 
-            }
-          : n
-      )
-    );
+      // Simulate realistic token usage
+      const inputTokens = Math.floor(processedPrompt.length / 4) + Math.floor(Math.random() * 50);
+      const outputTokens = Math.floor(output.length / 4) + Math.floor(Math.random() * 100);
+
+      // Update node with results
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId
+            ? { 
+                ...n, 
+                data: { 
+                  ...n.data, 
+                  isRunning: false, 
+                  output,
+                  score,
+                  executionTime,
+                  tokenUsage: {
+                    input: inputTokens,
+                    output: outputTokens,
+                    total: inputTokens + outputTokens
+                  }
+                } 
+              }
+            : n
+        )
+      );
+
+      // Add to execution history
+      setExecutionHistory(prev => [...prev, {
+        nodeId,
+        title: node.data.title,
+        executionTime,
+        tokenUsage: {
+          input: inputTokens,
+          output: outputTokens,
+          total: inputTokens + outputTokens
+        },
+        score: score.overall,
+        timestamp: new Date()
+      }]);
+
+    } catch (error) {
+      // Update node with error
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId
+            ? { 
+                ...n, 
+                data: { 
+                  ...n.data, 
+                  isRunning: false, 
+                  error: 'Failed to execute prompt. Please try again.'
+                } 
+              }
+            : n
+        )
+      );
+    }
   };
 
   const getTopologicalOrder = (): string[] => {
@@ -208,28 +328,72 @@ const PromptChainCanvas = () => {
     return result;
   };
 
+  const getNextNodes = (nodeId: string, conditionResult?: boolean): string[] => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return [];
+
+    if (node.data.condition && conditionResult !== undefined) {
+      // Find edges based on condition result
+      return edges
+        .filter(edge => 
+          edge.source === nodeId && 
+          edge.sourceHandle === (conditionResult ? 'true' : 'false')
+        )
+        .map(edge => edge.target);
+    } else {
+      // Find all outgoing edges
+      return edges
+        .filter(edge => edge.source === nodeId && (!edge.sourceHandle || edge.sourceHandle === 'default'))
+        .map(edge => edge.target);
+    }
+  };
+
   const runFullChain = async () => {
     if (nodes.length === 0) return;
 
     setIsRunningChain(true);
-    const executionOrder = getTopologicalOrder();
+    setExecutionHistory([]);
+    
+    // Clear all outputs first
+    setNodes((nds) =>
+      nds.map((n) => ({ ...n, data: { ...n.data, output: '', score: undefined, error: undefined } }))
+    );
 
-    if (executionOrder.length === 0) {
-      alert('Cannot execute chain: Cycle detected in the flow');
+    // Find starting nodes (nodes with no incoming edges)
+    const startingNodes = nodes.filter(node => 
+      !edges.some(edge => edge.target === node.id)
+    );
+
+    if (startingNodes.length === 0) {
+      alert('No starting nodes found. Please ensure you have nodes without incoming connections.');
       setIsRunningChain(false);
       return;
     }
 
-    // Clear all outputs first
-    setNodes((nds) =>
-      nds.map((n) => ({ ...n, data: { ...n.data, output: '', score: undefined } }))
-    );
+    // Execute chain with conditional logic
+    const executedNodes = new Set<string>();
+    const queue = [...startingNodes.map(n => n.id)];
 
-    // Execute nodes in topological order
-    for (const nodeId of executionOrder) {
+    while (queue.length > 0) {
+      const nodeId = queue.shift()!;
+      if (executedNodes.has(nodeId)) continue;
+
       await runSingleNode(nodeId);
+      executedNodes.add(nodeId);
+
       // Small delay between nodes for visual effect
       await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Determine next nodes based on conditions
+      const node = nodes.find(n => n.id === nodeId);
+      if (node?.data.condition && node.data.score) {
+        const conditionResult = evaluateCondition(node.data.condition, node.data);
+        const nextNodes = getNextNodes(nodeId, conditionResult);
+        queue.push(...nextNodes);
+      } else {
+        const nextNodes = getNextNodes(nodeId);
+        queue.push(...nextNodes);
+      }
     }
 
     setIsRunningChain(false);
@@ -323,6 +487,18 @@ const PromptChainCanvas = () => {
         </div>
 
         <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowVisualization(!showVisualization)}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+              showVisualization 
+                ? 'bg-black text-white' 
+                : 'bg-gray-100 hover:bg-gray-200'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>Live Viz</span>
+          </button>
+
           <input
             type="file"
             accept=".json"
@@ -366,54 +542,68 @@ const PromptChainCanvas = () => {
       </div>
 
       {/* Canvas */}
-      <div className="flex-1">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          connectionMode={ConnectionMode.Loose}
-          fitView
-          proOptions={proOptions}
-          className="bg-gray-50"
-        >
-          <Background 
-            variant={BackgroundVariant.Dots} 
-            gap={20} 
-            size={1} 
-            color="#e5e7eb"
-          />
-          <Controls className="bg-white border border-gray-200 rounded-lg shadow-sm" />
-          <MiniMap 
-            className="bg-white border border-gray-200 rounded-lg shadow-sm"
-            nodeColor="#000000"
-            maskColor="rgba(0, 0, 0, 0.1)"
-          />
-          
-          {/* Welcome Panel */}
-          {nodes.length === 0 && (
-            <Panel position="center">
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 max-w-md text-center">
-                <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Zap className="w-8 h-8 text-white" />
+      <div className="flex-1 flex">
+        <div className={`transition-all duration-300 ${showVisualization ? 'w-2/3' : 'w-full'}`}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            nodeTypes={nodeTypes}
+            connectionMode={ConnectionMode.Loose}
+            fitView
+            proOptions={proOptions}
+            className="bg-gray-50"
+          >
+            <Background 
+              variant={BackgroundVariant.Dots} 
+              gap={20} 
+              size={1} 
+              color="#e5e7eb"
+            />
+            <Controls className="bg-white border border-gray-200 rounded-lg shadow-sm" />
+            <MiniMap 
+              className="bg-white border border-gray-200 rounded-lg shadow-sm"
+              nodeColor="#000000"
+              maskColor="rgba(0, 0, 0, 0.1)"
+            />
+            
+            {/* Welcome Panel */}
+            {nodes.length === 0 && (
+              <Panel position="center">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 max-w-md text-center">
+                  <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Zap className="w-8 h-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-black mb-2">Welcome to Prompt Chaining</h2>
+                  <p className="text-gray-600 mb-6">
+                    Create visual prompt workflows with conditional logic. Build complex multi-step reasoning chains with branching paths.
+                  </p>
+                  <button
+                    onClick={addPromptNode}
+                    className="flex items-center space-x-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors mx-auto"
+                  >
+                    <Plus className="w-5 h-5" />
+                    <span>Add Your First Node</span>
+                  </button>
                 </div>
-                <h2 className="text-2xl font-bold text-black mb-2">Welcome to Prompt Chaining</h2>
-                <p className="text-gray-600 mb-6">
-                  Create visual prompt workflows by connecting AI nodes. Build complex multi-step reasoning chains.
-                </p>
-                <button
-                  onClick={addPromptNode}
-                  className="flex items-center space-x-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors mx-auto"
-                >
-                  <Plus className="w-5 h-5" />
-                  <span>Add Your First Node</span>
-                </button>
-              </div>
-            </Panel>
-          )}
-        </ReactFlow>
+              </Panel>
+            )}
+          </ReactFlow>
+        </div>
+
+        {/* Live Visualization Panel */}
+        {showVisualization && (
+          <div className="w-1/3 border-l border-gray-200 bg-white">
+            <LiveChainVisualization 
+              nodes={nodes}
+              edges={edges}
+              executionHistory={executionHistory}
+              isRunning={isRunningChain}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

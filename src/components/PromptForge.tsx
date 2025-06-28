@@ -1,51 +1,146 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Play, Zap, ChevronDown, Sparkles } from 'lucide-react';
+import { ArrowLeft, Zap, BarChart3, GitBranch, Settings } from 'lucide-react';
 import PromptEditor from './PromptEditor';
 import ModelOutput from './ModelOutput';
 import PromptScore from './PromptScore';
+import VersionControl from './VersionControl';
+import VariableManager from './VariableManager';
+import MultiModelRunner from './MultiModelRunner';
+import VersionComparison from './VersionComparison';
+import Analytics from './Analytics';
+import { usePromptVersions } from '../hooks/usePromptVersions';
+import { Model, Variable, PromptScore as PromptScoreType } from '../types';
 
 const PromptForge = () => {
-  const [selectedModel, setSelectedModel] = useState('gpt-4');
-  const [prompt, setPrompt] = useState('');
-  const [output, setOutput] = useState('');
+  const [activeTab, setActiveTab] = useState<'editor' | 'analytics' | 'compare'>('editor');
+  const [variables, setVariables] = useState<Variable[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [promptScore, setPromptScore] = useState(null);
+  const [selectedVersionsForComparison, setSelectedVersionsForComparison] = useState<string[]>([]);
 
-  const models = [
-    { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model' },
-    { id: 'gpt-3.5', name: 'GPT-3.5 Turbo', description: 'Fast and efficient' }
+  const {
+    versions,
+    runs,
+    currentVersionId,
+    setCurrentVersionId,
+    createVersion,
+    getCurrentVersion,
+    addRun,
+    getRunsForVersion
+  } = usePromptVersions();
+
+  const currentVersion = getCurrentVersion();
+  const currentRuns = getRunsForVersion(currentVersionId);
+
+  const models: Model[] = [
+    { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', enabled: true },
+    { id: 'gpt-3.5', name: 'GPT-3.5 Turbo', description: 'Fast and efficient', provider: 'OpenAI', enabled: true },
+    { id: 'claude-3', name: 'Claude 3', description: 'Anthropic\'s latest', provider: 'Anthropic', enabled: true },
+    { id: 'gemini-pro', name: 'Gemini Pro', description: 'Google\'s advanced model', provider: 'Google', enabled: true },
+    { id: 'llama-2', name: 'Llama 2', description: 'Meta\'s open source model', provider: 'Meta', enabled: true }
   ];
 
-  const handleRunPrompt = async () => {
-    if (!prompt.trim()) return;
-    
-    setIsRunning(true);
-    setOutput('');
-    setPromptScore(null);
-    
-    // Simulate AI processing
-    setTimeout(() => {
-      const simulatedOutput = `This is a simulated response from ${selectedModel} based on your prompt: "${prompt.substring(0, 50)}..."\n\nIn a real implementation, this would be the actual AI response from the selected model. The response would be contextually relevant and follow the instructions provided in your prompt.`;
-      setOutput(simulatedOutput);
-      setIsRunning(false);
-      
-      // Simulate PromptScore evaluation
-      setTimeout(() => {
-        const score = {
-          relevance: Math.floor(Math.random() * 3) + 8, // 8-10
-          clarity: Math.floor(Math.random() * 3) + 7,   // 7-9
-          creativity: Math.floor(Math.random() * 4) + 6, // 6-9
-          critique: `This prompt demonstrates good structure and clear intent. The ${selectedModel} response shows strong alignment with the request. Consider adding more specific context or examples to further improve clarity and effectiveness.`
-        };
-        setPromptScore(score);
-      }, 1500);
-    }, 2000);
+  const handlePromptChange = (newPrompt: string) => {
+    // Update current version
+    const updatedVersion = { ...currentVersion, content: newPrompt };
+    // In a real app, this would update the version in the store
   };
 
+  const handleVariableChange = (name: string, value: string) => {
+    setVariables(prev => prev.map(v => v.name === name ? { ...v, value } : v));
+  };
+
+  const handleAddVariable = (name: string) => {
+    setVariables(prev => [...prev, { name, value: '' }]);
+  };
+
+  const handleRemoveVariable = (name: string) => {
+    setVariables(prev => prev.filter(v => v.name !== name));
+  };
+
+  const handleVariablesChange = useCallback((newVariables: Variable[]) => {
+    setVariables(newVariables);
+  }, []);
+
+  const replaceVariables = (prompt: string) => {
+    let result = prompt;
+    variables.forEach(variable => {
+      if (variable.value) {
+        result = result.replace(
+          new RegExp(`\\{\\{${variable.name}\\}\\}`, 'g'),
+          variable.value
+        );
+      }
+    });
+    return result;
+  };
+
+  const generateMockScore = (): PromptScoreType => ({
+    relevance: Math.floor(Math.random() * 3) + 8,
+    clarity: Math.floor(Math.random() * 3) + 7,
+    creativity: Math.floor(Math.random() * 4) + 6,
+    overall: 0, // Will be calculated
+    critique: `This prompt demonstrates good structure and clear intent. Consider adding more specific context or examples to further improve clarity and effectiveness.`
+  });
+
+  const handleRunModels = async (selectedModels: string[]) => {
+    if (!currentVersion.content.trim()) return;
+    
+    setIsRunning(true);
+    
+    const processedPrompt = replaceVariables(currentVersion.content);
+    
+    // Simulate running multiple models
+    for (const modelId of selectedModels) {
+      const startTime = Date.now();
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      
+      const executionTime = Date.now() - startTime;
+      const score = generateMockScore();
+      score.overall = Math.round(((score.relevance + score.clarity + score.creativity) / 3) * 10) / 10;
+      
+      const simulatedOutput = `Response from ${modelId.toUpperCase()}:\n\nThis is a simulated response based on your prompt: "${processedPrompt.substring(0, 100)}..."\n\nIn a real implementation, this would be the actual AI response from ${modelId}. The response would be contextually relevant and follow the instructions provided in your prompt.`;
+      
+      addRun({
+        versionId: currentVersionId,
+        modelId,
+        output: simulatedOutput,
+        score,
+        executionTime,
+        tokenUsage: {
+          input: Math.floor(Math.random() * 200) + 50,
+          output: Math.floor(Math.random() * 500) + 100,
+          total: 0 // Will be calculated
+        }
+      });
+    }
+    
+    setIsRunning(false);
+  };
+
+  const handleCreateVersion = (title: string, message: string) => {
+    createVersion(currentVersion.content, Object.fromEntries(variables.map(v => [v.name, v.value])), title, message);
+  };
+
+  const handleVersionSelect = (versionId: string) => {
+    setCurrentVersionId(versionId);
+    const version = versions.find(v => v.id === versionId);
+    if (version) {
+      const versionVariables = Object.entries(version.variables || {}).map(([name, value]) => ({ name, value }));
+      setVariables(versionVariables);
+    }
+  };
+
+  const tabs = [
+    { id: 'editor' as const, name: 'Editor', icon: Zap },
+    { id: 'analytics' as const, name: 'Analytics', icon: BarChart3 },
+    { id: 'compare' as const, name: 'Compare', icon: GitBranch }
+  ];
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       {/* Top Navigation Bar */}
       <div className="sticky top-0 z-50 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -66,96 +161,123 @@ const PromptForge = () => {
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
-              {/* Model Selector */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center space-x-2 bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-100 transition-colors"
-                >
-                  <span className="font-medium text-black">
-                    {models.find(m => m.id === selectedModel)?.name}
-                  </span>
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
-                </button>
-                
-                {showDropdown && (
-                  <div className="absolute top-full right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-10">
-                    {models.map((model) => (
-                      <button
-                        key={model.id}
-                        onClick={() => {
-                          setSelectedModel(model.id);
-                          setShowDropdown(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${
-                          selectedModel === model.id ? 'bg-gray-50 border-l-2 border-black' : ''
-                        }`}
-                      >
-                        <div className="font-medium text-black">{model.name}</div>
-                        <div className="text-sm text-gray-500">{model.description}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Run Button */}
-              <button
-                onClick={handleRunPrompt}
-                disabled={!prompt.trim() || isRunning}
-                className="flex items-center space-x-2 bg-black text-white px-6 py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-800 transition-all duration-200"
-              >
-                <Play className={`w-4 h-4 ${isRunning ? 'animate-pulse' : ''}`} />
-                <span>{isRunning ? 'Running...' : 'Run Prompt'}</span>
-              </button>
+            {/* Tab Navigation */}
+            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                      activeTab === tab.id
+                        ? 'bg-white text-black shadow-sm'
+                        : 'text-gray-600 hover:text-black'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{tab.name}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="space-y-8">
-          {/* Prompt Editor */}
-          <PromptEditor 
-            prompt={prompt} 
-            setPrompt={setPrompt}
-            isRunning={isRunning}
-          />
-
-          {/* Output and Score */}
-          {(output || isRunning) && (
-            <div className="grid lg:grid-cols-2 gap-8">
-              <ModelOutput 
-                output={output} 
-                isRunning={isRunning}
-                selectedModel={selectedModel}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {activeTab === 'editor' && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Left Sidebar */}
+            <div className="space-y-6">
+              <VersionControl
+                versions={versions}
+                currentVersionId={currentVersionId}
+                onVersionSelect={handleVersionSelect}
+                onCreateVersion={handleCreateVersion}
               />
               
-              {promptScore && (
-                <PromptScore score={promptScore} />
+              <VariableManager
+                variables={variables}
+                onVariableChange={handleVariableChange}
+                onAddVariable={handleAddVariable}
+                onRemoveVariable={handleRemoveVariable}
+              />
+            </div>
+
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-6">
+              <PromptEditor 
+                prompt={currentVersion.content} 
+                setPrompt={handlePromptChange}
+                isRunning={isRunning}
+                variables={variables}
+                onVariablesChange={handleVariablesChange}
+              />
+
+              <MultiModelRunner
+                models={models}
+                onRunModels={handleRunModels}
+                isRunning={isRunning}
+                runs={currentRuns}
+              />
+
+              {/* Model Outputs */}
+              {currentRuns.length > 0 && (
+                <div className="space-y-4">
+                  {currentRuns.slice(-3).map((run) => (
+                    <div key={run.id} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <ModelOutput 
+                        output={run.output} 
+                        isRunning={false}
+                        selectedModel={run.modelId}
+                      />
+                      {run.score && (
+                        <PromptScore score={run.score} />
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-          )}
 
-          {/* Welcome Message */}
-          {!output && !isRunning && (
-            <div className="text-center py-20">
-              <div className="inline-flex items-center space-x-2 bg-gray-50 border border-gray-200 rounded-full px-6 py-3 mb-6">
-                <Sparkles className="w-5 h-5 text-gray-700" />
-                <span className="text-gray-700 font-medium">Ready to forge amazing prompts?</span>
-              </div>
-              <h2 className="text-3xl font-bold text-black mb-4">
-                Start building your perfect AI prompt
-              </h2>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Write your prompt above, select your preferred AI model, and hit "Run Prompt" to see the magic happen. 
-                You'll get instant feedback with our PromptScore evaluation system.
-              </p>
+            {/* Right Sidebar */}
+            <div className="space-y-6">
+              <VersionComparison
+                versions={versions}
+                runs={runs}
+                selectedVersions={selectedVersionsForComparison}
+                onVersionSelect={(versionId) => {
+                  setSelectedVersionsForComparison(prev => 
+                    prev.includes(versionId) 
+                      ? prev.filter(id => id !== versionId)
+                      : [...prev, versionId].slice(0, 3)
+                  );
+                }}
+              />
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <Analytics versions={versions} runs={runs} />
+        )}
+
+        {activeTab === 'compare' && (
+          <VersionComparison
+            versions={versions}
+            runs={runs}
+            selectedVersions={selectedVersionsForComparison}
+            onVersionSelect={(versionId) => {
+              setSelectedVersionsForComparison(prev => 
+                prev.includes(versionId) 
+                  ? prev.filter(id => id !== versionId)
+                  : [...prev, versionId]
+              );
+            }}
+          />
+        )}
       </div>
     </div>
   );

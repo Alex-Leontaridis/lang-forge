@@ -750,7 +750,7 @@ if __name__ == "__main__":
       name: 'LangChain Python',
       description: 'Export as LangChain Python code',
       color: 'bg-green-600',
-      icon: '🐍',
+      icon: <span className="flex items-center"><img src="/src/components/logos/langgraph.png" alt="LangGraph" className="h-5 w-auto mr-1 object-contain" />🐍</span>,
       action: exportToLangChainPython
     },
     {
@@ -758,7 +758,7 @@ if __name__ == "__main__":
       name: 'LangChain JS',
       description: 'Export as LangChain JavaScript code',
       color: 'bg-yellow-600',
-      icon: '🟨',
+      icon: <span className="flex items-center"><img src="/src/components/logos/langgraph.png" alt="LangGraph" className="h-5 w-auto mr-1 object-contain" />🟨</span>,
       action: exportToLangChainJS
     },
     {
@@ -766,16 +766,8 @@ if __name__ == "__main__":
       name: 'OpenAI SDK',
       description: 'Export as OpenAI Python SDK code',
       color: 'bg-black',
-      icon: <img src={require('./logos/openai.png')} alt="OpenAI" className="w-5 h-5 inline" />,
+      icon: <img src="/src/components/logos/openai.png" alt="OpenAI" className="h-7 w-auto object-contain" />,
       action: exportToOpenAISDK
-    },
-    {
-      id: 'langgraph',
-      name: 'LangGraph',
-      description: 'Export as LangGraph code',
-      color: 'bg-orange-600',
-      icon: <img src={require('./logos/langgraph.png')} alt="LangGraph" className="w-5 h-5 inline" />,
-      action: exportToLangGraph
     },
     {
       id: 'json-config',

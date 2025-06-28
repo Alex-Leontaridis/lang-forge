@@ -38,17 +38,26 @@ const PromptForge = () => {
   const currentRuns = getRunsForVersion(currentVersionId);
 
   const models: Model[] = [
-    { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', logo: require('./logos/openai.png'), enabled: true },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient', provider: 'OpenAI', logo: require('./logos/openai.png'), enabled: true },
-    { id: 'claude-3', name: 'Claude 3', description: 'Anthropic model', provider: 'Anthropic', logo: require('./logos/anthropic.png'), enabled: true },
-    { id: 'gemini-pro', name: 'Gemini Pro', description: 'Google advanced model', provider: 'Google', logo: require('./logos/google.png'), enabled: true },
-    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', description: 'Google Gemma 2 9B IT', provider: 'Google', logo: require('./logos/google.png'), enabled: true },
-    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', description: 'Meta Llama 3.1 8B Instant', provider: 'Meta', logo: require('./logos/meta.png'), enabled: true },
-    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', description: 'Meta Llama 3.3 70B Versatile', provider: 'Meta', logo: require('./logos/meta.png'), enabled: true },
-    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', description: 'Meta Llama Guard 4 12B', provider: 'Meta', logo: require('./logos/meta.png'), enabled: true },
-    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', description: 'DeepSeek R1 Distill Llama 70B', provider: 'DeepSeek', logo: require('./logos/deepseek.png'), enabled: true },
-    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', description: 'Alibaba Qwen QWQ 32B', provider: 'Alibaba', logo: require('./logos/alibaba.png'), enabled: true },
-    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', description: 'Hugging Face Distil Whisper Large v3 EN', provider: 'HuggingFace', logo: require('./logos/huggingface.png'), enabled: true },
+    { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', logo: '/src/components/logos/openai.png', enabled: true },
+    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient', provider: 'OpenAI', logo: '/src/components/logos/openai.png', enabled: true },
+    { id: 'claude-3', name: 'Claude 3', description: 'Anthropic model', provider: 'Anthropic', logo: '/src/components/logos/anthropic.png', enabled: true },
+    { id: 'gemini-pro', name: 'Gemini Pro', description: 'Google advanced model', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
+    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', description: 'Google Gemma 2 9B IT', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
+    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp', description: 'Google Gemini 2.5 Pro Exp', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
+    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp', description: 'Google Gemini 2.0 Flash Exp', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
+    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT', description: 'Google Gemma 3 12B IT', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
+    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', description: 'Meta Llama 3.1 8B Instant', provider: 'Meta', logo: '/src/components/logos/meta.png', enabled: true },
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', description: 'Meta Llama 3.3 70B Versatile', provider: 'Meta', logo: '/src/components/logos/meta.png', enabled: true },
+    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', description: 'Meta Llama Guard 4 12B', provider: 'Meta', logo: '/src/components/logos/meta.png', enabled: true },
+    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', description: 'DeepSeek R1 Distill Llama 70B', provider: 'DeepSeek', logo: '/src/components/logos/deepseek.png', enabled: true },
+    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528', description: 'DeepSeek R1 0528', provider: 'DeepSeek', logo: '/src/components/logos/deepseek.png', enabled: true },
+    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B', description: 'DeepSeek R1 0528 Qwen3 8B', provider: 'DeepSeek', logo: '/src/components/logos/deepseek.png', enabled: true },
+    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base', description: 'DeepSeek V3 Base', provider: 'DeepSeek', logo: '/src/components/logos/deepseek.png', enabled: true },
+    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', description: 'Alibaba Qwen QWQ 32B', provider: 'Alibaba', logo: '/src/components/logos/alibaba.png', enabled: true },
+    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', description: 'Hugging Face Distil Whisper Large v3 EN', provider: 'HuggingFace', logo: '/src/components/logos/huggingface.png', enabled: true },
+    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B', description: 'Nvidia Llama 3.3 Nemotron Super 49B', provider: 'Nvidia', logo: '/src/components/logos/nvidia.png', enabled: true },
+    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', description: 'Mistral Small 3.2 24B Instruct', provider: 'Mistral', logo: '/src/components/logos/mistral.png', enabled: true },
+    { id: 'minimax/minimax-m1', name: 'MiniMax M1', description: 'MiniMax M1', provider: 'MiniMax', logo: '/src/components/logos/minimax.png', enabled: true },
   ];
 
   const handlePromptChange = (newPrompt: string) => {

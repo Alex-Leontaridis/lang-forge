@@ -199,7 +199,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs }) => {
 
         {/* Failure Rate */}
         <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Failure Rate (Score < 6)</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Failure Rate (Score &lt; 6)</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={failureRateData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -226,7 +226,6 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs }) => {
         </div>
       </div>
     </div>
-  )
   );
 };
 

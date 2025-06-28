@@ -44,3 +44,33 @@ export interface Variable {
   value: string;
   description?: string;
 }
+
+// New types for Prompt Chaining Canvas
+export interface PromptNode {
+  id: string;
+  title: string;
+  prompt: string;
+  model: string;
+  output: string;
+  isRunning: boolean;
+  score?: PromptScore;
+  position: { x: number; y: number };
+  variables: Record<string, string>;
+}
+
+export interface ChainEdge {
+  id: string;
+  source: string;
+  target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
+}
+
+export interface PromptChain {
+  id: string;
+  name: string;
+  nodes: PromptNode[];
+  edges: ChainEdge[];
+  createdAt: Date;
+  updatedAt: Date;
+}

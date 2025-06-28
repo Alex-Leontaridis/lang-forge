@@ -270,7 +270,7 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
                       className="w-full p-2 text-xs bg-white border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black"
                     />
                     <div className="text-xs text-gray-500 mt-1">
-                      Use conditions like: {{score}} > 7, {{sentiment}} == "positive"
+                      Use conditions like: &#123;&#123;score&#125;&#125; &gt; 7, &#123;&#123;sentiment&#125;&#125; == "positive"
                     </div>
                   </div>
                 </div>

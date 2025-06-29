@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow } from 'lucide-react';
+import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow, Menu, X, Search, Filter } from 'lucide-react';
 import PromptEditor from './PromptEditor';
 import ModelOutput from './ModelOutput';
 import PromptScore from './PromptScore';
@@ -23,6 +23,8 @@ const PromptForge = () => {
   const [currentModel, setCurrentModel] = useState<string>('gpt-3.5-turbo');
   const [systemMessage, setSystemMessage] = useState<string>('');
   const [showFullScoreReport, setShowFullScoreReport] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const {
     versions,
@@ -80,7 +82,6 @@ const PromptForge = () => {
   };
 
   const handleVariablesChange = useCallback((newVariables: Variable[]) => {
-    // Only update if the variables have actually changed
     const currentVariableNames = variables.map(v => v.name).sort();
     const newVariableNames = newVariables.map(v => v.name).sort();
     
@@ -186,58 +187,150 @@ const PromptForge = () => {
     { id: 'compare' as const, name: 'Compare', icon: GitBranch }
   ];
 
+  const filteredRuns = currentRuns.filter(run => {
+    if (!searchTerm) return true;
+    return run.modelId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+           run.output.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Navigation Bar */}
       <div className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <Link 
                 to="/" 
                 className="flex items-center space-x-2 text-gray-600 hover:text-black transition-colors"
               >
-                <ArrowLeft className="w-5 h-5" />
-                <span className="font-medium">Back to Home</span>
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="font-medium hidden sm:inline">Back to Home</span>
               </Link>
               <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-black rounded-lg flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-white" />
+                <div className="w-5 h-5 sm:w-6 sm:h-6 bg-black rounded-lg flex items-center justify-center">
+                  <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                 </div>
-                <span className="text-lg font-semibold text-black">PromptForge</span>
+                <span className="text-base sm:text-lg font-semibold text-black">PromptForge</span>
               </div>
             </div>
 
-            {/* Tab Navigation */}
-            <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden p-2 text-gray-600 hover:text-black transition-colors"
+            >
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+
+            {/* Desktop Tab Navigation */}
+            <div className="hidden lg:flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors ${
                       activeTab === tab.id
                         ? 'bg-white text-black shadow-sm'
                         : 'text-gray-600 hover:text-black'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
-                    <span>{tab.name}</span>
+                    <span className="hidden sm:inline">{tab.name}</span>
                   </button>
                 );
               })}
             </div>
           </div>
+
+          {/* Mobile Tab Navigation */}
+          <div className="lg:hidden mt-3 flex items-center space-x-1 bg-gray-100 rounded-lg p-1 overflow-x-auto">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? 'bg-white text-black shadow-sm'
+                      : 'text-gray-600 hover:text-black'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="text-sm">{tab.name}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 z-40 bg-black bg-opacity-50"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Content */}
-      <div className={activeTab === 'canvas' ? '' : 'max-w-7xl mx-auto px-6 py-8'}>
+      <div className={activeTab === 'canvas' ? '' : 'px-4 sm:px-6 py-4 sm:py-8'}>
         {activeTab === 'editor' && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Left Sidebar */}
-            <div className="space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 sm:gap-6">
+            {/* Mobile/Tablet Sidebar */}
+            <div className={`xl:hidden fixed inset-y-0 left-0 z-50 w-80 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${
+              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}>
+              <div className="h-full overflow-y-auto p-4 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900">Controls</h2>
+                  <button
+                    onClick={() => setSidebarOpen(false)}
+                    className="p-2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                
+                <VersionControl
+                  versions={versions}
+                  currentVersionId={currentVersionId}
+                  onVersionSelect={handleVersionSelect}
+                  onCreateVersion={handleCreateVersion}
+                />
+                
+                <VariableManager
+                  variables={variables}
+                  onVariableChange={handleVariableChange}
+                  onAddVariable={handleAddVariable}
+                  onRemoveVariable={handleRemoveVariable}
+                />
+
+                {/* System Message */}
+                <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                  <div className="p-4 border-b border-gray-200">
+                    <div className="flex items-center space-x-2">
+                      <Settings className="w-5 h-5 text-gray-700" />
+                      <span className="font-semibold text-gray-900">System Message</span>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <textarea
+                      value={systemMessage}
+                      onChange={(e) => setSystemMessage(e.target.value)}
+                      placeholder="Optional system message to set context for the AI..."
+                      className="w-full h-24 p-3 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-black text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Left Sidebar */}
+            <div className="hidden xl:block space-y-6">
               <VersionControl
                 versions={versions}
                 currentVersionId={currentVersionId}
@@ -272,7 +365,18 @@ const PromptForge = () => {
             </div>
 
             {/* Main Content */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="xl:col-span-2 space-y-4 sm:space-y-6">
+              {/* Mobile Controls Button */}
+              <div className="xl:hidden">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Controls</span>
+                </button>
+              </div>
+
               <PromptEditor 
                 prompt={currentVersion.content} 
                 setPrompt={handlePromptChange}
@@ -288,12 +392,27 @@ const PromptForge = () => {
                 runs={currentRuns}
               />
 
-              {/* Recent Runs */}
+              {/* Search and Filter for Recent Runs */}
               {currentRuns.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Recent Runs</h3>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Recent Runs</h3>
+                    <div className="flex items-center space-x-2">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Search runs..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {currentRuns.slice(-6).map((run) => {
+                    {filteredRuns.slice(-6).map((run) => {
                       const model = models.find(m => m.id === run.modelId);
                       return (
                         <ModelOutput 
@@ -321,29 +440,10 @@ const PromptForge = () => {
                   selectedModel={currentModel}
                 />
               )}
-
-              {/* Recent Runs */}
-              {currentRuns.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Recent Runs</h3>
-                  {currentRuns.slice(-3).map((run) => (
-                    <div key={run.id} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <ModelOutput 
-                        output={run.output} 
-                        isRunning={false}
-                        selectedModel={run.modelId}
-                      />
-                      {run.score && (
-                        <PromptScore score={run.score} />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Right Sidebar */}
-            <div className="space-y-6">
+            <div className="hidden xl:block space-y-6">
               <VersionComparison
                 versions={versions}
                 runs={runs}
@@ -376,35 +476,39 @@ const PromptForge = () => {
         )}
 
         {activeTab === 'analytics' && (
-          <Analytics versions={versions} runs={runs} />
+          <div className="max-w-7xl mx-auto">
+            <Analytics versions={versions} runs={runs} />
+          </div>
         )}
 
         {activeTab === 'compare' && (
-          <VersionComparison
-            versions={versions}
-            runs={runs}
-            selectedVersions={selectedVersionsForComparison}
-            onVersionSelect={(versionId) => {
-              setSelectedVersionsForComparison(prev => 
-                prev.includes(versionId) 
-                  ? prev.filter(id => id !== versionId)
-                  : [...prev, versionId]
-              );
-            }}
-          />
+          <div className="max-w-4xl mx-auto">
+            <VersionComparison
+              versions={versions}
+              runs={runs}
+              selectedVersions={selectedVersionsForComparison}
+              onVersionSelect={(versionId) => {
+                setSelectedVersionsForComparison(prev => 
+                  prev.includes(versionId) 
+                    ? prev.filter(id => id !== versionId)
+                    : [...prev, versionId]
+                );
+              }}
+            />
+          </div>
         )}
       </div>
 
       {/* Full Score Report Modal */}
       {showFullScoreReport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full">
+          <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             {(() => {
               const run = currentRuns.find(r => r.id === showFullScoreReport);
               return run?.score ? (
-                <PromptScore 
-                  score={run.score} 
-                />
+                <div className="p-6">
+                  <PromptScore score={run.score} />
+                </div>
               ) : null;
             })()}
             <div className="p-4 border-t border-gray-200">

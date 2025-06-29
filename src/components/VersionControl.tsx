@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GitBranch, Plus, Clock, MessageSquare, ChevronDown, ChevronRight } from 'lucide-react';
+import { GitBranch, Plus, Clock, MessageSquare, ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { PromptVersion } from '../types';
 
 interface VersionControlProps {
@@ -19,6 +19,7 @@ const VersionControl: React.FC<VersionControlProps> = ({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newMessage, setNewMessage] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleCreateVersion = () => {
     if (newTitle.trim()) {
@@ -60,9 +61,15 @@ const VersionControl: React.FC<VersionControlProps> = ({
     }
   };
 
+  const filteredVersions = versions.filter(version =>
+    searchTerm === '' || 
+    version.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    version.message?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-3 sm:p-4 border-b border-gray-200">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="flex items-center space-x-2 w-full text-left"
@@ -72,24 +79,24 @@ const VersionControl: React.FC<VersionControlProps> = ({
           ) : (
             <ChevronRight className="w-4 h-4 text-gray-500" />
           )}
-          <GitBranch className="w-5 h-5 text-gray-700" />
-          <span className="font-semibold text-gray-900">Version History</span>
-          <span className="text-sm text-gray-500">({versions.length})</span>
+          <GitBranch className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+          <span className="font-semibold text-gray-900 text-sm sm:text-base">Version History</span>
+          <span className="text-xs sm:text-sm text-gray-500">({versions.length})</span>
         </button>
       </div>
 
       {isExpanded && (
-        <div className="p-4">
+        <div className="p-3 sm:p-4">
           <button
             onClick={() => setShowCreateForm(true)}
-            className="flex items-center space-x-2 w-full p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors mb-4"
+            className="flex items-center space-x-2 w-full p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors mb-4 text-sm sm:text-base"
           >
             <Plus className="w-4 h-4 text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">Create New Version</span>
+            <span className="font-medium text-gray-700">Create New Version</span>
           </button>
 
           {showCreateForm && (
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="mb-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
               <input
                 type="text"
                 placeholder="Version title"
@@ -101,18 +108,18 @@ const VersionControl: React.FC<VersionControlProps> = ({
                 placeholder="Commit message (optional)"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-lg mb-2 text-sm h-20 resize-none"
+                className="w-full p-2 border border-gray-300 rounded-lg mb-2 text-sm h-16 sm:h-20 resize-none"
               />
-              <div className="flex space-x-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={handleCreateVersion}
-                  className="px-3 py-1 bg-black text-white rounded text-sm hover:bg-gray-800"
+                  className="px-3 py-1.5 bg-black text-white rounded text-sm hover:bg-gray-800 flex-1 sm:flex-none"
                 >
                   Create
                 </button>
                 <button
                   onClick={() => setShowCreateForm(false)}
-                  className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
+                  className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300 flex-1 sm:flex-none"
                 >
                   Cancel
                 </button>
@@ -120,8 +127,22 @@ const VersionControl: React.FC<VersionControlProps> = ({
             </div>
           )}
 
+          {/* Search */}
+          {versions.length > 3 && (
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search versions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
+              />
+            </div>
+          )}
+
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {versions.slice().reverse().map((version) => (
+            {filteredVersions.slice().reverse().map((version) => (
               <button
                 key={version.id}
                 onClick={() => onVersionSelect(version.id)}
@@ -147,6 +168,12 @@ const VersionControl: React.FC<VersionControlProps> = ({
               </button>
             ))}
           </div>
+
+          {filteredVersions.length === 0 && searchTerm && (
+            <div className="text-center py-4 text-gray-500">
+              <p className="text-sm">No versions found matching "{searchTerm}"</p>
+            </div>
+          )}
         </div>
       )}
     </div>

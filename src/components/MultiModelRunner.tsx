@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Bot, Clock, Zap, CheckCircle, AlertCircle } from 'lucide-react';
+import { Play, Bot, Clock, Zap, CheckCircle, AlertCircle, Search, Filter } from 'lucide-react';
 import { Model, ModelRun } from '../types';
 
 interface MultiModelRunnerProps {
@@ -16,6 +16,8 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
   runs
 }) => {
   const [selectedModels, setSelectedModels] = useState<string[]>(['gpt-4']);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterProvider, setFilterProvider] = useState<string>('all');
 
   const handleModelToggle = (modelId: string) => {
     setSelectedModels(prev => 
@@ -41,29 +43,70 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
     return `${(time / 1000).toFixed(1)}s`;
   };
 
+  const filteredModels = models.filter(model => {
+    const matchesSearch = searchTerm === '' || 
+      model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      model.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesProvider = filterProvider === 'all' || model.provider === filterProvider;
+    
+    return matchesSearch && matchesProvider;
+  });
+
+  const providers = [...new Set(models.map(m => m.provider))];
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
+      <div className="p-3 sm:p-4 border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center space-x-2">
-            <Bot className="w-5 h-5 text-gray-700" />
-            <span className="font-semibold text-gray-900">Multi-Model Runner</span>
-            <span className="text-sm text-gray-500">({selectedModels.length}/5)</span>
+            <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+            <span className="font-semibold text-gray-900 text-sm sm:text-base">Multi-Model Runner</span>
+            <span className="text-xs sm:text-sm text-gray-500">({selectedModels.length}/5)</span>
           </div>
+          
           <button
             onClick={handleRunSelected}
             disabled={selectedModels.length === 0 || isRunning}
-            className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors"
+            className="flex items-center justify-center space-x-2 px-4 py-2 bg-black text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors text-sm sm:text-base"
           >
             <Play className={`w-4 h-4 ${isRunning ? 'animate-pulse' : ''}`} />
             <span>{isRunning ? 'Running...' : 'Run Selected'}</span>
           </button>
         </div>
+
+        {/* Search and Filter */}
+        <div className="flex flex-col sm:flex-row gap-2 mt-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search models..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
+            />
+          </div>
+          
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <select
+              value={filterProvider}
+              onChange={(e) => setFilterProvider(e.target.value)}
+              className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black appearance-none bg-white"
+            >
+              <option value="all">All Providers</option>
+              {providers.map(provider => (
+                <option key={provider} value={provider}>{provider}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {models.map((model) => {
+      <div className="p-3 sm:p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-3">
+          {filteredModels.map((model) => {
             const isSelected = selectedModels.includes(model.id);
             const status = getRunStatus(model.id);
             const run = runs.find(r => r.modelId === model.id);
@@ -86,7 +129,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
                       onChange={() => handleModelToggle(model.id)}
                       className="rounded border-gray-300 text-black focus:ring-black"
                     />
-                    <span className="font-medium text-gray-900">{model.name}</span>
+                    <span className="font-medium text-gray-900 text-sm">{model.name}</span>
                   </div>
                   
                   {status === 'completed' && (
@@ -97,10 +140,10 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
                   )}
                 </div>
                 
-                <p className="text-xs text-gray-600 mb-2">{model.description}</p>
+                <p className="text-xs text-gray-600 mb-2 line-clamp-2">{model.description}</p>
                 
                 {run && (
-                  <div className="flex items-center space-x-4 text-xs text-gray-500">
+                  <div className="flex items-center space-x-3 sm:space-x-4 text-xs text-gray-500">
                     <div className="flex items-center space-x-1">
                       <Clock className="w-3 h-3" />
                       <span>{formatExecutionTime(run.executionTime)}</span>
@@ -121,7 +164,14 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
           })}
         </div>
 
-        {selectedModels.length === 0 && (
+        {filteredModels.length === 0 && (
+          <div className="text-center py-6 text-gray-500">
+            <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No models found matching your criteria</p>
+          </div>
+        )}
+
+        {selectedModels.length === 0 && filteredModels.length > 0 && (
           <div className="text-center py-6 text-gray-500">
             <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">Select at least one model to run</p>

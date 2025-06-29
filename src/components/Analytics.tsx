@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, Cell } from 'recharts';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { TrendingUp, BarChart3, Clock, Zap, Target, AlertTriangle } from 'lucide-react';
 import { ModelRun, PromptVersion } from '../types';
 
@@ -86,60 +86,58 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs }) => {
     };
   });
 
-  const COLORS = ['#000000', '#374151', '#6B7280', '#9CA3AF', '#D1D5DB'];
-
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-2 mb-6">
-        <TrendingUp className="w-6 h-6 text-gray-700" />
-        <h2 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h2>
+        <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" />
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Analytics Dashboard</h2>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
           <div className="flex items-center space-x-2 mb-2">
-            <Target className="w-5 h-5 text-gray-600" />
-            <span className="text-sm font-medium text-gray-600">Total Versions</span>
+            <Target className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+            <span className="text-xs sm:text-sm font-medium text-gray-600">Total Versions</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{versions.length}</div>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900">{versions.length}</div>
         </div>
         
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
           <div className="flex items-center space-x-2 mb-2">
-            <BarChart3 className="w-5 h-5 text-gray-600" />
-            <span className="text-sm font-medium text-gray-600">Total Runs</span>
+            <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+            <span className="text-xs sm:text-sm font-medium text-gray-600">Total Runs</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">{runs.length}</div>
+          <div className="text-xl sm:text-2xl font-bold text-gray-900">{runs.length}</div>
         </div>
         
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
           <div className="flex items-center space-x-2 mb-2">
-            <Clock className="w-5 h-5 text-gray-600" />
-            <span className="text-sm font-medium text-gray-600">Avg Response Time</span>
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+            <span className="text-xs sm:text-sm font-medium text-gray-600">Avg Response Time</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">
+          <div className="text-xl sm:text-2xl font-bold text-gray-900">
             {runs.length > 0 ? `${(runs.reduce((sum, run) => sum + run.executionTime, 0) / runs.length / 1000).toFixed(1)}s` : '0s'}
           </div>
         </div>
         
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
           <div className="flex items-center space-x-2 mb-2">
-            <Zap className="w-5 h-5 text-gray-600" />
-            <span className="text-sm font-medium text-gray-600">Total Tokens</span>
+            <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+            <span className="text-xs sm:text-sm font-medium text-gray-600">Total Tokens</span>
           </div>
-          <div className="text-2xl font-bold text-gray-900">
+          <div className="text-xl sm:text-2xl font-bold text-gray-900">
             {runs.reduce((sum, run) => sum + run.tokenUsage.total, 0).toLocaleString()}
           </div>
         </div>
       </div>
 
       {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* PromptScore Over Time */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">PromptScore Over Time</h3>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">PromptScore Over Time</h3>
+          <ResponsiveContainer width="100%" height={250}>
             <LineChart data={scoreOverTimeData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis dataKey="version" tick={{ fontSize: 12 }} />
@@ -153,9 +151,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs }) => {
         </div>
 
         {/* Model Performance Comparison */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Model Performance Comparison</h3>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Model Performance Comparison</h3>
+          <ResponsiveContainer width="100%" height={250}>
             <BarChart data={modelComparisonData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis dataKey="model" tick={{ fontSize: 12 }} />
@@ -169,9 +167,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs }) => {
         </div>
 
         {/* Execution Time */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Prompt Execution Time</h3>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Prompt Execution Time</h3>
+          <ResponsiveContainer width="100%" height={250}>
             <BarChart data={executionTimeData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis dataKey="version" tick={{ fontSize: 12 }} />
@@ -183,9 +181,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs }) => {
         </div>
 
         {/* Token Usage */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Token Usage</h3>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Token Usage</h3>
+          <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={tokenUsageData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis dataKey="version" tick={{ fontSize: 12 }} />
@@ -198,9 +196,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs }) => {
         </div>
 
         {/* Failure Rate */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Failure Rate (Score &lt; 6)</h3>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Failure Rate (Score &lt; 6)</h3>
+          <ResponsiveContainer width="100%" height={250}>
             <LineChart data={failureRateData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis dataKey="version" tick={{ fontSize: 12 }} />
@@ -212,9 +210,9 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs }) => {
         </div>
 
         {/* Version Comparison Bar Chart */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Version Score Comparison</h3>
-          <ResponsiveContainer width="100%" height={300}>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Version Score Comparison</h3>
+          <ResponsiveContainer width="100%" height={250}>
             <BarChart data={scoreOverTimeData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis dataKey="version" tick={{ fontSize: 12 }} />

@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow, Menu, X, Search, Filter } from 'lucide-react';
+import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow, Menu, X, Search, Filter, ChevronDown, Edit3 } from 'lucide-react';
 import PromptEditor from './PromptEditor';
 import ModelOutput from './ModelOutput';
 import PromptScore from './PromptScore';
@@ -25,6 +25,13 @@ const PromptForge = () => {
   const [showFullScoreReport, setShowFullScoreReport] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // New state for onboarding
+  const [isFirstTime, setIsFirstTime] = useState<boolean>(() => {
+    const hasSetup = localStorage.getItem('promptforge_setup_complete');
+    return !hasSetup;
+  });
+  const [showSystemSettings, setShowSystemSettings] = useState(false);
 
   const {
     versions,
@@ -66,6 +73,19 @@ const PromptForge = () => {
     { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', description: 'Mistral Small 3.2 24B Instruct (OpenRouter)', provider: 'OpenRouter', logo: '/src/components/logos/mistral.png', enabled: true },
     { id: 'minimax/minimax-m1', name: 'MiniMax M1', description: 'MiniMax M1 (OpenRouter)', provider: 'OpenRouter', logo: '/src/components/logos/minimax.png', enabled: true },
   ];
+
+  // Load saved system settings on mount
+  useEffect(() => {
+    const savedSystemMessage = localStorage.getItem('promptforge_system_message');
+    const savedModel = localStorage.getItem('promptforge_default_model');
+    
+    if (savedSystemMessage) {
+      setSystemMessage(savedSystemMessage);
+    }
+    if (savedModel) {
+      setCurrentModel(savedModel);
+    }
+  }, []);
 
   const handlePromptChange = (newPrompt: string) => {
     updateVersion(currentVersionId, { content: newPrompt });
@@ -184,18 +204,34 @@ const PromptForge = () => {
 
   const handleDeleteVersion = (versionId: string) => {
     deleteVersion(versionId);
-    // Remove from comparison if it was selected
     setSelectedVersionsForComparison(prev => prev.filter(id => id !== versionId));
   };
 
   const handleDuplicateVersion = (versionId: string) => {
     const duplicatedVersion = duplicateVersion(versionId);
     if (duplicatedVersion) {
-      // Switch to the duplicated version
       setCurrentVersionId(duplicatedVersion.id);
       const versionVariables = Object.entries(duplicatedVersion.variables || {}).map(([name, value]) => ({ name, value }));
       setVariables(versionVariables);
     }
+  };
+
+  const handleCompleteSetup = () => {
+    // Save system settings
+    localStorage.setItem('promptforge_system_message', systemMessage);
+    localStorage.setItem('promptforge_default_model', currentModel);
+    localStorage.setItem('promptforge_setup_complete', 'true');
+    
+    setIsFirstTime(false);
+  };
+
+  const handleSystemSettingsChange = (newSystemMessage: string, newModel: string) => {
+    setSystemMessage(newSystemMessage);
+    setCurrentModel(newModel);
+    
+    // Save to localStorage
+    localStorage.setItem('promptforge_system_message', newSystemMessage);
+    localStorage.setItem('promptforge_default_model', newModel);
   };
 
   const tabs = [
@@ -210,6 +246,80 @@ const PromptForge = () => {
     return run.modelId.toLowerCase().includes(searchTerm.toLowerCase()) ||
            run.output.toLowerCase().includes(searchTerm.toLowerCase());
   });
+
+  // First-time setup modal
+  if (isFirstTime) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 max-w-2xl w-full p-8">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Zap className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-black mb-2">Welcome to PromptForge</h1>
+            <p className="text-gray-600 text-lg">Let's set up your AI assistant to get started</p>
+          </div>
+
+          <div className="space-y-6">
+            {/* Default Model Selection */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-3">
+                Choose Your Default AI Model
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {models.slice(0, 4).map((model) => (
+                  <button
+                    key={model.id}
+                    onClick={() => setCurrentModel(model.id)}
+                    className={`p-4 border-2 rounded-xl text-left transition-all ${
+                      currentModel === model.id
+                        ? 'border-black bg-gray-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="font-medium text-gray-900">{model.name}</div>
+                    <div className="text-sm text-gray-600 mt-1">{model.description}</div>
+                    <div className="text-xs text-gray-500 mt-1">{model.provider}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* System Message */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-3">
+                System Message (Optional)
+              </label>
+              <textarea
+                value={systemMessage}
+                onChange={(e) => setSystemMessage(e.target.value)}
+                placeholder="You are a helpful AI assistant. Be concise and accurate in your responses..."
+                className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-black text-sm"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                This sets the context and behavior for your AI assistant across all prompts.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
+              <button
+                onClick={() => setIsFirstTime(false)}
+                className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium text-gray-700 transition-colors"
+              >
+                Skip Setup
+              </button>
+              <button
+                onClick={handleCompleteSetup}
+                className="flex-1 px-6 py-3 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-colors"
+              >
+                Complete Setup
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -233,33 +343,44 @@ const PromptForge = () => {
               </div>
             </div>
 
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-2 text-gray-600 hover:text-black transition-colors"
-            >
-              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+            <div className="flex items-center space-x-3">
+              {/* System Settings Button */}
+              <button
+                onClick={() => setShowSystemSettings(true)}
+                className="flex items-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Settings</span>
+              </button>
 
-            {/* Desktop Tab Navigation */}
-            <div className="hidden lg:flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors ${
-                      activeTab === tab.id
-                        ? 'bg-white text-black shadow-sm'
-                        : 'text-gray-600 hover:text-black'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="hidden sm:inline">{tab.name}</span>
-                  </button>
-                );
-              })}
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden p-2 text-gray-600 hover:text-black transition-colors"
+              >
+                {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+
+              {/* Desktop Tab Navigation */}
+              <div className="hidden lg:flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors ${
+                        activeTab === tab.id
+                          ? 'bg-white text-black shadow-sm'
+                          : 'text-gray-600 hover:text-black'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="hidden sm:inline">{tab.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -328,24 +449,6 @@ const PromptForge = () => {
                   onAddVariable={handleAddVariable}
                   onRemoveVariable={handleRemoveVariable}
                 />
-
-                {/* System Message */}
-                <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                  <div className="p-4 border-b border-gray-200">
-                    <div className="flex items-center space-x-2">
-                      <Settings className="w-5 h-5 text-gray-700" />
-                      <span className="font-semibold text-gray-900">System Message</span>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <textarea
-                      value={systemMessage}
-                      onChange={(e) => setSystemMessage(e.target.value)}
-                      placeholder="Optional system message to set context for the AI..."
-                      className="w-full h-24 p-3 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-black text-sm"
-                    />
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -366,24 +469,6 @@ const PromptForge = () => {
                 onAddVariable={handleAddVariable}
                 onRemoveVariable={handleRemoveVariable}
               />
-
-              {/* System Message */}
-              <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                <div className="p-4 border-b border-gray-200">
-                  <div className="flex items-center space-x-2">
-                    <Settings className="w-5 h-5 text-gray-700" />
-                    <span className="font-semibold text-gray-900">System Message</span>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <textarea
-                    value={systemMessage}
-                    onChange={(e) => setSystemMessage(e.target.value)}
-                    placeholder="Optional system message to set context for the AI..."
-                    className="w-full h-24 p-3 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-black text-sm"
-                  />
-                </div>
-              </div>
             </div>
 
             {/* Main Content */}
@@ -513,6 +598,86 @@ const PromptForge = () => {
           </div>
         )}
       </div>
+
+      {/* System Settings Modal */}
+      {showSystemSettings && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-900">System Settings</h2>
+                <button
+                  onClick={() => setShowSystemSettings(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Default Model Selection */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                  Default AI Model
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {models.slice(0, 6).map((model) => (
+                    <button
+                      key={model.id}
+                      onClick={() => setCurrentModel(model.id)}
+                      className={`p-3 border-2 rounded-xl text-left transition-all ${
+                        currentModel === model.id
+                          ? 'border-black bg-gray-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-medium text-gray-900 text-sm">{model.name}</div>
+                      <div className="text-xs text-gray-600 mt-1">{model.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* System Message */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                  System Message
+                </label>
+                <textarea
+                  value={systemMessage}
+                  onChange={(e) => setSystemMessage(e.target.value)}
+                  placeholder="You are a helpful AI assistant. Be concise and accurate in your responses..."
+                  className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-black text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  This sets the context and behavior for your AI assistant across all prompts.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => setShowSystemSettings(false)}
+                  className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors font-medium text-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    handleSystemSettingsChange(systemMessage, currentModel);
+                    setShowSystemSettings(false);
+                  }}
+                  className="flex-1 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors font-medium"
+                >
+                  Save Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Full Score Report Modal */}
       {showFullScoreReport && (

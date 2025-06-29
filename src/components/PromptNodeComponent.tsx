@@ -34,7 +34,6 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const models = [
-<<<<<<< HEAD
     { id: 'gpt-4', name: 'GPT-4', logo: '/src/components/logos/openai.png', color: 'bg-green-500' },
     { id: 'gpt-3.5-turbo', name: 'GPT-3.5', logo: '/src/components/logos/openai.png', color: 'bg-green-500' },
     { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', logo: '/src/components/logos/google.png', color: 'bg-blue-500' },
@@ -56,13 +55,6 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
     { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B', logo: '/src/components/logos/nvidia.png', color: 'bg-green-600' },
     { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', logo: '/src/components/logos/mistral.png', color: 'bg-blue-600' },
     { id: 'minimax/minimax-m1', name: 'MiniMax M1', logo: '/src/components/logos/minimax.png', color: 'bg-pink-500' },
-=======
-    { id: 'gpt-4', name: 'GPT-4', color: 'bg-purple-500' },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5', color: 'bg-green-500' },
-    { id: 'claude-3', name: 'Claude 3', color: 'bg-orange-500' },
-    { id: 'gemini-pro', name: 'Gemini Pro', color: 'bg-blue-500' },
-    { id: 'llama-2', name: 'Llama 2', color: 'bg-red-500' }
->>>>>>> 14e150fe0346b5bda1d4cadb07601ec100c1098d
   ];
 
   const selectedModel = models.find(m => m.id === data.model) || models[0];

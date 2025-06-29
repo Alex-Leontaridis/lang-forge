@@ -107,25 +107,21 @@ const PromptForge = () => {
     setIsRunning(true);
     const processedPrompt = replaceVariables(currentVersion.content);
     const TIMEOUT_MS = 20000;
-
-    // Helper to add timeout to a promise
     const withTimeout = (promise: Promise<any>, ms: number) => {
       return Promise.race([
         promise,
         new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), ms))
       ]);
     };
-
     await Promise.allSettled(selectedModels.map(async (modelId) => {
       const startTime = Date.now();
       try {
-        // Use real API call for all models, with timeout
         const result = await withTimeout(
           apiService.generateCompletion(
             modelId,
             processedPrompt,
             systemMessage || undefined,
-            0.7 // temperature
+            0.7
           ),
           TIMEOUT_MS
         );
@@ -136,12 +132,11 @@ const PromptForge = () => {
           total: result.usage.total_tokens
         } : { input: 0, output: 0, total: 0 };
         const executionTime = Date.now() - startTime;
-        // Use GPT-4 to evaluate the response
         const score = await withTimeout(
           apiService.evaluatePromptResponse(
             processedPrompt,
             output,
-            0.3 // Low temperature for consistent evaluation
+            0.3
           ),
           TIMEOUT_MS
         );
@@ -153,7 +148,6 @@ const PromptForge = () => {
           executionTime,
           tokenUsage
         });
-        // Update current output for the first model
         if (selectedModels[0] === modelId) {
           setCurrentOutput(output);
           setCurrentModel(modelId);
@@ -294,7 +288,7 @@ const PromptForge = () => {
                 runs={currentRuns}
               />
 
-              {/* Recent Runs Grid */}
+              {/* Recent Runs */}
               {currentRuns.length > 0 && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900">Recent Runs</h3>
@@ -326,6 +320,25 @@ const PromptForge = () => {
                   isRunning={isRunning}
                   selectedModel={currentModel}
                 />
+              )}
+
+              {/* Recent Runs */}
+              {currentRuns.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Recent Runs</h3>
+                  {currentRuns.slice(-3).map((run) => (
+                    <div key={run.id} className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <ModelOutput 
+                        output={run.output} 
+                        isRunning={false}
+                        selectedModel={run.modelId}
+                      />
+                      {run.score && (
+                        <PromptScore score={run.score} />
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 
@@ -391,7 +404,6 @@ const PromptForge = () => {
               return run?.score ? (
                 <PromptScore 
                   score={run.score} 
-                  compact={false}
                 />
               ) : null;
             })()}

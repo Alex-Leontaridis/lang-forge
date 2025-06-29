@@ -86,21 +86,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
                       onChange={() => handleModelToggle(model.id)}
                       className="rounded border-gray-300 text-black focus:ring-black"
                     />
-                    <img
-                      src={model.logo}
-                      alt={model.name + ' logo'}
-                      className={
-                        [
-                          'object-contain',
-                          model.provider === 'OpenAI' || model.provider === 'Anthropic' || model.provider === 'Meta' || model.provider === 'Alibaba'
-                            ? 'h-10 w-10' // Larger for these providers
-                            : 'h-7 w-7',
-                          model.provider === 'OpenAI' ? '' : 'bg-white', // Remove bg for OpenAI
-                          'rounded p-1'
-                        ].join(' ')
-                      }
-                    />
-                    <span className="font-medium text-gray-900 text-xs">{model.name}</span>
+                    <span className="font-medium text-gray-900">{model.name}</span>
                   </div>
                   
                   {status === 'completed' && (

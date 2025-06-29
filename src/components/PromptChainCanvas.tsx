@@ -477,11 +477,6 @@ const PromptChainCanvas = () => {
     downloadFile(`${chainName.replace(/\s+/g, '_')}_openai.py`, code);
   };
 
-  const exportToLangGraph = () => {
-    // Implementation for exporting to LangGraph
-    console.log('Export to LangGraph');
-  };
-
   const exportToJSON = () => {
     const config = generateJSONConfig();
     downloadFile(`${chainName.replace(/\s+/g, '_')}_config.json`, JSON.stringify(config, null, 2));
@@ -751,7 +746,7 @@ if __name__ == "__main__":
       name: 'LangChain Python',
       description: 'Export as LangChain Python code',
       color: 'bg-green-600',
-      icon: <span className="flex items-center"><img src="/src/components/logos/langgraph.png" alt="LangGraph" className="h-5 w-auto mr-1 object-contain" />🐍</span>,
+      icon: '🐍',
       action: exportToLangChainPython
     },
     {
@@ -759,7 +754,7 @@ if __name__ == "__main__":
       name: 'LangChain JS',
       description: 'Export as LangChain JavaScript code',
       color: 'bg-yellow-600',
-      icon: <span className="flex items-center"><img src="/src/components/logos/langgraph.png" alt="LangGraph" className="h-5 w-auto mr-1 object-contain" />🟨</span>,
+      icon: '🟨',
       action: exportToLangChainJS
     },
     {
@@ -767,7 +762,7 @@ if __name__ == "__main__":
       name: 'OpenAI SDK',
       description: 'Export as OpenAI Python SDK code',
       color: 'bg-black',
-      icon: <img src="/src/components/logos/openai.png" alt="OpenAI" className="h-7 w-auto object-contain" />,
+      icon: '🤖',
       action: exportToOpenAISDK
     },
     {

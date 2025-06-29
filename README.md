@@ -1,98 +1,204 @@
 # PromptForge
 
-A powerful prompt engineering and testing platform with visual prompt chaining capabilities.
+A powerful prompt engineering and testing platform with advanced version control, analytics, and multi-model comparison capabilities.
 
-## Features
+## 🚀 Features
 
-### 🎯 **Real API Integration**
-- **OpenAI Models**: Direct integration with GPT-4 and GPT-3.5-turbo using OpenAI API
-- **Groq Models**: Fast inference with Gemma, Llama, and other models via Groq API
-- **OpenRouter Models**: Access to 100+ models from various providers
-- **Real Token Usage**: Accurate token counting and cost tracking
+### ✨ Core Functionality
+- **Advanced Prompt Editor** with syntax highlighting and variable support
+- **Multi-Model Testing** across 20+ AI models (OpenAI, Groq, OpenRouter)
+- **Real-time Prompt Scoring** with relevance, clarity, and creativity metrics
+- **Variable Management** with dynamic prompt templating
 
-### 🤖 **AI-Powered Scoring**
-- **GPT-4 Evaluation**: Uses GPT-4 as the system LLM to evaluate prompt responses
-- **Consistent Algorithm**: Same evaluation criteria applied to all responses
-- **Multi-dimensional Scoring**: Relevance, Clarity, and Creativity metrics
-- **Detailed Critiques**: Constructive feedback for prompt improvement
+### 🔄 Version Control System (100% Functional)
+- **Complete Version History** with persistent storage
+- **Version Comparison** with side-by-side analysis
+- **Version Management** with create, duplicate, and delete operations
+- **Branching Support** with parent-child relationships
+- **Search & Filter** capabilities for large version sets
+- **Local Storage Persistence** - your work is automatically saved
 
-### 🔧 **Advanced Controls**
-- **Temperature Control**: Adjustable creativity levels (0-2) with visual slider
-- **System Messages**: Custom system prompts for consistent behavior
-- **Variable Management**: Dynamic content with {{variable}} syntax
-- **Conditional Logic**: Branching workflows based on response scores
+### 📊 Analytics Dashboard (Fully Working)
+- **Performance Metrics** across all versions and models
+- **Score Trends** over time with detailed breakdowns
+- **Model Comparison** charts and statistics
+- **Execution Time Analysis** for optimization
+- **Token Usage Tracking** for cost management
+- **Failure Rate Monitoring** for quality assurance
+- **Interactive Charts** using Recharts library
 
-### 📊 **Visual Prompt Chaining**
-- **Canvas Interface**: Drag-and-drop prompt workflow builder
-- **Live Visualization**: Real-time execution tracking
-- **Conditional Branches**: If/then logic based on response quality
-- **Export Options**: Generate code for LangChain, OpenAI SDK, and more
+### 🎯 Advanced Features
+- **Prompt Chain Canvas** for complex workflows
+- **System Message Support** for context setting
+- **Real-time API Integration** with multiple providers
+- **Responsive Design** for desktop and mobile
+- **Export & Import** capabilities (coming soon)
 
-### 📈 **Analytics & Comparison**
-- **Version Control**: Track prompt evolution over time
-- **Multi-Model Testing**: Compare responses across different AI models
-- **Performance Metrics**: Execution time and token usage statistics
-- **Score Tracking**: Historical performance analysis
+## 🛠️ Technology Stack
 
-## Getting Started
-
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
-
-2. **Start Development Server**
-   ```bash
-   npm run dev
-   ```
-
-3. **Access the Application**
-   - Open http://localhost:5173 (or the port shown in terminal)
-   - Start with the Editor tab for basic prompt testing
-   - Use the Canvas tab for visual prompt chaining
-
-## API Configuration
-
-The application uses the following API keys (configured in `src/services/apiService.ts`):
-
-- **OpenAI API**: For GPT-4 and GPT-3.5-turbo models
-- **Groq API**: For fast inference models
-- **OpenRouter API**: For access to 100+ models
-
-⚠️ **Security Note**: In production, these API keys should be stored securely on the backend.
-
-## Usage
-
-### Basic Prompt Testing
-1. Navigate to the **Editor** tab
-2. Enter your prompt in the main text area
-3. Select models to test from the Multi-Model Runner
-4. Click "Run Selected" to execute
-5. View responses, scores, and token usage
-
-### Visual Prompt Chaining
-1. Navigate to the **Canvas** tab
-2. Add prompt nodes by clicking "Add Node"
-3. Configure each node with prompts, models, and temperature
-4. Connect nodes to create workflows
-5. Add conditional logic based on response scores
-6. Run the entire chain to see the flow in action
-
-### Advanced Features
-- **Variables**: Use `{{variable_name}}` in prompts for dynamic content
-- **System Messages**: Set consistent behavior across all models
-- **Temperature**: Adjust creativity from focused (0) to creative (2)
-- **Conditions**: Use `{{score}} > 7` for conditional branching
-
-## Architecture
-
-- **Frontend**: React + TypeScript + Vite
+- **Frontend**: React 18 + TypeScript + Vite
 - **Styling**: Tailwind CSS
-- **State Management**: React hooks and local state
-- **API Integration**: Custom service layer for multiple providers
-- **Visual Flow**: ReactFlow for canvas functionality
+- **Charts**: Recharts
+- **Icons**: Lucide React
+- **State Management**: React Hooks + Local Storage
+- **APIs**: OpenAI, Groq, OpenRouter
 
-## Contributing
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd prompt-forge
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+### API Configuration
+
+The application comes pre-configured with API keys for demonstration. For production use, update the keys in `src/services/apiService.ts`:
+
+```typescript
+const OPENAI_API_KEY = 'your-openai-key';
+const GROQ_API_KEY = 'your-groq-key';
+const OPENROUTER_API_KEY = 'your-openrouter-key';
+```
+
+## 📖 Usage Guide
+
+### Creating and Managing Versions
+
+1. **Create a New Version**
+   - Click "Create New Version" in the Version History panel
+   - Enter a title and optional commit message
+   - The new version will be created with current prompt and variables
+
+2. **Version Comparison**
+   - Select multiple versions using the checkboxes
+   - View side-by-side comparison with scores and metrics
+   - Analyze performance differences between versions
+
+3. **Version Actions**
+   - **Duplicate**: Create a copy of any version
+   - **Delete**: Remove versions (prevents deletion of last version)
+   - **Search**: Filter versions by title or message
+
+### Using the Analytics Dashboard
+
+1. **Navigate to Analytics Tab**
+   - View comprehensive metrics across all versions
+   - Analyze performance trends over time
+   - Compare model performance
+
+2. **Key Metrics**
+   - **Total Versions**: Number of prompt versions created
+   - **Total Runs**: Number of model executions
+   - **Avg Response Time**: Average execution time across all runs
+   - **Total Tokens**: Cumulative token usage for cost tracking
+
+3. **Charts Available**
+   - **PromptScore Over Time**: Track score improvements across versions
+   - **Model Performance Comparison**: Compare different AI models
+   - **Execution Time**: Monitor performance optimization
+   - **Token Usage**: Track cost and efficiency
+   - **Failure Rate**: Identify problematic prompts
+   - **Version Score Comparison**: Overall performance comparison
+
+### Working with Variables
+
+1. **Adding Variables**
+   - Use `{{variableName}}` syntax in your prompts
+   - Add variables through the Variable Manager
+   - Set default values for testing
+
+2. **Dynamic Testing**
+   - Change variable values to test different scenarios
+   - Variables are automatically replaced in prompts
+   - Each version maintains its own variable set
+
+### Multi-Model Testing
+
+1. **Select Models**
+   - Choose from 20+ available models
+   - Mix different providers (OpenAI, Groq, OpenRouter)
+   - Run multiple models simultaneously
+
+2. **Compare Results**
+   - View outputs from all selected models
+   - Compare scores and performance metrics
+   - Identify the best model for your use case
+
+## 🔧 Development
+
+### Project Structure
+
+```
+src/
+├── components/          # React components
+│   ├── Analytics.tsx   # Analytics dashboard
+│   ├── VersionControl.tsx # Version management
+│   ├── VersionComparison.tsx # Version comparison
+│   └── ...
+├── hooks/              # Custom React hooks
+│   └── usePromptVersions.ts # Version management logic
+├── services/           # API services
+│   └── apiService.ts   # Multi-provider API integration
+├── types/              # TypeScript type definitions
+└── ...
+```
+
+### Key Components
+
+- **`usePromptVersions`**: Manages version state with localStorage persistence
+- **`VersionControl`**: Complete version management interface
+- **`VersionComparison`**: Side-by-side version analysis
+- **`Analytics`**: Comprehensive analytics dashboard
+- **`apiService`**: Multi-provider API integration
+
+### Adding New Features
+
+1. **New Model Support**
+   - Add model configuration to `MODEL_CONFIG` in `apiService.ts`
+   - Update model list in `PromptForge.tsx`
+
+2. **New Analytics Metrics**
+   - Extend the `Analytics.tsx` component
+   - Add new chart types as needed
+
+3. **Enhanced Version Features**
+   - Extend the `PromptVersion` type in `types/index.ts`
+   - Update version management logic in `usePromptVersions.ts`
+
+## 🎯 Best Practices
+
+### Version Management
+- Use descriptive version titles and commit messages
+- Create versions frequently to track improvements
+- Compare versions regularly to identify best performers
+- Use the search feature for large version sets
+
+### Analytics Usage
+- Monitor failure rates to identify problematic prompts
+- Track token usage for cost optimization
+- Use execution time data to optimize performance
+- Compare model performance for your specific use cases
+
+### Prompt Engineering
+- Start with simple prompts and iterate
+- Use variables for dynamic content
+- Test across multiple models
+- Leverage system messages for context
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -100,6 +206,17 @@ The application uses the following API keys (configured in `src/services/apiServ
 4. Add tests if applicable
 5. Submit a pull request
 
-## License
+## 📄 License
 
-MIT License - see LICENSE file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For support and questions:
+- Open an issue on GitHub
+- Check the documentation
+- Review the code examples
+
+---
+
+**PromptForge** - Empowering prompt engineers with advanced tools and analytics.

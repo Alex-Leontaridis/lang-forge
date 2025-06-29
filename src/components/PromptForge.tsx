@@ -35,7 +35,9 @@ const PromptForge = () => {
     getCurrentVersion,
     addRun,
     getRunsForVersion,
-    updateVersion
+    updateVersion,
+    deleteVersion,
+    duplicateVersion
   } = usePromptVersions();
 
   const currentVersion = getCurrentVersion();
@@ -180,6 +182,22 @@ const PromptForge = () => {
     }
   };
 
+  const handleDeleteVersion = (versionId: string) => {
+    deleteVersion(versionId);
+    // Remove from comparison if it was selected
+    setSelectedVersionsForComparison(prev => prev.filter(id => id !== versionId));
+  };
+
+  const handleDuplicateVersion = (versionId: string) => {
+    const duplicatedVersion = duplicateVersion(versionId);
+    if (duplicatedVersion) {
+      // Switch to the duplicated version
+      setCurrentVersionId(duplicatedVersion.id);
+      const versionVariables = Object.entries(duplicatedVersion.variables || {}).map(([name, value]) => ({ name, value }));
+      setVariables(versionVariables);
+    }
+  };
+
   const tabs = [
     { id: 'editor' as const, name: 'Editor', icon: Zap },
     { id: 'canvas' as const, name: 'Canvas', icon: Workflow },
@@ -300,6 +318,8 @@ const PromptForge = () => {
                   currentVersionId={currentVersionId}
                   onVersionSelect={handleVersionSelect}
                   onCreateVersion={handleCreateVersion}
+                  onDeleteVersion={handleDeleteVersion}
+                  onDuplicateVersion={handleDuplicateVersion}
                 />
                 
                 <VariableManager
@@ -336,6 +356,8 @@ const PromptForge = () => {
                 currentVersionId={currentVersionId}
                 onVersionSelect={handleVersionSelect}
                 onCreateVersion={handleCreateVersion}
+                onDeleteVersion={handleDeleteVersion}
+                onDuplicateVersion={handleDuplicateVersion}
               />
               
               <VariableManager
@@ -455,18 +477,9 @@ const PromptForge = () => {
                       : [...prev, versionId].slice(0, 3)
                   );
                 }}
+                onDeleteVersion={handleDeleteVersion}
+                onDuplicateVersion={handleDuplicateVersion}
               />
-
-              {/* Demo Status */}
-              <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
-                <div className="flex items-center space-x-2 text-blue-600">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-sm font-medium">Demo Mode</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Using simulated AI responses for UI demonstration
-                </p>
-              </div>
             </div>
           </div>
         )}
@@ -494,6 +507,8 @@ const PromptForge = () => {
                     : [...prev, versionId]
                 );
               }}
+              onDeleteVersion={handleDeleteVersion}
+              onDuplicateVersion={handleDuplicateVersion}
             />
           </div>
         )}

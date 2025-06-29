@@ -96,11 +96,11 @@ const PromptScore: React.FC<PromptScoreProps> = ({ score, compact = false }) => 
     return (
       <>
         <div className="flex items-center space-x-3">
-          <CircularProgress value={averageScore} size={40} strokeWidth={3} />
+          <CircularProgress value={averageScore} size={48} strokeWidth={4} />
           <div className="flex items-center space-x-2">
             {scoreItems.map((item) => (
               <div key={item.name} className="text-center">
-                <CircularProgress value={item.value} size={24} strokeWidth={2} />
+                <CircularProgress value={item.value} size={32} strokeWidth={3} />
                 <div className="text-xs text-gray-500 mt-1">{item.name.charAt(0)}</div>
               </div>
             ))}

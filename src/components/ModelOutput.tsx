@@ -14,6 +14,8 @@ interface ModelOutputProps {
   };
   compact?: boolean;
   onShowFullReport?: () => void;
+  modelLogo?: string;
+  modelName?: string;
 }
 
 const ModelOutput: React.FC<ModelOutputProps> = ({ 
@@ -22,7 +24,9 @@ const ModelOutput: React.FC<ModelOutputProps> = ({
   selectedModel, 
   score,
   compact = false,
-  onShowFullReport 
+  onShowFullReport,
+  modelLogo,
+  modelName
 }) => {
   const [copied, setCopied] = React.useState(false);
 
@@ -88,18 +92,22 @@ const ModelOutput: React.FC<ModelOutputProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-black rounded-md flex items-center justify-center">
-              <Bot className="w-3 h-3 text-white" />
-            </div>
+            {modelLogo ? (
+              <img src={modelLogo} alt="model logo" className="w-7 h-7 rounded-md object-contain bg-white border border-gray-200" />
+            ) : (
+              <div className="w-6 h-6 bg-black rounded-md flex items-center justify-center">
+                <Bot className="w-3 h-3 text-white" />
+              </div>
+            )}
             <div>
-              <h3 className="text-sm font-semibold text-black">{selectedModel.toUpperCase()}</h3>
+              <h3 className="text-sm font-semibold text-black">{modelName || selectedModel.toUpperCase()}</h3>
               {score && (
                 <div className="flex items-center space-x-2 mt-1">
-                  <CircularProgress value={score.overall} size={24} strokeWidth={2} />
+                  <CircularProgress value={score.overall} size={32} strokeWidth={3} />
                   <div className="flex items-center space-x-1">
-                    <CircularProgress value={score.relevance} size={16} strokeWidth={2} />
-                    <CircularProgress value={score.clarity} size={16} strokeWidth={2} />
-                    <CircularProgress value={score.creativity} size={16} strokeWidth={2} />
+                    <CircularProgress value={score.relevance} size={22} strokeWidth={2} />
+                    <CircularProgress value={score.clarity} size={22} strokeWidth={2} />
+                    <CircularProgress value={score.creativity} size={22} strokeWidth={2} />
                   </div>
                   {onShowFullReport && (
                     <button

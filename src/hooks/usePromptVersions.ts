@@ -50,6 +50,10 @@ export const usePromptVersions = () => {
     return runs.filter(run => run.versionId === versionId);
   }, [runs]);
 
+  const updateVersion = useCallback((id: string, updates: Partial<PromptVersion>) => {
+    setVersions(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v));
+  }, []);
+
   return {
     versions,
     runs,
@@ -58,6 +62,7 @@ export const usePromptVersions = () => {
     createVersion,
     getCurrentVersion,
     addRun,
-    getRunsForVersion
+    getRunsForVersion,
+    updateVersion
   };
 };

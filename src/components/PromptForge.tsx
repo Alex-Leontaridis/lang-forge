@@ -12,6 +12,7 @@ import Analytics from './Analytics';
 import PromptChainCanvas from './PromptChainCanvas';
 import { usePromptVersions } from '../hooks/usePromptVersions';
 import { Model, Variable, PromptScore as PromptScoreType } from '../types';
+import apiService from '../services/apiService';
 
 const PromptForge = () => {
   const [activeTab, setActiveTab] = useState<'editor' | 'analytics' | 'compare' | 'canvas'>('editor');
@@ -31,7 +32,8 @@ const PromptForge = () => {
     createVersion,
     getCurrentVersion,
     addRun,
-    getRunsForVersion
+    getRunsForVersion,
+    updateVersion
   } = usePromptVersions();
 
   const currentVersion = getCurrentVersion();
@@ -40,29 +42,29 @@ const PromptForge = () => {
   const models: Model[] = [
     { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', logo: '/src/components/logos/openai.png', enabled: true },
     { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient', provider: 'OpenAI', logo: '/src/components/logos/openai.png', enabled: true },
-    { id: 'claude-3', name: 'Claude 3', description: 'Anthropic model', provider: 'Anthropic', logo: '/src/components/logos/anthropic.png', enabled: true },
-    { id: 'gemini-pro', name: 'Gemini Pro', description: 'Google advanced model', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
-    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', description: 'Google Gemma 2 9B IT', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
-    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp', description: 'Google Gemini 2.5 Pro Exp', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
-    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp', description: 'Google Gemini 2.0 Flash Exp', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
-    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT', description: 'Google Gemma 3 12B IT', provider: 'Google', logo: '/src/components/logos/google.png', enabled: true },
-    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', description: 'Meta Llama 3.1 8B Instant', provider: 'Meta', logo: '/src/components/logos/meta.png', enabled: true },
-    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', description: 'Meta Llama 3.3 70B Versatile', provider: 'Meta', logo: '/src/components/logos/meta.png', enabled: true },
-    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', description: 'Meta Llama Guard 4 12B', provider: 'Meta', logo: '/src/components/logos/meta.png', enabled: true },
-    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', description: 'DeepSeek R1 Distill Llama 70B', provider: 'DeepSeek', logo: '/src/components/logos/deepseek.png', enabled: true },
-    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528', description: 'DeepSeek R1 0528', provider: 'DeepSeek', logo: '/src/components/logos/deepseek.png', enabled: true },
-    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B', description: 'DeepSeek R1 0528 Qwen3 8B', provider: 'DeepSeek', logo: '/src/components/logos/deepseek.png', enabled: true },
-    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base', description: 'DeepSeek V3 Base', provider: 'DeepSeek', logo: '/src/components/logos/deepseek.png', enabled: true },
-    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', description: 'Alibaba Qwen QWQ 32B', provider: 'Alibaba', logo: '/src/components/logos/alibaba.png', enabled: true },
-    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', description: 'Hugging Face Distil Whisper Large v3 EN', provider: 'HuggingFace', logo: '/src/components/logos/huggingface.png', enabled: true },
-    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B', description: 'Nvidia Llama 3.3 Nemotron Super 49B', provider: 'Nvidia', logo: '/src/components/logos/nvidia.png', enabled: true },
-    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', description: 'Mistral Small 3.2 24B Instruct', provider: 'Mistral', logo: '/src/components/logos/mistral.png', enabled: true },
-    { id: 'minimax/minimax-m1', name: 'MiniMax M1', description: 'MiniMax M1', provider: 'MiniMax', logo: '/src/components/logos/minimax.png', enabled: true },
+    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', description: 'Google Gemma 2 9B IT (Groq)', provider: 'Groq', logo: '/src/components/logos/google.png', enabled: true },
+    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp', description: 'Google Gemini 2.5 Pro Exp (OpenRouter)', provider: 'OpenRouter', logo: '/src/components/logos/google.png', enabled: true },
+    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp', description: 'Google Gemini 2.0 Flash Exp (OpenRouter)', provider: 'OpenRouter', logo: '/src/components/logos/google.png', enabled: true },
+    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT', description: 'Google Gemma 3 12B IT (OpenRouter)', provider: 'OpenRouter', logo: '/src/components/logos/google.png', enabled: true },
+    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', description: 'Meta Llama 3.1 8B Instant (Groq)', provider: 'Groq', logo: '/src/components/logos/meta.png', enabled: true },
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', description: 'Meta Llama 3.3 70B Versatile (Groq)', provider: 'Groq', logo: '/src/components/logos/meta.png', enabled: true },
+    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', description: 'Meta Llama Guard 4 12B (Groq)', provider: 'Groq', logo: '/src/components/logos/meta.png', enabled: true },
+    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', description: 'DeepSeek R1 Distill Llama 70B (OpenRouter)', provider: 'OpenRouter', logo: '/src/components/logos/deepseek.png', enabled: true },
+    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528', description: 'DeepSeek R1 0528 (OpenRouter)', provider: 'OpenRouter', logo: '/src/components/logos/deepseek.png', enabled: true },
+    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B', description: 'DeepSeek R1 0528 Qwen3 8B (OpenRouter)', provider: 'OpenRouter', logo: '/src/components/logos/deepseek.png', enabled: true },
+    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base', description: 'DeepSeek V3 Base (OpenRouter)', provider: 'OpenRouter', logo: '/src/components/logos/deepseek.png', enabled: true },
+    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', description: 'Alibaba Qwen QWQ 32B (OpenRouter)', provider: 'OpenRouter', logo: '/src/components/logos/alibaba.png', enabled: true },
+    { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B', description: 'Alibaba Qwen 3 32B (Groq)', provider: 'Groq', logo: '/src/components/logos/alibaba.png', enabled: true },
+    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', description: 'Hugging Face Distil Whisper Large v3 EN (Groq)', provider: 'Groq', logo: '/src/components/logos/huggingface.png', enabled: true },
+    { id: 'whisper-large-v3', name: 'Whisper Large v3', description: 'OpenAI Whisper Large v3 (Groq)', provider: 'Groq', logo: '/src/components/logos/openai.png', enabled: true },
+    { id: 'whisper-large-v3-turbo', name: 'Whisper Large v3 Turbo', description: 'OpenAI Whisper Large v3 Turbo (Groq)', provider: 'Groq', logo: '/src/components/logos/openai.png', enabled: true },
+    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B', description: 'Nvidia Llama 3.3 Nemotron Super 49B (OpenRouter)', provider: 'OpenRouter', logo: '/src/components/logos/nvidia.png', enabled: true },
+    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', description: 'Mistral Small 3.2 24B Instruct (OpenRouter)', provider: 'OpenRouter', logo: '/src/components/logos/mistral.png', enabled: true },
+    { id: 'minimax/minimax-m1', name: 'MiniMax M1', description: 'MiniMax M1 (OpenRouter)', provider: 'OpenRouter', logo: '/src/components/logos/minimax.png', enabled: true },
   ];
 
   const handlePromptChange = (newPrompt: string) => {
-    // Update current version content
-    // In a real app, this would update the version in the store
+    updateVersion(currentVersionId, { content: newPrompt });
   };
 
   const handleVariableChange = (name: string, value: string) => {
@@ -78,8 +80,14 @@ const PromptForge = () => {
   };
 
   const handleVariablesChange = useCallback((newVariables: Variable[]) => {
-    setVariables(newVariables);
-  }, []);
+    // Only update if the variables have actually changed
+    const currentVariableNames = variables.map(v => v.name).sort();
+    const newVariableNames = newVariables.map(v => v.name).sort();
+    
+    if (JSON.stringify(currentVariableNames) !== JSON.stringify(newVariableNames)) {
+      setVariables(newVariables);
+    }
+  }, [variables]);
 
   const replaceVariables = (prompt: string) => {
     let result = prompt;
@@ -94,154 +102,73 @@ const PromptForge = () => {
     return result;
   };
 
-  const generateMockResponse = (modelId: string, prompt: string): string => {
-    const responses = {
-      'gpt-4': `**GPT-4 Response:**
-
-Based on your prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"
-
-This is a comprehensive and thoughtful response that demonstrates GPT-4's advanced reasoning capabilities. The model provides detailed analysis, creative insights, and maintains excellent coherence throughout the response.
-
-Key points addressed:
-• Thorough understanding of the prompt context
-• Creative and original perspective
-• Well-structured and clear communication
-• Actionable insights and recommendations
-
-This response showcases the model's ability to handle complex reasoning tasks while maintaining clarity and relevance to the original request.`,
-
-      'gpt-3.5-turbo': `**GPT-3.5 Turbo Response:**
-
-Thank you for your prompt: "${prompt.substring(0, 80)}${prompt.length > 80 ? '...' : ''}"
-
-Here's a clear and efficient response that addresses your request directly. GPT-3.5 Turbo provides fast, reliable answers while maintaining good quality and relevance.
-
-The response includes:
-- Direct answers to your questions
-- Practical suggestions
-- Clear and concise communication
-- Good balance of detail and brevity
-
-This demonstrates the model's strength in providing quick, accurate responses for everyday tasks and queries.`,
-
-      'claude-3': `**Claude 3 Response:**
-
-I appreciate your thoughtful prompt: "${prompt.substring(0, 90)}${prompt.length > 90 ? '...' : ''}"
-
-As Claude 3, I aim to provide helpful, harmless, and honest responses. Here's my analysis of your request with careful consideration of nuance and context.
-
-My response focuses on:
-→ Ethical considerations and balanced perspectives
-→ Detailed reasoning and step-by-step thinking
-→ Acknowledgment of limitations and uncertainties
-→ Constructive and solution-oriented approach
-
-I strive to be particularly thoughtful about potential implications and to provide responses that are both useful and responsible.`,
-
-      'gemini-pro': `**Gemini Pro Response:**
-
-Processing your prompt: "${prompt.substring(0, 85)}${prompt.length > 85 ? '...' : ''}"
-
-Gemini Pro leverages Google's advanced AI capabilities to provide comprehensive, multimodal understanding. Here's my response with integrated knowledge and reasoning:
-
-Analysis includes:
-🔍 Deep contextual understanding
-🧠 Advanced reasoning patterns
-🌐 Broad knowledge integration
-⚡ Efficient processing capabilities
-
-The response demonstrates Gemini's strength in combining factual accuracy with creative problem-solving, drawing from extensive training data to provide relevant and insightful answers.`,
-
-      'llama-2': `**Llama 2 Response:**
-
-Your prompt: "${prompt.substring(0, 75)}${prompt.length > 75 ? '...' : ''}"
-
-As an open-source model, Llama 2 provides transparent and accessible AI capabilities. Here's my response focusing on practical utility and clear communication:
-
-Response characteristics:
-• Open and transparent reasoning
-• Community-driven development benefits
-• Balanced and unbiased perspective
-• Focus on practical applications
-
-This response represents the collaborative nature of open-source AI development, providing reliable assistance while maintaining transparency in the reasoning process.`
-    };
-
-    return responses[modelId as keyof typeof responses] || `Response from ${modelId.toUpperCase()}: This is a simulated response to your prompt.`;
-  };
-
-  const generateMockScore = (): PromptScoreType => {
-    const relevance = Math.floor(Math.random() * 3) + 8;
-    const clarity = Math.floor(Math.random() * 3) + 7;
-    const creativity = Math.floor(Math.random() * 4) + 6;
-    
-    const critiques = [
-      "Excellent prompt structure with clear intent. Consider adding more specific context for even better results.",
-      "Well-crafted prompt that effectively guides the AI. The use of variables makes it highly reusable.",
-      "Strong prompt with good clarity. Adding examples could further improve response quality.",
-      "Thoughtful prompt design that balances specificity with flexibility. Great use of structured variables.",
-      "Clear and purposeful prompt. Consider refining the tone instructions for more consistent outputs."
-    ];
-
-    return {
-      relevance,
-      clarity,
-      creativity,
-      overall: Math.round(((relevance + clarity + creativity) / 3) * 10) / 10,
-      critique: critiques[Math.floor(Math.random() * critiques.length)]
-    };
-  };
-
   const handleRunModels = async (selectedModels: string[]) => {
     if (!currentVersion.content.trim()) return;
-    
     setIsRunning(true);
-    
     const processedPrompt = replaceVariables(currentVersion.content);
-    
-    // Simulate running multiple models with realistic delays
-    for (const modelId of selectedModels) {
-      const startTime = Date.now();
-      
-      // Simulate API call delay (different for each model)
-      const delays = {
-        'gpt-4': 2000 + Math.random() * 1000,
-        'gpt-3.5-turbo': 800 + Math.random() * 500,
-        'claude-3': 1500 + Math.random() * 800,
-        'gemini-pro': 1200 + Math.random() * 600,
-        'llama-2': 1000 + Math.random() * 700
-      };
-      
-      await new Promise(resolve => setTimeout(resolve, delays[modelId as keyof typeof delays] || 1000));
-      
-      const executionTime = Date.now() - startTime;
-      const score = generateMockScore();
-      const output = generateMockResponse(modelId, processedPrompt);
-      
-      // Simulate realistic token usage
-      const inputTokens = Math.floor(processedPrompt.length / 4) + Math.floor(Math.random() * 50);
-      const outputTokens = Math.floor(output.length / 4) + Math.floor(Math.random() * 100);
-      
-      addRun({
-        versionId: currentVersionId,
-        modelId,
-        output,
-        score,
-        executionTime,
-        tokenUsage: {
-          input: inputTokens,
-          output: outputTokens,
-          total: inputTokens + outputTokens
-        }
-      });
+    const TIMEOUT_MS = 20000;
 
-      // Update current output for the first model
-      if (selectedModels[0] === modelId) {
-        setCurrentOutput(output);
-        setCurrentModel(modelId);
+    // Helper to add timeout to a promise
+    const withTimeout = (promise: Promise<any>, ms: number) => {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), ms))
+      ]);
+    };
+
+    await Promise.allSettled(selectedModels.map(async (modelId) => {
+      const startTime = Date.now();
+      try {
+        // Use real API call for all models, with timeout
+        const result = await withTimeout(
+          apiService.generateCompletion(
+            modelId,
+            processedPrompt,
+            systemMessage || undefined,
+            0.7 // temperature
+          ),
+          TIMEOUT_MS
+        );
+        const output = result.content;
+        const tokenUsage = result.usage ? {
+          input: result.usage.prompt_tokens,
+          output: result.usage.completion_tokens,
+          total: result.usage.total_tokens
+        } : { input: 0, output: 0, total: 0 };
+        const executionTime = Date.now() - startTime;
+        // Use GPT-4 to evaluate the response
+        const score = await withTimeout(
+          apiService.evaluatePromptResponse(
+            processedPrompt,
+            output,
+            0.3 // Low temperature for consistent evaluation
+          ),
+          TIMEOUT_MS
+        );
+        addRun({
+          versionId: currentVersionId,
+          modelId,
+          output,
+          score,
+          executionTime,
+          tokenUsage
+        });
+        // Update current output for the first model
+        if (selectedModels[0] === modelId) {
+          setCurrentOutput(output);
+          setCurrentModel(modelId);
+        }
+      } catch (error) {
+        console.error(`Error running model ${modelId}:`, error);
+        addRun({
+          versionId: currentVersionId,
+          modelId,
+          output: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
+          executionTime: Date.now() - startTime,
+          tokenUsage: { input: 0, output: 0, total: 0 }
+        });
       }
-    }
-    
+    }));
     setIsRunning(false);
   };
 
@@ -372,17 +299,22 @@ This response represents the collaborative nature of open-source AI development,
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900">Recent Runs</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {currentRuns.slice(-6).map((run) => (
-                      <ModelOutput 
-                        key={run.id}
-                        output={run.output} 
-                        isRunning={false}
-                        selectedModel={run.modelId}
-                        score={run.score}
-                        compact={true}
-                        onShowFullReport={() => setShowFullScoreReport(run.id)}
-                      />
-                    ))}
+                    {currentRuns.slice(-6).map((run) => {
+                      const model = models.find(m => m.id === run.modelId);
+                      return (
+                        <ModelOutput 
+                          key={run.id}
+                          output={run.output} 
+                          isRunning={false}
+                          selectedModel={run.modelId}
+                          score={run.score}
+                          compact={true}
+                          modelLogo={model?.logo}
+                          modelName={model?.name || run.modelId}
+                          onShowFullReport={() => setShowFullScoreReport(run.id)}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               )}

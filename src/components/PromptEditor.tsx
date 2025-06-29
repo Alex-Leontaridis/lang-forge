@@ -34,12 +34,14 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
       return existing || { name, value: '' };
     });
 
-    // Only update if variables changed
-    if (JSON.stringify(newVariables.map(v => v.name).sort()) !== 
-        JSON.stringify(variables.map(v => v.name).sort())) {
+    // Always update if variables changed (either added or removed)
+    const currentNames = variables.map(v => v.name).sort();
+    const newNames = newVariables.map(v => v.name).sort();
+    
+    if (JSON.stringify(currentNames) !== JSON.stringify(newNames)) {
       onVariablesChange(newVariables);
     }
-  }, [prompt, variables, onVariablesChange]);
+  }, [prompt, onVariablesChange]);
 
   // Replace variables in prompt for preview
   const getPreviewPrompt = () => {

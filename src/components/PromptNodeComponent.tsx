@@ -34,26 +34,27 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const models = [
-    { id: 'gpt-4', name: 'GPT-4', logo: '/src/components/logos/openai.png' },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5', logo: '/src/components/logos/openai.png' },
-    { id: 'claude-3', name: 'Claude 3', logo: '/src/components/logos/anthropic.png' },
-    { id: 'gemini-pro', name: 'Gemini Pro', logo: '/src/components/logos/google.png' },
-    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', logo: '/src/components/logos/google.png' },
-    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp', logo: '/src/components/logos/google.png' },
-    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp', logo: '/src/components/logos/google.png' },
-    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT', logo: '/src/components/logos/google.png' },
-    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', logo: '/src/components/logos/meta.png' },
-    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', logo: '/src/components/logos/meta.png' },
-    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', logo: '/src/components/logos/meta.png' },
-    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', logo: '/src/components/logos/deepseek.png' },
-    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528', logo: '/src/components/logos/deepseek.png' },
-    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B', logo: '/src/components/logos/deepseek.png' },
-    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base', logo: '/src/components/logos/deepseek.png' },
-    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', logo: '/src/components/logos/alibaba.png' },
-    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', logo: '/src/components/logos/huggingface.png' },
-    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B', logo: '/src/components/logos/nvidia.png' },
-    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', logo: '/src/components/logos/mistral.png' },
-    { id: 'minimax/minimax-m1', name: 'MiniMax M1', logo: '/src/components/logos/minimax.png' },
+    { id: 'gpt-4', name: 'GPT-4', logo: '/src/components/logos/openai.png', color: 'bg-green-500' },
+    { id: 'gpt-3.5-turbo', name: 'GPT-3.5', logo: '/src/components/logos/openai.png', color: 'bg-green-500' },
+    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', logo: '/src/components/logos/google.png', color: 'bg-blue-500' },
+    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp', logo: '/src/components/logos/google.png', color: 'bg-blue-500' },
+    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp', logo: '/src/components/logos/google.png', color: 'bg-blue-500' },
+    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT', logo: '/src/components/logos/google.png', color: 'bg-blue-500' },
+    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', logo: '/src/components/logos/meta.png', color: 'bg-purple-500' },
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', logo: '/src/components/logos/meta.png', color: 'bg-purple-500' },
+    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', logo: '/src/components/logos/meta.png', color: 'bg-purple-500' },
+    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', logo: '/src/components/logos/deepseek.png', color: 'bg-indigo-500' },
+    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528', logo: '/src/components/logos/deepseek.png', color: 'bg-indigo-500' },
+    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B', logo: '/src/components/logos/deepseek.png', color: 'bg-indigo-500' },
+    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base', logo: '/src/components/logos/deepseek.png', color: 'bg-indigo-500' },
+    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', logo: '/src/components/logos/alibaba.png', color: 'bg-red-500' },
+    { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B', logo: '/src/components/logos/alibaba.png', color: 'bg-red-500' },
+    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', logo: '/src/components/logos/huggingface.png', color: 'bg-yellow-500' },
+    { id: 'whisper-large-v3', name: 'Whisper Large v3', logo: '/src/components/logos/openai.png', color: 'bg-green-500' },
+    { id: 'whisper-large-v3-turbo', name: 'Whisper Large v3 Turbo', logo: '/src/components/logos/openai.png', color: 'bg-green-500' },
+    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B', logo: '/src/components/logos/nvidia.png', color: 'bg-green-600' },
+    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', logo: '/src/components/logos/mistral.png', color: 'bg-blue-600' },
+    { id: 'minimax/minimax-m1', name: 'MiniMax M1', logo: '/src/components/logos/minimax.png', color: 'bg-pink-500' },
   ];
 
   const selectedModel = models.find(m => m.id === data.model) || models[0];
@@ -263,12 +264,15 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
                       step="0.1"
                       value={data.temperature || 0.7}
                       onChange={(e) => handleTemperatureChange(parseFloat(e.target.value))}
-                      className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                      style={{
+                        background: `linear-gradient(to right, #10b981 0%, #10b981 ${((data.temperature || 0.7) / 2) * 100}%, #e5e7eb ${((data.temperature || 0.7) / 2) * 100}%, #e5e7eb 100%)`
+                      }}
                     />
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>Focused</span>
-                      <span>Balanced</span>
-                      <span>Creative</span>
+                      <span>Focused (0)</span>
+                      <span>Balanced (1)</span>
+                      <span>Creative (2)</span>
                     </div>
                   </div>
 
@@ -281,7 +285,7 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
                       type="text"
                       value={data.condition || ''}
                       onChange={(e) => handleConditionChange(e.target.value)}
-                      placeholder="e.g., {{score}} > 7"
+                      placeholder="e.g., {{score}} &gt; 7"
                       className="w-full p-2 text-xs bg-white border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black"
                     />
                     <div className="text-xs text-gray-500 mt-1">

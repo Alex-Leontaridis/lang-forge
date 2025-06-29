@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import ReactFlow, {
   Node,
@@ -13,12 +13,48 @@ import ReactFlow, {
   ConnectionMode,
   Panel,
   MiniMap,
+  NodeProps,
+  Handle,
+  Position,
+  useReactFlow,
+  ReactFlowProvider
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { ArrowLeft, Plus, Play, Save, Zap, Download, Upload, BarChart3, Activity, FileCode, ChevronDown } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Plus, 
+  Play, 
+  Save, 
+  Upload, 
+  Download, 
+  Settings, 
+  BarChart3, 
+  Clock, 
+  Zap, 
+  Target,
+  ChevronDown,
+  ChevronUp,
+  X,
+  Check,
+  Edit3,
+  Trash2,
+  Bot,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Thermometer,
+  FileText,
+  Code,
+  Database,
+  GitBranch,
+  Workflow,
+  FileCode,
+  Activity
+} from 'lucide-react';
 import PromptNodeComponent from './PromptNodeComponent';
 import LiveChainVisualization from './LiveChainVisualization';
 import { PromptNode as PromptNodeType, PromptScore } from '../types';
+import apiService from '../services/apiService';
 
 const nodeTypes = {
   promptNode: PromptNodeComponent,
@@ -97,46 +133,6 @@ const PromptChainCanvas = () => {
     setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
   }, [setNodes, setEdges]);
 
-  const generateMockResponse = (prompt: string, model: string, temperature: number): string => {
-    const tempVariation = temperature > 1.5 ? 'highly creative' : temperature > 1.0 ? 'creative' : temperature > 0.5 ? 'balanced' : 'focused';
-    
-    const responses = {
-      'gpt-4': `**GPT-4 Response (${tempVariation}):**\n\n${prompt.substring(0, 50)}...\n\nThis is a comprehensive response that demonstrates advanced reasoning. The analysis includes detailed insights, creative perspectives, and maintains excellent coherence throughout.\n\n• Thorough contextual understanding\n• Creative and original insights\n• Well-structured communication\n• Actionable recommendations`,
-      
-      'gpt-3.5-turbo': `**GPT-3.5 Response (${tempVariation}):**\n\n${prompt.substring(0, 40)}...\n\nHere's a clear and efficient response that addresses your request directly. This provides practical, well-structured information with good balance of detail and brevity.\n\n- Direct answers to key points\n- Practical suggestions\n- Clear communication`,
-      
-      'claude-3': `**Claude 3 Analysis (${tempVariation}):**\n\n${prompt.substring(0, 45)}...\n\nI'll provide a thoughtful response with careful consideration of nuance and context. My analysis focuses on:\n\n→ Balanced perspectives\n→ Detailed reasoning\n→ Ethical considerations\n→ Solution-oriented approach`,
-      
-      'gemini-pro': `**Gemini Pro Response (${tempVariation}):**\n\n${prompt.substring(0, 42)}...\n\nLeveraging advanced AI capabilities for comprehensive understanding:\n\n🔍 Deep contextual analysis\n🧠 Advanced reasoning patterns\n🌐 Broad knowledge integration\n⚡ Efficient processing`,
-      
-      'llama-2': `**Llama 2 Response (${tempVariation}):**\n\n${prompt.substring(0, 38)}...\n\nAs an open-source model, providing transparent and accessible AI capabilities:\n\n• Open reasoning process\n• Community-driven benefits\n• Balanced perspective\n• Practical applications`
-    };
-
-    return responses[model as keyof typeof responses] || `Response from ${model.toUpperCase()}: This is a simulated response to your prompt.`;
-  };
-
-  const generateMockScore = (): PromptScore => {
-    const relevance = Math.floor(Math.random() * 3) + 8;
-    const clarity = Math.floor(Math.random() * 3) + 7;
-    const creativity = Math.floor(Math.random() * 4) + 6;
-    
-    const critiques = [
-      "Excellent prompt structure with clear intent. Consider adding more specific context.",
-      "Well-crafted prompt that effectively guides the AI. The use of variables makes it highly reusable.",
-      "Strong prompt with good clarity. Adding examples could further improve response quality.",
-      "Thoughtful prompt design that balances specificity with flexibility.",
-      "Clear and purposeful prompt. Consider refining the tone instructions for consistency."
-    ];
-
-    return {
-      relevance,
-      clarity,
-      creativity,
-      overall: Math.round(((relevance + clarity + creativity) / 3) * 10) / 10,
-      critique: critiques[Math.floor(Math.random() * critiques.length)]
-    };
-  };
-
   const evaluateCondition = (condition: string, nodeData: any): boolean => {
     if (!condition) return true;
     
@@ -163,6 +159,10 @@ const PromptChainCanvas = () => {
       if (evaluatedCondition.includes('==')) {
         const [left, right] = evaluatedCondition.split('==').map(s => s.trim().replace(/"/g, ''));
         return left === right;
+      }
+      if (evaluatedCondition.includes('!=')) {
+        const [left, right] = evaluatedCondition.split('!=').map(s => s.trim().replace(/"/g, ''));
+        return left !== right;
       }
       
       return true;
@@ -193,7 +193,7 @@ const PromptChainCanvas = () => {
     if (currentNode?.data.variables) {
       Object.entries(currentNode.data.variables).forEach(([key, value]) => {
         const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-        processedPrompt = processedPrompt.replace(regex, value);
+        processedPrompt = processedPrompt.replace(regex, String(value));
       });
     }
 
@@ -216,28 +216,35 @@ const PromptChainCanvas = () => {
     );
 
     try {
-      // Simulate API delay based on model and temperature
-      const baseDelay = {
-        'gpt-4': 2000,
-        'gpt-3.5-turbo': 800,
-        'claude-3': 1500,
-        'gemini-pro': 1200,
-        'llama-2': 1000
-      }[node.data.model] || 1000;
-      
-      const temperatureDelay = (node.data.temperature || 0.7) * 500;
-      const totalDelay = baseDelay + temperatureDelay + Math.random() * 1000;
-      
-      await new Promise(resolve => setTimeout(resolve, totalDelay));
-
       const processedPrompt = replaceVariables(node.data.prompt, nodeId);
-      const output = generateMockResponse(processedPrompt, node.data.model, node.data.temperature || 0.7);
-      const score = generateMockScore();
-      const executionTime = Date.now() - startTime;
+      let output: string;
+      let tokenUsage = { input: 0, output: 0, total: 0 };
 
-      // Simulate realistic token usage
-      const inputTokens = Math.floor(processedPrompt.length / 4) + Math.floor(Math.random() * 50);
-      const outputTokens = Math.floor(output.length / 4) + Math.floor(Math.random() * 100);
+      // Use real API call for all models
+      const result = await apiService.generateCompletion(
+        node.data.model,
+        processedPrompt,
+        undefined, // system message
+        node.data.temperature || 0.7
+      );
+      
+      output = result.content;
+      if (result.usage) {
+        tokenUsage = {
+          input: result.usage.prompt_tokens,
+          output: result.usage.completion_tokens,
+          total: result.usage.total_tokens
+        };
+      }
+
+      // Use GPT-4 to evaluate the response
+      const score = await apiService.evaluatePromptResponse(
+        processedPrompt,
+        output,
+        0.3 // Low temperature for consistent evaluation
+      );
+
+      const executionTime = Date.now() - startTime;
 
       // Update node with results
       setNodes((nds) =>
@@ -251,11 +258,7 @@ const PromptChainCanvas = () => {
                   output,
                   score,
                   executionTime,
-                  tokenUsage: {
-                    input: inputTokens,
-                    output: outputTokens,
-                    total: inputTokens + outputTokens
-                  }
+                  tokenUsage
                 } 
               }
             : n
@@ -267,16 +270,14 @@ const PromptChainCanvas = () => {
         nodeId,
         title: node.data.title,
         executionTime,
-        tokenUsage: {
-          input: inputTokens,
-          output: outputTokens,
-          total: inputTokens + outputTokens
-        },
+        tokenUsage,
         score: score.overall,
         timestamp: new Date()
       }]);
 
     } catch (error) {
+      console.error(`Error running node ${nodeId}:`, error);
+      
       // Update node with error
       setNodes((nds) =>
         nds.map((n) =>
@@ -286,7 +287,7 @@ const PromptChainCanvas = () => {
                 data: { 
                   ...n.data, 
                   isRunning: false, 
-                  error: 'Failed to execute prompt. Please try again.'
+                  error: error instanceof Error ? error.message : 'Failed to execute prompt. Please try again.'
                 } 
               }
             : n

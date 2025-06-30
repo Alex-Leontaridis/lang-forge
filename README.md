@@ -1,6 +1,6 @@
 # LangForge 🦜
 
-**The visual IDE for crafting, testing, and exporting LangChain-ready prompt chains.**  
+The visual IDE for crafting, testing, and exporting LangChain-ready prompt chains.
 Design prompts like a pro, visualize logic flows, validate with AI, and export production-ready chains — all in one elegant workspace.
 ---
 

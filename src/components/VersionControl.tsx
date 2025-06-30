@@ -145,7 +145,7 @@ const VersionControl: React.FC<VersionControlProps> = ({
   );
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm" data-walkthrough="version-control">
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
       <div className="p-3 sm:p-4 border-b border-gray-200">
         <button
           onClick={() => setIsExpanded(!isExpanded)}

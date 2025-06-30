@@ -347,7 +347,7 @@ Only return the JSON, no additional text.`;
   };
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`} data-walkthrough="auto-testing">
+    <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
       <div className="p-3 sm:p-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <button

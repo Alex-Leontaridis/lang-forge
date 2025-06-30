@@ -687,7 +687,6 @@ const PromptForge = () => {
                         ? 'bg-white text-black shadow-sm'
                         : 'text-gray-600 hover:text-black'
                     }`}
-                    data-walkthrough={tab.id === 'analytics' ? 'analytics-tab' : undefined}
                   >
                     <Icon className="w-4 h-4" />
                     <span className="hidden sm:inline">{tab.name}</span>
@@ -743,7 +742,6 @@ const PromptForge = () => {
                       ? 'bg-white text-black shadow-sm'
                       : 'text-gray-600 hover:text-black'
                   }`}
-                  data-walkthrough={tab.id === 'analytics' ? 'analytics-tab' : undefined}
                 >
                   <Icon className="w-4 h-4" />
                   <span className="text-sm">{tab.name}</span>
@@ -787,7 +785,7 @@ const PromptForge = () => {
       )}
 
       {/* Main Content */}
-      <div className={activeTab === 'canvas' ? '' : 'px-4 sm:px-6 py-4 sm:py-8'} data-walkthrough="editor-main">
+      <div className={activeTab === 'canvas' ? '' : 'px-4 sm:px-6 py-4 sm:py-8'}>
         {activeTab === 'editor' && (
           <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 sm:gap-6">
             {/* Mobile/Tablet Sidebar */}
@@ -830,7 +828,7 @@ const PromptForge = () => {
                     <span className="font-semibold">Prompts</span>
                   </button>
                   {!collapsePrompts && (
-                    <div data-walkthrough="prompt-list">
+                    <div>
                       <PromptManager
                         projectId={projectId}
                         prompts={prompts}
@@ -853,7 +851,7 @@ const PromptForge = () => {
                     <span className="font-semibold">Variables</span>
                   </button>
                   {!collapseVariables && (
-                    <div data-walkthrough="variables-panel">
+                    <div>
                       <VariableManager
                         variables={variables}
                         inputVariables={inputVariables}
@@ -896,7 +894,7 @@ const PromptForge = () => {
                   <span className="font-semibold">Prompts</span>
                 </button>
                 {!collapsePrompts && (
-                  <div data-walkthrough="prompt-list">
+                  <div>
                     <PromptManager
                       projectId={projectId}
                       prompts={prompts}
@@ -919,7 +917,7 @@ const PromptForge = () => {
                   <span className="font-semibold">Variables</span>
                 </button>
                 {!collapseVariables && (
-                  <div data-walkthrough="variables-panel">
+                  <div>
                     <VariableManager
                       variables={variables}
                       inputVariables={inputVariables}
@@ -934,7 +932,7 @@ const PromptForge = () => {
               </div>
 
               {/* Version Control */}
-              <div data-walkthrough="version-control">
+              <div>
                 <VersionControl
                   versions={versions}
                   currentVersionId={currentVersionId}
@@ -947,7 +945,7 @@ const PromptForge = () => {
               </div>
 
               {/* Prompt Actions */}
-              <div data-walkthrough="prompt-actions">
+              <div>
                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
                   <div className="p-3 sm:p-4 border-b border-gray-200">
                     <div className="flex items-center space-x-2">
@@ -988,7 +986,7 @@ const PromptForge = () => {
                 </button>
               </div>
 
-              <div data-walkthrough="prompt-input">
+              <div>
                 <PromptEditor 
                   prompt={currentVersion?.content || ''} 
                   setPrompt={handlePromptChange}
@@ -1003,7 +1001,7 @@ const PromptForge = () => {
                 />
               </div>
 
-              <div data-walkthrough="run-button">
+              <div>
                 <MultiModelRunner
                   models={models}
                   onRunModels={handleRunModels}

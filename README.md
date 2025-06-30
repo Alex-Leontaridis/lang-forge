@@ -1,6 +1,6 @@
-# PromptForge
+# LangForge 🦜
 
-A powerful prompt engineering and testing platform with advanced version control, analytics, multi-model comparison, and comprehensive variable management capabilities.
+The visual IDE for crafting prompts and building LangChain logic — all in one place. A powerful prompt engineering and testing platform with advanced version control, analytics, multi-model comparison, and comprehensive variable management capabilities.
 
 ## 🚀 Features
 
@@ -63,7 +63,7 @@ A powerful prompt engineering and testing platform with advanced version control
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd prompt-forge
+cd langforge
 
 # Install dependencies
 npm install
@@ -294,4 +294,4 @@ For support and questions:
 
 ---
 
-**PromptForge** - Empowering prompt engineers with advanced tools and analytics.
+**LangForge 🦜** - The visual IDE for crafting prompts and building LangChain logic.

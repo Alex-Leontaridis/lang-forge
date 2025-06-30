@@ -1,14 +1,15 @@
 import React from 'react';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { TrendingUp, BarChart3, Clock, Zap, Target, AlertTriangle } from 'lucide-react';
-import { ModelRun, PromptVersion } from '../types';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, BarChart3, Clock, Zap, Target, AlertTriangle, Sparkles, CheckCircle, XCircle } from 'lucide-react';
+import { ModelRun, PromptVersion, AutoTestResult } from '../types';
 
 interface AnalyticsProps {
   versions: PromptVersion[];
   runs: ModelRun[];
+  autoTestResults?: AutoTestResult[];
 }
 
-const Analytics: React.FC<AnalyticsProps> = ({ versions, runs }) => {
+const Analytics: React.FC<AnalyticsProps> = ({ versions, runs, autoTestResults = [] }) => {
   // Prepare data for charts
   const scoreOverTimeData = versions.map(version => {
     const versionRuns = runs.filter(run => run.versionId === version.id && run.score);
@@ -86,6 +87,57 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs }) => {
     };
   });
 
+  // Auto-test analytics data
+  const autoTestSummary = {
+    totalTests: autoTestResults.reduce((sum, result) => sum + result.summary.totalTests, 0),
+    passedTests: autoTestResults.reduce((sum, result) => sum + result.summary.passedTests, 0),
+    failedTests: autoTestResults.reduce((sum, result) => sum + result.summary.failedTests, 0),
+    overallPassRate: autoTestResults.length > 0 
+      ? (autoTestResults.reduce((sum, result) => sum + result.summary.passedTests, 0) / 
+         autoTestResults.reduce((sum, result) => sum + result.summary.totalTests, 0)) * 100
+      : 0
+  };
+
+  const autoTestModelPerformance = Object.entries(
+    autoTestResults.reduce((acc, result) => {
+      Object.entries(result.summary.modelResults).forEach(([modelId, stats]) => {
+        if (!acc[modelId]) {
+          acc[modelId] = { passed: 0, failed: 0, total: 0 };
+        }
+        acc[modelId].passed += stats.passed;
+        acc[modelId].failed += stats.failed;
+        acc[modelId].total += stats.total;
+      });
+      return acc;
+    }, {} as Record<string, { passed: number; failed: number; total: number }>)
+  ).map(([modelId, stats]) => ({
+    model: modelId,
+    passRate: stats.total > 0 ? (stats.passed / stats.total) * 100 : 0,
+    totalTests: stats.total,
+    passedTests: stats.passed,
+    failedTests: stats.failed
+  }));
+
+  const autoTestPassFailData = [
+    { name: 'Passed', value: autoTestSummary.passedTests, color: '#10b981' },
+    { name: 'Failed', value: autoTestSummary.failedTests, color: '#ef4444' }
+  ];
+
+  const autoTestOverTimeData = versions.map(version => {
+    const versionAutoTests = autoTestResults.filter(result => 
+      result.prompt === version.content
+    );
+    const avgPassRate = versionAutoTests.length > 0 
+      ? versionAutoTests.reduce((sum, result) => sum + (result.summary.passedTests / result.summary.totalTests * 100), 0) / versionAutoTests.length
+      : 0;
+    
+    return {
+      version: version.title,
+      passRate: avgPassRate,
+      totalTests: versionAutoTests.reduce((sum, result) => sum + result.summary.totalTests, 0)
+    };
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-2 mb-6">
@@ -131,6 +183,45 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs }) => {
           </div>
         </div>
       </div>
+
+      {/* Auto-Test Summary Cards */}
+      {autoTestResults.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+          <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+              <span className="text-xs sm:text-sm font-medium text-gray-600">Auto-Tests</span>
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">{autoTestSummary.totalTests}</div>
+          </div>
+          
+          <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+              <span className="text-xs sm:text-sm font-medium text-gray-600">Passed Tests</span>
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">{autoTestSummary.passedTests}</div>
+          </div>
+          
+          <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+              <span className="text-xs sm:text-sm font-medium text-gray-600">Failed Tests</span>
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">{autoTestSummary.failedTests}</div>
+          </div>
+          
+          <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <Target className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+              <span className="text-xs sm:text-sm font-medium text-gray-600">Pass Rate</span>
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">
+              {autoTestSummary.overallPassRate.toFixed(1)}%
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
@@ -199,29 +290,73 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs }) => {
         <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Failure Rate (Score &lt; 6)</h3>
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={failureRateData}>
+            <BarChart data={failureRateData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis dataKey="version" tick={{ fontSize: 12 }} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
               <Tooltip formatter={(value) => [`${value}%`, 'Failure Rate']} />
-              <Line type="monotone" dataKey="failureRate" stroke="#ef4444" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Version Comparison Bar Chart */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Version Score Comparison</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={scoreOverTimeData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-              <XAxis dataKey="version" tick={{ fontSize: 12 }} />
-              <YAxis domain={[0, 10]} tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Bar dataKey="overall" fill="#000000" name="Overall Score" />
+              <Bar dataKey="failureRate" fill="#ef4444" />
             </BarChart>
           </ResponsiveContainer>
         </div>
+
+        {/* Auto-Test Pass/Fail Distribution */}
+        {autoTestResults.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Auto-Test Results Distribution</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={autoTestPassFailData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {autoTestPassFailData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Auto-Test Model Performance */}
+        {autoTestResults.length > 0 && autoTestModelPerformance.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Auto-Test Model Performance</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={autoTestModelPerformance}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="model" tick={{ fontSize: 12 }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(value) => [`${value}%`, 'Pass Rate']} />
+                <Bar dataKey="passRate" fill="#8b5cf6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Auto-Test Pass Rate Over Time */}
+        {autoTestResults.length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Auto-Test Pass Rate Over Time</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={autoTestOverTimeData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="version" tick={{ fontSize: 12 }} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(value) => [`${value}%`, 'Pass Rate']} />
+                <Line type="monotone" dataKey="passRate" stroke="#8b5cf6" strokeWidth={2} name="Pass Rate" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -170,6 +170,8 @@ export interface TestCase {
 export interface TestResult {
   testCase: TestCase;
   actualOutput: string;
+  modelId: string;
+  modelName: string;
   passed: boolean;
   evaluation: {
     followsInstructions: boolean;
@@ -196,5 +198,6 @@ export interface AutoTestResult {
     failedTests: number;
     overallPassed: boolean;
     averageScore: number;
+    modelResults: Record<string, { passed: number; failed: number; total: number }>;
   };
 }

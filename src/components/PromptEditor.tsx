@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { FileText, Zap, Eye, EyeOff, Sparkles } from 'lucide-react';
-import { Variable } from '../types';
+import { Variable, Model } from '../types';
 import apiService from '../services/apiService';
 import PromptAutoTest, { AutoTestResult } from './PromptAutoTest';
 
@@ -12,6 +12,9 @@ interface PromptEditorProps {
   onVariablesChange: (variables: Variable[]) => void;
   selectedModel?: string;
   temperature?: number;
+  models?: Model[];
+  selectedModels?: string[];
+  onAutoTestComplete?: (result: AutoTestResult) => void;
 }
 
 const PromptEditor: React.FC<PromptEditorProps> = ({ 
@@ -21,7 +24,10 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   variables,
   onVariablesChange,
   selectedModel = 'gpt-4',
-  temperature = 0.3
+  temperature = 0.3,
+  models = [],
+  selectedModels = ['gpt-4'],
+  onAutoTestComplete
 }) => {
   const [showPreview, setShowPreview] = React.useState(false);
   const [isOptimizing, setIsOptimizing] = React.useState(false);
@@ -213,9 +219,14 @@ OPTIMIZED PROMPT:`;
             <PromptAutoTest
               prompt={prompt}
               variables={variables}
-              model={selectedModel}
+              models={models}
+              selectedModels={selectedModels}
               temperature={temperature}
-              onTestComplete={setAutoTestResult}
+              onTestComplete={(result) => {
+                setAutoTestResult(result);
+                onAutoTestComplete?.(result);
+              }}
+              isRunning={isRunning}
             />
           </div>
         )}

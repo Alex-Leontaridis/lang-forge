@@ -9,17 +9,14 @@ const Homepage = () => {
       <nav className="relative z-10 px-6 py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white text-lg">🦜</span>
-            </div>
-            <span className="text-xl font-semibold text-black">LangForge</span>
+            <span className="text-xl font-semibold text-black">🦜 LangForge</span>
           </div>
           <div className="hidden md:flex items-center space-x-8">
             <a href="#features" className="text-gray-600 hover:text-black transition-colors">Features</a>
             <a href="#about" className="text-gray-600 hover:text-black transition-colors">About</a>
             <Link 
               to="/app" 
-              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2"
+              className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-all duration-200 flex items-center space-x-2"
             >
               <span>Launch App</span>
               <ArrowRight className="w-4 h-4" />
@@ -31,14 +28,14 @@ const Homepage = () => {
       {/* Hero Section */}
       <section className="px-6 py-20">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-full px-4 py-2 mb-8">
-            <Sparkles className="w-4 h-4 text-blue-700" />
-            <span className="text-sm font-medium text-blue-700">Visual IDE for LangChain & Prompt Engineering</span>
+          <div className="inline-flex items-center space-x-2 bg-gray-50 border border-gray-200 rounded-full px-4 py-2 mb-8">
+            <Sparkles className="w-4 h-4 text-gray-700" />
+            <span className="text-sm font-medium text-gray-700">Visual IDE for LangChain & Prompt Engineering</span>
           </div>
           
           <h1 className="text-5xl md:text-7xl font-bold text-black mb-8 leading-tight">
             The visual IDE for crafting prompts and building
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> LangChain logic</span>
+            <span className="text-gray-600"> LangChain logic</span>
           </h1>
           
           <p className="text-xl md:text-2xl text-gray-600 mb-12 leading-relaxed max-w-3xl mx-auto">
@@ -48,7 +45,7 @@ const Homepage = () => {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link 
               to="/app" 
-              className="group bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 flex items-center space-x-2"
+              className="group bg-black text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-800 transition-all duration-300 flex items-center space-x-2"
             >
               <span>Start Building</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -61,7 +58,7 @@ const Homepage = () => {
       </section>
 
       {/* Build Smarter Section */}
-      <section className="px-6 py-20 bg-gradient-to-br from-blue-50 to-purple-50">
+      <section className="px-6 py-20 bg-gray-50">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
@@ -86,7 +83,7 @@ const Homepage = () => {
           
           <div className="grid md:grid-cols-2 gap-12">
             <div className="bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-lg transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+              <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-6">
                 <Palette className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-2xl font-semibold text-black mb-4">🧩 Canvas</h3>
@@ -96,7 +93,7 @@ const Homepage = () => {
             </div>
             
             <div className="bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-lg transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+              <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-6">
                 <Code className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-2xl font-semibold text-black mb-4">💬 Editor</h3>
@@ -132,7 +129,7 @@ const Homepage = () => {
           
           <div className="grid md:grid-cols-3 gap-8 mb-12">
             <div className="bg-white border border-gray-200 rounded-2xl p-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+              <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-6">
                 <Layers className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-black mb-4">✅ PromptTemplates</h3>
@@ -142,7 +139,7 @@ const Homepage = () => {
             </div>
             
             <div className="bg-white border border-gray-200 rounded-2xl p-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+              <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-6">
                 <Workflow className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-black mb-4">✅ Chain Flows</h3>
@@ -152,7 +149,7 @@ const Homepage = () => {
             </div>
             
             <div className="bg-white border border-gray-200 rounded-2xl p-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+              <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-6">
                 <Zap className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-black mb-4">✅ Memory & Tools</h3>
@@ -187,7 +184,7 @@ const Homepage = () => {
           
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-lg transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+              <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-6">
                 <TestTube className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-2xl font-semibold text-black mb-4">🧪 Auto-Generated Tests</h3>
@@ -197,7 +194,7 @@ const Homepage = () => {
             </div>
             
             <div className="bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-lg transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+              <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-6">
                 <Target className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-2xl font-semibold text-black mb-4">📈 PromptScore</h3>
@@ -207,7 +204,7 @@ const Homepage = () => {
             </div>
             
             <div className="bg-white border border-gray-200 rounded-2xl p-8 hover:shadow-lg transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+              <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-6">
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-2xl font-semibold text-black mb-4">📊 Analytics Dashboard</h3>
@@ -230,7 +227,7 @@ const Homepage = () => {
           
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white border border-gray-200 rounded-2xl p-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+              <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-6">
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-black mb-4">🚀 One-click LangGraph templates</h3>
@@ -240,7 +237,7 @@ const Homepage = () => {
             </div>
             
             <div className="bg-white border border-gray-200 rounded-2xl p-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+              <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-6">
                 <Layers className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-black mb-4">🧱 Save reusable components</h3>
@@ -250,7 +247,7 @@ const Homepage = () => {
             </div>
             
             <div className="bg-white border border-gray-200 rounded-2xl p-8">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
+              <div className="w-12 h-12 bg-black rounded-lg flex items-center justify-center mb-6">
                 <GitBranch className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-black mb-4">💾 Version control & history</h3>
@@ -271,7 +268,7 @@ const Homepage = () => {
       {/* CTA Section */}
       <section className="px-6 py-20">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-2xl p-12">
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-12">
             <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
               Ready to forge better LangChain applications?
             </h2>
@@ -280,7 +277,7 @@ const Homepage = () => {
             </p>
             <Link 
               to="/app" 
-              className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300"
+              className="inline-flex items-center space-x-2 bg-black text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-800 transition-all duration-300"
             >
               <span>Get Started Now</span>
               <ArrowRight className="w-5 h-5" />
@@ -294,10 +291,7 @@ const Homepage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between mb-8">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white text-sm">🦜</span>
-              </div>
-              <span className="text-lg font-semibold text-black">LangForge</span>
+              <span className="text-lg font-semibold text-black">🦜 LangForge</span>
             </div>
             <p className="text-gray-600">&copy; 2025 LangForge. Built with AI in mind.</p>
           </div>

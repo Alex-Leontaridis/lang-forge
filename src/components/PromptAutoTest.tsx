@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Play, CheckCircle, XCircle, Loader2, AlertTriangle, Sparkles } from 'lucide-react';
-import { Variable } from '../types';
+import { Play, CheckCircle, XCircle, Loader2, AlertTriangle, Sparkles, ChevronDown, ChevronRight, Bot } from 'lucide-react';
+import { Variable, Model } from '../types';
 import apiService from '../services/apiService';
 
 export interface TestCase {
@@ -13,6 +13,8 @@ export interface TestCase {
 export interface TestResult {
   testCase: TestCase;
   actualOutput: string;
+  modelId: string;
+  modelName: string;
   passed: boolean;
   evaluation: {
     followsInstructions: boolean;
@@ -39,29 +41,35 @@ export interface AutoTestResult {
     failedTests: number;
     overallPassed: boolean;
     averageScore: number;
+    modelResults: Record<string, { passed: number; failed: number; total: number }>;
   };
 }
 
 interface PromptAutoTestProps {
   prompt: string;
   variables: Variable[];
-  model: string;
+  models: Model[];
+  selectedModels?: string[];
   temperature?: number;
   onTestComplete?: (result: AutoTestResult) => void;
   className?: string;
+  isRunning?: boolean;
 }
 
 const PromptAutoTest: React.FC<PromptAutoTestProps> = ({
   prompt,
   variables,
-  model,
+  models,
+  selectedModels = ['gpt-4'],
   temperature = 0.3,
   onTestComplete,
-  className = ''
+  className = '',
+  isRunning = false
 }) => {
-  const [isRunning, setIsRunning] = useState(false);
+  const [isRunningTests, setIsRunningTests] = useState(false);
   const [testResult, setTestResult] = useState<AutoTestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const generateTestCases = async (prompt: string, variables: Variable[]): Promise<TestCase[]> => {
     const systemMessage = `You are an expert QA engineer specializing in generating comprehensive test cases for AI prompts. Your goal is to create realistic test scenarios that validate the prompt's effectiveness.
@@ -148,7 +156,7 @@ Only return the JSON, no additional text.`;
     return testCases;
   };
 
-  const runTestCase = async (testCase: TestCase): Promise<TestResult> => {
+  const runTestCase = async (testCase: TestCase, modelId: string): Promise<TestResult> => {
     // Replace variables in prompt with test case values
     let testPrompt = prompt;
     Object.entries(testCase.input).forEach(([key, value]) => {
@@ -159,7 +167,7 @@ Only return the JSON, no additional text.`;
     
     // Run the prompt with the test case input
     const result = await apiService.generateCompletion(
-      model,
+      modelId,
       testPrompt,
       '',
       temperature,
@@ -171,13 +179,21 @@ Only return the JSON, no additional text.`;
     // Evaluate the result using GPT-4
     const evaluation = await evaluateTestResult(testCase, result.content, prompt);
 
+    const model = models.find(m => m.id === modelId);
+
     return {
       testCase,
       actualOutput: result.content,
+      modelId,
+      modelName: model?.name || modelId,
       passed: evaluation.overallPassed,
       evaluation,
       executionTime,
-      tokenUsage: result.tokenUsage || { input: 0, output: 0, total: 0 }
+      tokenUsage: result.usage ? {
+        input: result.usage.prompt_tokens,
+        output: result.usage.completion_tokens,
+        total: result.usage.total_tokens
+      } : { input: 0, output: 0, total: 0 }
     };
   };
 
@@ -250,9 +266,9 @@ Only return the JSON, no additional text.`;
   };
 
   const runAutoTest = async () => {
-    if (!prompt.trim() || isRunning) return;
+    if (!prompt.trim() || isRunningTests) return;
 
-    setIsRunning(true);
+    setIsRunningTests(true);
     setError(null);
     setTestResult(null);
 
@@ -260,14 +276,29 @@ Only return the JSON, no additional text.`;
       // Generate test cases
       const testCases = await generateTestCases(prompt, variables);
       
-      // Run each test case
+      // Run each test case with each selected model
       const results: TestResult[] = [];
       for (const testCase of testCases) {
-        const result = await runTestCase(testCase);
-        results.push(result);
+        for (const modelId of selectedModels) {
+          const result = await runTestCase(testCase, modelId);
+          results.push(result);
+        }
       }
 
-      // Calculate summary
+      // Calculate summary with model-specific results
+      const modelResults: Record<string, { passed: number; failed: number; total: number }> = {};
+      
+      selectedModels.forEach(modelId => {
+        const modelTestResults = results.filter(r => r.modelId === modelId);
+        const passed = modelTestResults.filter(r => r.passed).length;
+        const total = modelTestResults.length;
+        modelResults[modelId] = {
+          passed,
+          failed: total - passed,
+          total
+        };
+      });
+
       const passedTests = results.filter(r => r.passed).length;
       const totalTests = results.length;
       const averageScore = results.reduce((sum, r) => {
@@ -282,7 +313,8 @@ Only return the JSON, no additional text.`;
         passedTests,
         failedTests: totalTests - passedTests,
         overallPassed: passedTests === totalTests,
-        averageScore: Math.round(averageScore * 100) / 100
+        averageScore: Math.round(averageScore * 100) / 100,
+        modelResults
       };
 
       const autoTestResult: AutoTestResult = {
@@ -298,7 +330,7 @@ Only return the JSON, no additional text.`;
       console.error('Error running auto test:', error);
       setError('Failed to run auto test. Please try again.');
     } finally {
-      setIsRunning(false);
+      setIsRunningTests(false);
     }
   };
 
@@ -316,103 +348,147 @@ Only return the JSON, no additional text.`;
 
   return (
     <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <Sparkles className="w-5 h-5 text-purple-600" />
-            <span className="font-semibold text-gray-900">Prompt Auto-Test</span>
+      <div className="p-3 sm:p-4 border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center justify-between w-full">
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex items-center space-x-2 text-left"
+            >
+              {isExpanded ? (
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-gray-500" />
+              )}
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+              <span className="font-semibold text-gray-900 text-sm sm:text-base">Prompt Auto-Test</span>
+              <span className="text-xs sm:text-sm text-gray-500">({selectedModels.length} models)</span>
+            </button>
+            
+            <button
+              onClick={runAutoTest}
+              disabled={!prompt.trim() || isRunningTests || isRunning}
+              className="flex items-center justify-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-700 transition-colors text-sm sm:text-base"
+            >
+              {isRunningTests ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Play className="w-4 h-4" />
+              )}
+              <span>{isRunningTests ? 'Running Tests...' : 'Run Auto-Test'}</span>
+            </button>
           </div>
-          
-          <button
-            onClick={runAutoTest}
-            disabled={!prompt.trim() || isRunning}
-            className="flex items-center space-x-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
-          >
-            {isRunning ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Play className="w-4 h-4" />
-            )}
-            <span>{isRunning ? 'Running Tests...' : 'Run Auto-Test'}</span>
-          </button>
         </div>
       </div>
 
-      <div className="p-4">
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-700 text-sm">{error}</p>
-          </div>
-        )}
-
-        {testResult && (
-          <div className="space-y-4">
-            {/* Summary */}
-            <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-              {getOverallStatus()?.icon}
-              <div>
-                <p className={`font-medium ${getOverallStatus()?.className}`}>
-                  {getOverallStatus()?.text}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {testResult.summary.passedTests}/{testResult.summary.totalTests} tests passed
-                  {testResult.summary.averageScore > 0 && (
-                    <span> • Average score: {testResult.summary.averageScore}/1.0</span>
-                  )}
-                </p>
-              </div>
+      {isExpanded && (
+        <div className="p-3 sm:p-4">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-700 text-sm">{error}</p>
             </div>
+          )}
 
-            {/* Test Results */}
-            <div className="space-y-3">
-              <h4 className="font-medium text-gray-900">Test Results</h4>
-              {testResult.results.map((result, index) => (
-                <div key={result.testCase.id} className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <h5 className="font-medium text-sm">Test {index + 1}: {result.testCase.description}</h5>
-                    {result.passed ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-red-500" />
+          {testResult && (
+            <div className="space-y-4">
+              {/* Summary */}
+              <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                {getOverallStatus()?.icon}
+                <div>
+                  <p className={`font-medium ${getOverallStatus()?.className}`}>
+                    {getOverallStatus()?.text}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {testResult.summary.passedTests}/{testResult.summary.totalTests} tests passed
+                    {testResult.summary.averageScore > 0 && (
+                      <span> • Average score: {testResult.summary.averageScore}/1.0</span>
                     )}
-                  </div>
+                  </p>
+                </div>
+              </div>
+
+              {/* Model Results Summary */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {Object.entries(testResult.summary.modelResults).map(([modelId, stats]) => {
+                  const model = models.find(m => m.id === modelId);
+                  const passRate = stats.total > 0 ? (stats.passed / stats.total * 100).toFixed(0) : '0';
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <p className="font-medium text-gray-700 mb-1">Input:</p>
-                      <pre className="bg-gray-50 p-2 rounded text-gray-600 overflow-x-auto">
-                        {JSON.stringify(result.testCase.input, null, 2)}
-                      </pre>
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-700 mb-1">Output:</p>
-                      <div className="bg-gray-50 p-2 rounded text-gray-600 max-h-20 overflow-y-auto">
-                        {result.actualOutput}
+                  return (
+                    <div key={modelId} className="p-3 border border-gray-200 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <Bot className="w-4 h-4 text-gray-600" />
+                          <span className="font-medium text-sm">{model?.name || modelId}</span>
+                        </div>
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          stats.passed === stats.total 
+                            ? 'bg-green-100 text-green-700' 
+                            : stats.passed > 0 
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-red-100 text-red-700'
+                        }`}>
+                          {passRate}%
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        {stats.passed}/{stats.total} tests passed
                       </div>
                     </div>
-                  </div>
+                  );
+                })}
+              </div>
 
-                  <div className="mt-2 p-2 bg-blue-50 rounded">
-                    <p className="text-xs text-blue-800">{result.evaluation.critique}</p>
-                  </div>
+              {/* Detailed Test Results */}
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-900">Detailed Test Results</h4>
+                {testResult.results.map((result, index) => (
+                  <div key={`${result.testCase.id}-${result.modelId}`} className="border border-gray-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <h5 className="font-medium text-sm">Test {Math.floor(index / selectedModels.length) + 1} - {result.modelName}</h5>
+                        {result.passed ? (
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-red-500" />
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {result.executionTime}ms • {result.tokenUsage.total} tokens
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <p className="font-medium text-gray-700 mb-1">Input:</p>
+                        <pre className="bg-gray-50 p-2 rounded text-gray-600 overflow-x-auto">
+                          {JSON.stringify(result.testCase.input, null, 2)}
+                        </pre>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-700 mb-1">Output:</p>
+                        <div className="bg-gray-50 p-2 rounded text-gray-600 max-h-20 overflow-y-auto">
+                          {result.actualOutput}
+                        </div>
+                      </div>
+                    </div>
 
-                  <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
-                    <span>Execution: {result.executionTime}ms</span>
-                    <span>Tokens: {result.tokenUsage.total}</span>
+                    <div className="mt-2 p-2 bg-blue-50 rounded">
+                      <p className="text-xs text-blue-800">{result.evaluation.critique}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {!testResult && !isRunning && (
-          <div className="text-center py-8 text-gray-500">
-            <Sparkles className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-            <p className="text-sm">Click "Run Auto-Test" to generate and run test cases</p>
-          </div>
-        )}
-      </div>
+          {!testResult && !isRunningTests && (
+            <div className="text-center py-8 text-gray-500">
+              <Sparkles className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+              <p className="text-sm">Click "Run Auto-Test" to generate and run test cases with {selectedModels.length} models</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

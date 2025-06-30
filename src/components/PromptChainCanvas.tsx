@@ -699,9 +699,7 @@ export { runChain };
           </Link>
           
           <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white text-sm">🦜</span>
-            </div>
+            <span className="text-lg font-semibold text-black">🦜 LangForge</span>
             <input
               type="text"
               value={chainName}
@@ -839,7 +837,7 @@ export { runChain };
                 position: 'absolute'
               }}>
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 max-w-md text-center">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <span className="text-white text-2xl">🦜</span>
                   </div>
                   <h2 className="text-2xl font-bold text-black mb-2">Welcome to LangForge Canvas</h2>
@@ -848,7 +846,7 @@ export { runChain };
                   </p>
                   <button
                     onClick={addPromptNode}
-                    className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-colors mx-auto"
+                    className="flex items-center space-x-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors mx-auto"
                   >
                     <Plus className="w-5 h-5" />
                     <span>Add Your First Node</span>

@@ -12,7 +12,7 @@ import PromptChainCanvas from './PromptChainCanvas';
 import ChainHealthValidation from './ChainHealthValidation';
 import VariableFlowVisualization from './VariableFlowVisualization';
 import { usePromptVersions } from '../hooks/usePromptVersions';
-import { Model, Variable, InputVariable, OutputVariable, VariableFlow, ChainHealthIssue } from '../types';
+import { Model, Variable, InputVariable, OutputVariable, VariableFlow, ChainHealthIssue, AutoTestResult } from '../types';
 import apiService from '../services/apiService';
 
 const PromptForge = () => {
@@ -31,6 +31,8 @@ const PromptForge = () => {
   const [showVariableManagement, setShowVariableManagement] = useState(true);
   const [showChainHealth, setShowChainHealth] = useState(true);
   const [showVariableFlow, setShowVariableFlow] = useState(true);
+  const [selectedModelsForAutoTest, setSelectedModelsForAutoTest] = useState<string[]>(['gpt-4']);
+  const [autoTestResults, setAutoTestResults] = useState<AutoTestResult[]>([]);
 
   const {
     versions,
@@ -139,6 +141,7 @@ const PromptForge = () => {
   const handleRunModels = async (selectedModels: string[]) => {
     if (!currentVersion.content.trim()) return;
     setIsRunning(true);
+    setSelectedModelsForAutoTest(selectedModels);
     const processedPrompt = replaceVariables(currentVersion.content);
     const TIMEOUT_MS = 20000;
     const withTimeout = (promise: Promise<any>, ms: number) => {
@@ -280,13 +283,11 @@ const PromptForge = () => {
   };
 
   const handleDuplicateVersion = (versionId: string) => {
-    const duplicatedVersion = duplicateVersion(versionId);
-    if (duplicatedVersion) {
-      // Switch to the duplicated version
-      setCurrentVersionId(duplicatedVersion.id);
-      const versionVariables = Object.entries(duplicatedVersion.variables || {}).map(([name, value]) => ({ name, value }));
-      setVariables(versionVariables);
-    }
+    duplicateVersion(versionId);
+  };
+
+  const handleAutoTestComplete = (result: AutoTestResult) => {
+    setAutoTestResults(prev => [...prev, result]);
   };
 
   const tabs = [
@@ -296,11 +297,10 @@ const PromptForge = () => {
     { id: 'compare' as const, name: 'Compare', icon: GitBranch }
   ];
 
-  const filteredRuns = currentRuns.filter(run => {
-    if (!searchTerm) return true;
-    return run.modelId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           run.output.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  const filteredRuns = currentRuns.filter(run => 
+    run.output.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    run.modelId.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -317,10 +317,7 @@ const PromptForge = () => {
                 <span className="font-medium hidden sm:inline">Back to Home</span>
               </Link>
               <div className="flex items-center space-x-2">
-                <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white text-xs sm:text-sm">🦜</span>
-                </div>
-                <span className="text-base sm:text-lg font-semibold text-black">LangForge</span>
+                <span className="text-base sm:text-lg font-semibold text-black">🦜 LangForge</span>
               </div>
             </div>
 
@@ -494,6 +491,9 @@ const PromptForge = () => {
                 onVariablesChange={handleVariablesChange}
                 selectedModel={currentModel}
                 temperature={0.7}
+                models={models}
+                selectedModels={selectedModelsForAutoTest}
+                onAutoTestComplete={handleAutoTestComplete}
               />
 
               <MultiModelRunner
@@ -643,7 +643,7 @@ const PromptForge = () => {
 
         {activeTab === 'analytics' && (
           <div className="max-w-7xl mx-auto">
-            <Analytics versions={versions} runs={runs} />
+            <Analytics versions={versions} runs={runs} autoTestResults={autoTestResults} />
           </div>
         )}
 

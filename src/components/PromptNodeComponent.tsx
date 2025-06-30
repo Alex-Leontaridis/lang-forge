@@ -453,13 +453,15 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
                 <PromptAutoTest
                   prompt={data.prompt}
                   variables={variables.map(name => ({ name, value: data.variables[name] || '' }))}
-                  model={data.model}
+                  models={models}
+                  selectedModels={[data.model]}
                   temperature={data.temperature || 0.7}
                   onTestComplete={(result) => {
                     setAutoTestResult(result);
                     data.onUpdate(id, { autoTestResult: result });
                   }}
                   className="text-xs"
+                  isRunning={data.isRunning}
                 />
               </div>
             )}

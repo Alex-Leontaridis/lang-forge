@@ -5,6 +5,7 @@ interface APIConfig {
   openaiApiKey: string;
   groqApiKey: string;
   openRouterApiKey: string;
+  openRouterOpenAIKey: string; // New key for OpenAI models through OpenRouter
 }
 
 interface ChatMessage {
@@ -35,9 +36,9 @@ interface ChatCompletionResponse {
 
 // Model configuration mapping
 const MODEL_CONFIG = {
-  // OpenAI models (using direct OpenAI API)
-  'gpt-4': { provider: 'openai', modelId: 'gpt-4' },
-  'gpt-3.5-turbo': { provider: 'openai', modelId: 'gpt-3.5-turbo' },
+  // OpenAI models (now routed through OpenRouter with new key)
+  'gpt-4': { provider: 'openrouter_openai', modelId: 'openai/gpt-4' },
+  'gpt-3.5-turbo': { provider: 'openrouter_openai', modelId: 'openai/gpt-3.5-turbo' },
   
   // Groq models (using direct Groq API)
   'gemma2-9b-it': { provider: 'groq', modelId: 'gemma2-9b-it' },
@@ -50,7 +51,7 @@ const MODEL_CONFIG = {
   'qwen-qwq-32b': { provider: 'groq', modelId: 'qwen-qwq-32b' },
   'qwen3-32b': { provider: 'groq', modelId: 'qwen3-32b' },
   
-  // OpenRouter models - Using verified model IDs
+  // OpenRouter models - Using verified model IDs (using original OpenRouter key)
   'meta-llama/llama-3.3-70b-instruct': { provider: 'openrouter', modelId: 'meta-llama/llama-3.3-70b-instruct' },
   'qwen/qwen-2.5-coder-32b-instruct': { provider: 'openrouter', modelId: 'qwen/qwen-2.5-coder-32b-instruct' },
   'meta-llama/llama-3.2-11b-vision-instruct': { provider: 'openrouter', modelId: 'meta-llama/llama-3.2-11b-vision-instruct' },
@@ -69,12 +70,36 @@ const MODEL_CONFIG = {
 const OPENAI_API_KEY = import.meta.env?.VITE_OPENAI_API_KEY;
 const GROQ_API_KEY = import.meta.env?.VITE_GROQ_API_KEY;
 const OPENROUTER_API_KEY = import.meta.env?.VITE_OPENROUTER_API_KEY;
+const OPENROUTER_OPENAI_KEY = import.meta.env?.VITE_OPENROUTER_OPENAI_KEY;
+
+// Debug logging for API keys
+console.log('API Keys Debug:', {
+  openai: OPENAI_API_KEY ? `${OPENAI_API_KEY.substring(0, 10)}...` : 'NOT SET',
+  groq: GROQ_API_KEY ? `${GROQ_API_KEY.substring(0, 10)}...` : 'NOT SET',
+  openrouter: OPENROUTER_API_KEY ? `${OPENROUTER_API_KEY.substring(0, 10)}...` : 'NOT SET',
+  openrouterOpenAI: OPENROUTER_OPENAI_KEY ? `${OPENROUTER_OPENAI_KEY.substring(0, 10)}...` : 'NOT SET',
+  env: import.meta.env
+});
 
 class APIService {
   private config: APIConfig;
 
   constructor(config: APIConfig) {
     this.config = config;
+    
+    // Validate API keys on initialization
+    if (!this.config.openaiApiKey) {
+      console.warn('OpenAI API key is not set. OpenAI models will not work.');
+    }
+    if (!this.config.groqApiKey) {
+      console.warn('Groq API key is not set. Groq models will not work.');
+    }
+    if (!this.config.openRouterApiKey) {
+      console.warn('OpenRouter API key is not set. OpenRouter models will not work.');
+    }
+    if (!this.config.openRouterOpenAIKey) {
+      console.warn('OpenRouter OpenAI API key is not set. OpenAI models through OpenRouter will not work.');
+    }
   }
 
   private getModelConfig(modelId: string) {
@@ -82,6 +107,10 @@ class APIService {
   }
 
   private async callOpenAIAPI(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
+    if (!this.config.openaiApiKey) {
+      throw new Error('OpenAI API key is not configured. Please set VITE_OPENAI_API_KEY in your environment variables.');
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -92,13 +121,19 @@ class APIService {
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('OpenAI API error details:', errorText);
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     return response.json();
   }
 
   private async callGroqAPI(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
+    if (!this.config.groqApiKey) {
+      throw new Error('Groq API key is not configured. Please set VITE_GROQ_API_KEY in your environment variables.');
+    }
+
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -109,13 +144,19 @@ class APIService {
     });
 
     if (!response.ok) {
-      throw new Error(`Groq API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Groq API error details:', errorText);
+      throw new Error(`Groq API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     return response.json();
   }
 
   private async callOpenRouterAPI(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
+    if (!this.config.openRouterApiKey) {
+      throw new Error('OpenRouter API key is not configured. Please set VITE_OPENROUTER_API_KEY in your environment variables.');
+    }
+
     const headers: Record<string, string> = {
       'Authorization': `Bearer ${this.config.openRouterApiKey}`,
       'Content-Type': 'application/json',
@@ -140,6 +181,40 @@ class APIService {
       const errorText = await response.text();
       console.error('OpenRouter API error details:', errorText);
       throw new Error(`OpenRouter API error: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    return response.json();
+  }
+
+  private async callOpenRouterOpenAIAPI(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
+    if (!this.config.openRouterOpenAIKey) {
+      throw new Error('OpenRouter OpenAI API key is not configured. Please set VITE_OPENROUTER_OPENAI_KEY in your environment variables.');
+    }
+
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${this.config.openRouterOpenAIKey}`,
+      'Content-Type': 'application/json',
+      'X-Title': 'PromptForge',
+    };
+
+    // Add HTTP-Referer only in browser environment
+    if (typeof window !== 'undefined' && window.location) {
+      headers['HTTP-Referer'] = window.location.origin;
+    }
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        ...request,
+        stream: false, // Ensure streaming is disabled
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenRouter OpenAI API error details:', errorText);
+      throw new Error(`OpenRouter OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     return response.json();
@@ -182,6 +257,8 @@ class APIService {
         response = await this.callOpenAIAPI(request);
       } else if (modelConfig.provider === 'groq') {
         response = await this.callGroqAPI(request);
+      } else if (modelConfig.provider === 'openrouter_openai') {
+        response = await this.callOpenRouterOpenAIAPI(request);
       } else {
         response = await this.callOpenRouterAPI(request);
       }
@@ -342,6 +419,7 @@ const apiService = new APIService({
   openaiApiKey: OPENAI_API_KEY,
   groqApiKey: GROQ_API_KEY,
   openRouterApiKey: OPENROUTER_API_KEY,
+  openRouterOpenAIKey: OPENROUTER_OPENAI_KEY,
 });
 
 export default apiService;

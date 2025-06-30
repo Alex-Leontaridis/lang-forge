@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, Copy, Check, Clock } from 'lucide-react';
+import { Bot, Copy, Check, Clock, Eye } from 'lucide-react';
 
 interface ModelOutputProps {
   output: string;
@@ -33,6 +33,7 @@ const ModelOutput: React.FC<ModelOutputProps> = ({
   executionTime
 }) => {
   const [copied, setCopied] = React.useState(false);
+  const [showFullOutput, setShowFullOutput] = React.useState(false);
 
   const handleCopy = async () => {
     if (output) {
@@ -119,101 +120,177 @@ const ModelOutput: React.FC<ModelOutputProps> = ({
 
   if (compact) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center space-x-2">
-            {modelLogo ? (
-              <img src={modelLogo} alt="model logo" className="w-7 h-7 rounded-md object-contain bg-white border border-gray-200" />
+      <>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              {modelLogo ? (
+                <img src={modelLogo} alt="model logo" className="w-7 h-7 rounded-md object-contain bg-white border border-gray-200" />
+              ) : (
+                <div className="w-6 h-6 bg-black rounded-md flex items-center justify-center">
+                  <Bot className="w-3 h-3 text-white" />
+                </div>
+              )}
+              <div>
+                <h3 className="text-sm font-semibold text-black">{modelName || selectedModel.toUpperCase()}</h3>
+                {timestamp && (
+                  <div className="flex items-center space-x-1 mt-1">
+                    <Clock className="w-3 h-3 text-gray-400" />
+                    <span className="text-xs text-gray-500">{formatTimestamp(timestamp)}</span>
+                  </div>
+                )}
+                {score && (
+                  <div className="flex items-center space-x-2 mt-1">
+                    <CircularProgress value={score.overall} size={40} strokeWidth={4} />
+                    <div className="flex items-center space-x-1">
+                      <CircularProgress value={score.relevance} size={28} strokeWidth={3} />
+                      <CircularProgress value={score.clarity} size={28} strokeWidth={3} />
+                      <CircularProgress value={score.creativity} size={28} strokeWidth={3} />
+                    </div>
+                    {onShowFullReport && (
+                      <button
+                        onClick={onShowFullReport}
+                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Full Report
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center space-x-1">
+              {output && (
+                <>
+                  <button
+                    onClick={() => setShowFullOutput(true)}
+                    className="flex items-center space-x-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 rounded text-xs transition-colors border border-blue-200"
+                  >
+                    <Eye className="w-3 h-3 text-blue-600" />
+                    <span className="text-blue-600">Full Output</span>
+                  </button>
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center space-x-1 px-2 py-1 bg-gray-50 hover:bg-gray-100 rounded text-xs transition-colors border border-gray-200"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-3 h-3 text-green-600" />
+                        <span className="text-green-600">Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3 text-gray-600" />
+                        <span className="text-gray-600">Copy</span>
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          {/* Content */}
+          <div className="relative">
+            {isRunning ? (
+              <div className="h-24 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="inline-flex items-center space-x-1 bg-gray-50 px-3 py-1 rounded-full mb-2 border border-gray-200">
+                    <div className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce"></div>
+                    <div className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                  <p className="text-xs text-gray-600 font-medium">Generating...</p>
+                </div>
+              </div>
+            ) : output ? (
+              <div className="bg-gray-50 rounded-md p-3 border border-gray-200">
+                <div className="prose prose-gray max-w-none">
+                  <pre className="whitespace-pre-wrap font-sans text-xs text-gray-800 leading-relaxed line-clamp-4">
+                    {output}
+                  </pre>
+                </div>
+              </div>
             ) : (
-              <div className="w-6 h-6 bg-black rounded-md flex items-center justify-center">
-                <Bot className="w-3 h-3 text-white" />
+              <div className="h-24 flex items-center justify-center text-gray-500">
+                <div className="text-center">
+                  <Bot className="w-6 h-6 mx-auto mb-1 opacity-50" />
+                  <p className="text-xs">Awaiting response</p>
+                </div>
               </div>
             )}
-            <div>
-              <h3 className="text-sm font-semibold text-black">{modelName || selectedModel.toUpperCase()}</h3>
-              {timestamp && (
-                <div className="flex items-center space-x-1 mt-1">
-                  <Clock className="w-3 h-3 text-gray-400" />
-                  <span className="text-xs text-gray-500">{formatTimestamp(timestamp)}</span>
-                </div>
-              )}
-              {score && (
-                <div className="flex items-center space-x-2 mt-1">
-                  <CircularProgress value={score.overall} size={40} strokeWidth={4} />
-                  <div className="flex items-center space-x-1">
-                    <CircularProgress value={score.relevance} size={28} strokeWidth={3} />
-                    <CircularProgress value={score.clarity} size={28} strokeWidth={3} />
-                    <CircularProgress value={score.creativity} size={28} strokeWidth={3} />
-                  </div>
-                  {onShowFullReport && (
-                    <button
-                      onClick={onShowFullReport}
-                      className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      Full Report
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
           {output && (
-            <button
-              onClick={handleCopy}
-              className="flex items-center space-x-1 px-2 py-1 bg-gray-50 hover:bg-gray-100 rounded text-xs transition-colors border border-gray-200"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3 h-3 text-green-600" />
-                  <span className="text-green-600">Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3 h-3 text-gray-600" />
-                  <span className="text-gray-600">Copy</span>
-                </>
-              )}
-            </button>
+            <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+              <span>{executionTime ? formatExecutionTime(executionTime) : '~2.3s'}</span>
+              <span>{output.length} chars</span>
+            </div>
           )}
         </div>
-        {/* Content */}
-        <div className="relative">
-          {isRunning ? (
-            <div className="h-24 flex items-center justify-center">
-              <div className="text-center">
-                <div className="inline-flex items-center space-x-1 bg-gray-50 px-3 py-1 rounded-full mb-2 border border-gray-200">
-                  <div className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce"></div>
-                  <div className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-1.5 h-1.5 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+
+        {/* Full Output Modal */}
+        {showFullOutput && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    {modelLogo ? (
+                      <img src={modelLogo} alt="model logo" className="w-8 h-8 rounded-md object-contain bg-white border border-gray-200" />
+                    ) : (
+                      <div className="w-8 h-8 bg-black rounded-md flex items-center justify-center">
+                        <Bot className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Full Output</h3>
+                      <p className="text-sm text-gray-600">{modelName || selectedModel.toUpperCase()}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={handleCopy}
+                      className="flex items-center space-x-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-4 h-4 text-green-600" />
+                          <span className="text-sm text-green-600">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 text-gray-600" />
+                          <span className="text-sm text-gray-600">Copy</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowFullOutput(false)}
+                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-600 font-medium">Generating...</p>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="prose prose-gray max-w-none">
+                    <pre className="whitespace-pre-wrap font-sans text-sm text-gray-800 leading-relaxed">
+                      {output}
+                    </pre>
+                  </div>
+                </div>
+                {executionTime && (
+                  <div className="mt-4 text-sm text-gray-500">
+                    Generated in {formatExecutionTime(executionTime)} • {output.length} characters
+                  </div>
+                )}
               </div>
             </div>
-          ) : output ? (
-            <div className="bg-gray-50 rounded-md p-3 border border-gray-200">
-              <div className="prose prose-gray max-w-none">
-                <pre className="whitespace-pre-wrap font-sans text-xs text-gray-800 leading-relaxed line-clamp-4">
-                  {output}
-                </pre>
-              </div>
-            </div>
-          ) : (
-            <div className="h-24 flex items-center justify-center text-gray-500">
-              <div className="text-center">
-                <Bot className="w-6 h-6 mx-auto mb-1 opacity-50" />
-                <p className="text-xs">Awaiting response</p>
-              </div>
-            </div>
-          )}
-        </div>
-        {output && (
-          <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-            <span>{executionTime ? formatExecutionTime(executionTime) : '~2.3s'}</span>
-            <span>{output.length} chars</span>
           </div>
         )}
-      </div>
+      </>
     );
   }
 

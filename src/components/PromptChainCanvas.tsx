@@ -699,7 +699,9 @@ export { runChain };
           </Link>
           
           <div className="flex items-center space-x-2">
-            <Workflow className="w-6 h-6 text-black" />
+            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <span className="text-white text-sm">🦜</span>
+            </div>
             <input
               type="text"
               value={chainName}
@@ -837,16 +839,16 @@ export { runChain };
                 position: 'absolute'
               }}>
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 max-w-md text-center">
-                  <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Zap className="w-8 h-8 text-white" />
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <span className="text-white text-2xl">🦜</span>
                   </div>
-                  <h2 className="text-2xl font-bold text-black mb-2">Welcome to Prompt Chaining</h2>
+                  <h2 className="text-2xl font-bold text-black mb-2">Welcome to LangForge Canvas</h2>
                   <p className="text-gray-600 mb-6">
-                    Create visual prompt workflows with conditional logic. Build complex multi-step reasoning chains with branching paths.
+                    Create visual LangChain workflows with conditional logic. Build complex multi-step reasoning chains with branching paths.
                   </p>
                   <button
                     onClick={addPromptNode}
-                    className="flex items-center space-x-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors mx-auto"
+                    className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-colors mx-auto"
                   >
                     <Plus className="w-5 h-5" />
                     <span>Add Your First Node</span>

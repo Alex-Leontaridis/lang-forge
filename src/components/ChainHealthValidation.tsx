@@ -73,6 +73,33 @@ const ChainHealthValidation: React.FC<ChainHealthValidationProps> = ({
   const errorCount = healthIssues.filter(i => i.severity === 'error').length;
   const warningCount = healthIssues.filter(i => i.severity === 'warning').length;
 
+  const handleAutoFixVariables = () => {
+    // Auto-fix undeclared variables
+    const undeclaredIssues = healthIssues.filter(i => i.type === 'undeclared_variable');
+    console.log('Auto-fixing undeclared variables:', undeclaredIssues);
+    
+    // In a real implementation, this would:
+    // 1. Create missing variables
+    // 2. Add them to the variable manager
+    // 3. Update the prompt if needed
+    
+    // For now, just log the action
+    undeclaredIssues.forEach(issue => {
+      console.log(`Would create variable: ${issue.variableName}`);
+    });
+  };
+
+  const handleViewDetails = () => {
+    // Show detailed analysis
+    console.log('Detailed chain analysis:', { nodes, variableFlows, healthIssues });
+    
+    // In a real implementation, this would:
+    // 1. Open a detailed modal
+    // 2. Show variable usage patterns
+    // 3. Show dependency graphs
+    // 4. Show optimization suggestions
+  };
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
       <div className="p-3 sm:p-4 border-b border-gray-200">
@@ -167,20 +194,13 @@ const ChainHealthValidation: React.FC<ChainHealthValidationProps> = ({
             <div className="pt-3 border-t border-gray-200">
               <div className="flex flex-col sm:flex-row gap-2">
                 <button
-                  onClick={() => {
-                    // Auto-fix undeclared variables
-                    const undeclaredIssues = healthIssues.filter(i => i.type === 'undeclared_variable');
-                    console.log('Auto-fixing undeclared variables:', undeclaredIssues);
-                  }}
+                  onClick={handleAutoFixVariables}
                   className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
                 >
                   Auto-fix Variables
                 </button>
                 <button
-                  onClick={() => {
-                    // Show detailed analysis
-                    console.log('Detailed chain analysis:', { nodes, variableFlows, healthIssues });
-                  }}
+                  onClick={handleViewDetails}
                   className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
                 >
                   View Details

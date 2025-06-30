@@ -9,9 +9,7 @@ export const usePrompts = (projectId?: string) => {
       const projectPrompts = projectId 
         ? parsed.filter((p: any) => p.projectId === projectId)
         : parsed;
-      return projectPrompts.map((p: any) => ({
-        ...p
-      }));
+      return projectPrompts;
     }
     return [];
   });
@@ -53,10 +51,31 @@ export const usePrompts = (projectId?: string) => {
       id: `p${Date.now()}`,
       projectId,
       title,
-      description
+      description: description || '',
+      createdAt: new Date()
     };
     setPrompts(prev => [...prev, newPrompt]);
     setCurrentPromptId(newPrompt.id);
+    
+    const initialVersion = {
+      id: `v${Date.now()}`,
+      projectId,
+      promptId: newPrompt.id,
+      title: 'Initial Version',
+      content: '',
+      variables: {},
+      createdAt: new Date(),
+      parentId: '',
+      message: 'Initial version created'
+    };
+    
+    const savedVersions = localStorage.getItem('promptVersions');
+    const allVersions = savedVersions ? JSON.parse(savedVersions) : [];
+    allVersions.push(initialVersion);
+    localStorage.setItem('promptVersions', JSON.stringify(allVersions));
+    
+    localStorage.setItem(`currentVersionId_${projectId}_${newPrompt.id}`, initialVersion.id);
+    
     return newPrompt;
   }, [projectId]);
 
@@ -68,11 +87,7 @@ export const usePrompts = (projectId?: string) => {
   }, [prompts, currentPromptId]);
 
   const updatePrompt = useCallback((id: string, updates: Partial<Prompt>) => {
-    setPrompts(prev => prev.map(p => 
-      p.id === id 
-        ? { ...p, ...updates }
-        : p
-    ));
+    setPrompts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
   }, []);
 
   const deletePrompt = useCallback((id: string) => {
@@ -84,6 +99,22 @@ export const usePrompts = (projectId?: string) => {
         setCurrentPromptId(remainingPrompts[0].id);
       }
     }
+    
+    const savedVersions = localStorage.getItem('promptVersions');
+    if (savedVersions) {
+      const allVersions = JSON.parse(savedVersions);
+      const remainingVersions = allVersions.filter((v: any) => v.promptId !== id);
+      localStorage.setItem('promptVersions', JSON.stringify(remainingVersions));
+    }
+    
+    const savedRuns = localStorage.getItem('modelRuns');
+    if (savedRuns) {
+      const allRuns = JSON.parse(savedRuns);
+      const promptVersions = allVersions?.filter((v: any) => v.promptId === id) || [];
+      const promptVersionIds = promptVersions.map((v: any) => v.id);
+      const remainingRuns = allRuns.filter((r: any) => !promptVersionIds.includes(r.versionId));
+      localStorage.setItem('modelRuns', JSON.stringify(remainingRuns));
+    }
   }, [prompts, currentPromptId]);
 
   const duplicatePrompt = useCallback((id: string) => {
@@ -92,12 +123,39 @@ export const usePrompts = (projectId?: string) => {
     const newPrompt: Prompt = {
       ...promptToDuplicate,
       id: `p${Date.now()}`,
-      title: `${promptToDuplicate.title} (Copy)`
+      title: `${promptToDuplicate.title} (Copy)`,
+      createdAt: new Date()
     };
     setPrompts(prev => [...prev, newPrompt]);
     setCurrentPromptId(newPrompt.id);
+    
+    const savedVersions = localStorage.getItem('promptVersions');
+    if (savedVersions) {
+      const allVersions = JSON.parse(savedVersions);
+      const originalVersions = allVersions.filter((v: any) => v.promptId === id);
+      const currentOriginalVersion = originalVersions.find((v: any) => 
+        v.id === localStorage.getItem(`currentVersionId_${projectId}_${id}`)
+      ) || originalVersions[0];
+      
+      if (currentOriginalVersion) {
+        const duplicatedVersion = {
+          ...currentOriginalVersion,
+          id: `v${Date.now()}`,
+          promptId: newPrompt.id,
+          title: `${currentOriginalVersion.title} (Copy)`,
+          createdAt: new Date(),
+          parentId: '',
+          message: 'Version duplicated from original prompt'
+        };
+        
+        allVersions.push(duplicatedVersion);
+        localStorage.setItem('promptVersions', JSON.stringify(allVersions));
+        localStorage.setItem(`currentVersionId_${projectId}_${newPrompt.id}`, duplicatedVersion.id);
+      }
+    }
+    
     return newPrompt;
-  }, [prompts]);
+  }, [prompts, projectId]);
 
   const selectPrompt = useCallback((promptId: string) => {
     setCurrentPromptId(promptId);

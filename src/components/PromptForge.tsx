@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow, Menu, X, Search, ChevronRight, ChevronDown, Clock, MessageSquare, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,6 +18,15 @@ import { usePromptVersions } from '../hooks/usePromptVersions';
 import { usePrompts } from '../hooks/usePrompts';
 import { Model, Variable, InputVariable, OutputVariable, VariableFlow, ChainHealthIssue, AutoTestResult } from '../types';
 import apiService from '../services/apiService';
+
+// Custom debounce function
+const debounce = <T extends (...args: any[]) => any>(func: T, wait: number) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
 
 const PromptForge = () => {
   const { signOut } = useAuth();
@@ -111,7 +120,85 @@ const PromptForge = () => {
     if (canvasData) {
       try {
         const data = JSON.parse(canvasData);
-        if (data.fromCanvas) {
+        
+        if (data.action === 'createPromptFromCanvas' && data.updated) {
+          // Create a new prompt from canvas node
+          const newPrompt = createPrompt(
+            data.data.title,
+            'Created from canvas node'
+          );
+          if (newPrompt) {
+            setCurrentPromptId(newPrompt.id);
+            
+            // Create a new version with the canvas data
+            const newVersion = createVersion(
+              data.data.prompt,
+              data.data.variables,
+              data.data.title,
+              'Created from canvas node'
+            );
+            if (newVersion) {
+              setCurrentVersionId(newVersion.id);
+            }
+            
+            // Set the model
+            setCurrentModel(data.data.model);
+            
+            // Convert variables to the expected format
+            const canvasVariables = Object.entries(data.data.variables).map(([name, value]) => ({
+              name,
+              value: value as string
+            }));
+            setVariables(canvasVariables);
+            
+            // Store the mapping between the new prompt ID and the temporary prompt ID from canvas
+            localStorage.setItem(`promptToNode_${newPrompt.id}`, data.data.nodeId);
+            localStorage.setItem(`tempPromptToRealPrompt_${data.data.promptId}`, newPrompt.id);
+          }
+          
+          // Clear the localStorage data
+          localStorage.removeItem('canvasToEditorData');
+        } else if (data.action === 'updateFromCanvas' && data.updated) {
+          // Update prompt and version from canvas
+          if (data.promptId && data.data) {
+            // Update prompt title if it changed
+            if (data.data.title && currentPrompt && currentPrompt.title !== data.data.title) {
+              updatePrompt(data.promptId, { title: data.data.title });
+            }
+            
+            // Update version content if it changed
+            if (data.data.prompt && currentVersion && currentVersion.content !== data.data.prompt) {
+              updateVersion(currentVersionId, { content: data.data.prompt });
+            }
+            
+            // Update variables if they changed
+            if (data.data.variables) {
+              const newVariables = Object.entries(data.data.variables).map(([name, value]) => ({
+                name,
+                value: value as string
+              }));
+              setVariables(newVariables);
+            }
+            
+            // Update model if it changed
+            if (data.data.model && currentModel !== data.data.model) {
+              setCurrentModel(data.data.model);
+            }
+          }
+          
+          // Clear the localStorage data
+          localStorage.removeItem('canvasToEditorData');
+        } else if (data.action === 'deletePromptFromCanvas' && data.updated) {
+          // Delete the corresponding prompt from editor
+          if (data.data.promptId) {
+            deletePrompt(data.data.promptId);
+            // Remove the mapping
+            localStorage.removeItem(`promptToNode_${data.data.promptId}`);
+          }
+          
+          // Clear the localStorage data
+          localStorage.removeItem('canvasToEditorData');
+        } else if (data.fromCanvas) {
           setFromCanvas(true);
           setCanvasNodeId(data.nodeId);
           setCurrentModel(data.model);
@@ -153,7 +240,7 @@ const PromptForge = () => {
         localStorage.removeItem('canvasToEditorData');
       }
     }
-  }, [createVersion, setCurrentVersionId, createPrompt, setCurrentPromptId, currentPrompt]);
+  }, [createVersion, setCurrentVersionId, createPrompt, setCurrentPromptId, currentPrompt, currentVersion, currentVersionId, updatePrompt, updateVersion, currentModel, deletePrompt]);
 
   // Persist state to localStorage with project-specific keys
   useEffect(() => {
@@ -216,26 +303,185 @@ const PromptForge = () => {
     { id: 'minimax/minimax-m1', name: 'MiniMax M1', description: 'MiniMax M1 (OpenRouter)', provider: 'MiniMax', logo: '/src/logo/minimax.png', enabled: true },
   ];
 
-  // Mock data for chain health and variable flow (in a real app, this would come from the chain canvas)
-  const [variableFlows] = useState<VariableFlow[]>([
-    {
-      fromNode: 'node1',
-      toNode: 'node2',
-      fromVariable: 'output',
-      toVariable: 'input',
-      type: 'direct'
+  // Chain health and variable flow analysis
+  const analyzeChainHealth = useCallback(() => {
+    const issues: ChainHealthIssue[] = [];
+    const flows: VariableFlow[] = [];
+    
+    if (!currentVersion?.content) {
+      return { issues, flows };
     }
-  ]);
 
-  const [chainHealthIssues] = useState<ChainHealthIssue[]>([
-    {
-      type: 'undeclared_variable',
-      severity: 'warning',
-      message: 'Variable "name" is used but not declared',
-      nodeId: 'node1',
-      variableName: 'name'
+    const prompt = currentVersion.content;
+    
+    // Extract variables used in the prompt
+    const variableRegex = /\{\{([^}]+)\}\}/g;
+    const usedVariables = new Set<string>();
+    let match;
+    while ((match = variableRegex.exec(prompt)) !== null) {
+      usedVariables.add(match[1]);
     }
-  ]);
+
+    // Check for undeclared variables
+    const declaredVariables = new Set(variables.map(v => v.name));
+    usedVariables.forEach(varName => {
+      if (!declaredVariables.has(varName)) {
+        issues.push({
+          type: 'undeclared_variable',
+          severity: 'error',
+          message: `Variable "${varName}" is used in the prompt but not declared`,
+          variableName: varName
+        });
+      }
+    });
+
+    // Check for unused declared variables
+    variables.forEach(variable => {
+      if (!usedVariables.has(variable.name)) {
+        issues.push({
+          type: 'unused_input',
+          severity: 'warning',
+          message: `Variable "${variable.name}" is declared but not used in the prompt`,
+          variableName: variable.name
+        });
+      }
+    });
+
+    // Check for empty variable values
+    variables.forEach(variable => {
+      if (usedVariables.has(variable.name) && !variable.value.trim()) {
+        issues.push({
+          type: 'undeclared_variable',
+          severity: 'warning',
+          message: `Variable "${variable.name}" is used but has no value`,
+          variableName: variable.name
+        });
+      }
+    });
+
+    // Check input variables that are declared but not used
+    inputVariables.forEach(inputVar => {
+      if (!usedVariables.has(inputVar.name)) {
+        issues.push({
+          type: 'unused_input',
+          severity: 'warning',
+          message: `Input variable "${inputVar.name}" is declared but not used`,
+          variableName: inputVar.name
+        });
+      }
+    });
+
+    // Check for required input variables that are missing
+    inputVariables.forEach(inputVar => {
+      if (inputVar.required && !variables.some(v => v.name === inputVar.name)) {
+        issues.push({
+          type: 'undeclared_variable',
+          severity: 'error',
+          message: `Required input variable "${inputVar.name}" is missing`,
+          variableName: inputVar.name
+        });
+      }
+    });
+
+    // Create variable flows based on input/output relationships
+    // For now, we'll create flows from input variables to the prompt
+    inputVariables.forEach(inputVar => {
+      if (usedVariables.has(inputVar.name)) {
+        flows.push({
+          fromNode: 'input',
+          toNode: 'prompt',
+          fromVariable: inputVar.name,
+          toVariable: inputVar.name,
+          type: 'direct'
+        });
+      }
+    });
+
+    // Create flows from regular variables to the prompt
+    variables.forEach(variable => {
+      if (usedVariables.has(variable.name)) {
+        flows.push({
+          fromNode: 'variables',
+          toNode: 'prompt',
+          fromVariable: variable.name,
+          toVariable: variable.name,
+          type: 'direct'
+        });
+      }
+    });
+
+    return { issues, flows };
+  }, [currentVersion?.content, variables, inputVariables]);
+
+  const { issues: chainHealthIssues, flows: variableFlows } = analyzeChainHealth();
+
+  // Create virtual nodes for chain health and variable flow visualization
+  const virtualNodes = useMemo(() => {
+    if (!currentVersion?.content) return [];
+    
+    const prompt = currentVersion.content;
+    const usedVariables = new Set<string>();
+    const variableRegex = /\{\{([^}]+)\}\}/g;
+    let match;
+    while ((match = variableRegex.exec(prompt)) !== null) {
+      usedVariables.add(match[1]);
+    }
+
+    return [
+      {
+        id: 'prompt',
+        title: currentPrompt?.title || 'Current Prompt',
+        prompt: prompt,
+        model: currentModel,
+        temperature: 0.7,
+        output: currentOutput,
+        isRunning: isRunning,
+        position: { x: 0, y: 0 },
+        variables: Object.fromEntries(variables.map(v => [v.name, v.value])),
+        inputVariables: inputVariables.filter(iv => usedVariables.has(iv.name)),
+        outputVariables: [],
+        healthIssues: chainHealthIssues.filter(issue => !issue.nodeId || issue.nodeId === 'prompt')
+      },
+      {
+        id: 'input',
+        title: 'Input Variables',
+        prompt: '',
+        model: '',
+        temperature: 0,
+        output: '',
+        isRunning: false,
+        position: { x: -200, y: 0 },
+        variables: {},
+        inputVariables: [],
+        outputVariables: inputVariables.filter(iv => usedVariables.has(iv.name)).map(iv => ({
+          name: iv.name,
+          type: iv.type,
+          description: iv.description || `Input variable: ${iv.name}`,
+          source: 'input'
+        })),
+        healthIssues: chainHealthIssues.filter(issue => issue.nodeId === 'input')
+      },
+      {
+        id: 'variables',
+        title: 'Variables',
+        prompt: '',
+        model: '',
+        temperature: 0,
+        output: '',
+        isRunning: false,
+        position: { x: 200, y: 0 },
+        variables: Object.fromEntries(variables.map(v => [v.name, v.value])),
+        inputVariables: [],
+        outputVariables: variables.filter(v => usedVariables.has(v.name)).map(v => ({
+          name: v.name,
+          type: 'string' as const,
+          description: `Variable: ${v.name}`,
+          source: 'variables'
+        })),
+        healthIssues: chainHealthIssues.filter(issue => issue.nodeId === 'variables')
+      }
+    ];
+  }, [currentVersion?.content, currentPrompt?.title, currentModel, currentOutput, isRunning, variables, inputVariables, chainHealthIssues]);
 
   const handlePromptChange = (newPrompt: string) => {
     updateVersion(currentVersionId, { content: newPrompt });
@@ -402,9 +648,9 @@ const PromptForge = () => {
 
   const handleVersionSelect = (versionId: string) => {
     setCurrentVersionId(versionId);
-    const version = versions.find(v => v.id === versionId);
+    const version = versions.find((v: any) => v.id === versionId);
     if (version) {
-      const versionVariables = Object.entries(version.variables || {}).map(([name, value]) => ({ name, value }));
+      const versionVariables = Object.entries(version.variables || {}).map(([name, value]) => ({ name, value: value as string }));
       setVariables(versionVariables);
     }
   };
@@ -437,8 +683,102 @@ const PromptForge = () => {
 
   // Prompt management handlers
   const handleCreatePrompt = (title: string, description?: string) => {
-    createPrompt(title, description);
+    const newPrompt = createPrompt(title, description);
+    
+    // Automatically create a canvas node for the new prompt
+    if (newPrompt) {
+      const canvasNodeData = {
+        promptId: newPrompt.id,
+        title: newPrompt.title,
+        prompt: '',
+        model: currentModel,
+        temperature: 0.7,
+        maxTokens: 1000,
+        variables: {},
+        inputVariables: [],
+        outputVariables: [],
+        output: '',
+        isRunning: false,
+        score: null,
+        tokenUsage: null,
+        error: undefined,
+        healthIssues: [],
+        position: { x: Math.random() * 400 + 100, y: Math.random() * 400 + 100 },
+        createdAt: new Date().toISOString()
+      };
+      
+      // Store the node data for canvas to pick up
+      const existingCanvasData = localStorage.getItem(`canvasNodes_${projectId || 'default'}`);
+      const canvasNodes = existingCanvasData ? JSON.parse(existingCanvasData) : [];
+      canvasNodes.push(canvasNodeData);
+      localStorage.setItem(`canvasNodes_${projectId || 'default'}`, JSON.stringify(canvasNodes));
+      
+      // Notify canvas that a new node should be created
+      localStorage.setItem('editorToCanvasData', JSON.stringify({
+        action: 'createNode',
+        data: canvasNodeData,
+        updated: true
+      }));
+    }
   };
+
+  // Function to sync prompt changes with canvas nodes
+  const syncPromptToCanvas = useCallback((promptId: string, updates: any) => {
+    // Get the corresponding node ID for this prompt
+    const nodeId = localStorage.getItem(`promptToNode_${promptId}`);
+    
+    const canvasNodeData = {
+      promptId,
+      nodeId,
+      title: updates.title || currentPrompt?.title,
+      prompt: updates.content || currentVersion?.content || '',
+      variables: Object.fromEntries(variables.map(v => [v.name, v.value])),
+      model: currentModel,
+      temperature: 0.7,
+      maxTokens: 1000,
+      updated: true
+    };
+    
+    localStorage.setItem('editorToCanvasData', JSON.stringify({
+      action: 'updateNode',
+      data: canvasNodeData,
+      updated: true
+    }));
+  }, [currentPrompt?.title, currentVersion?.content, variables, currentModel]);
+
+  // Debounced sync function to prevent too frequent updates
+  const debouncedSync = useCallback(
+    debounce((promptId: string, updates: any) => {
+      syncPromptToCanvas(promptId, updates);
+    }, 300),
+    [syncPromptToCanvas]
+  );
+
+  // Sync prompt changes to canvas - only when content actually changes
+  useEffect(() => {
+    if (currentPrompt && currentVersion) {
+      const syncData = {
+        title: currentPrompt.title,
+        content: currentVersion.content
+      };
+      debouncedSync(currentPrompt.id, syncData);
+    }
+  }, [currentPrompt?.title, currentVersion?.content, currentPrompt?.id, debouncedSync]);
+
+  // Sync variable changes to canvas - only when variables actually change
+  useEffect(() => {
+    if (currentPrompt) {
+      const variablesData = Object.fromEntries(variables.map(v => [v.name, v.value]));
+      debouncedSync(currentPrompt.id, { variables: variablesData });
+    }
+  }, [variables, currentPrompt?.id, debouncedSync]);
+
+  // Sync model changes to canvas - only when model actually changes
+  useEffect(() => {
+    if (currentPrompt) {
+      debouncedSync(currentPrompt.id, { model: currentModel });
+    }
+  }, [currentModel, currentPrompt?.id, debouncedSync]);
 
   const handlePromptSelect = (promptId: string) => {
     selectPrompt(promptId);
@@ -463,7 +803,7 @@ const PromptForge = () => {
     { id: 'compare' as const, name: 'Compare', icon: GitBranch }
   ];
 
-  const filteredRuns = currentRuns.filter(run => 
+  const filteredRuns = currentRuns.filter((run: any) => 
     run.output.toLowerCase().includes(searchTerm.toLowerCase()) ||
     run.modelId.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -688,7 +1028,7 @@ const PromptForge = () => {
                 {/* Chain Health */}
                 {showChainHealth && (
                   <ChainHealthValidation
-                    nodes={[]}
+                    nodes={virtualNodes}
                     variableFlows={variableFlows}
                     healthIssues={chainHealthIssues}
                     onIssueClick={handleHealthIssueClick}
@@ -698,7 +1038,7 @@ const PromptForge = () => {
                 {/* Variable Flow */}
                 {showVariableFlow && (
                   <VariableFlowVisualization
-                    nodes={[]}
+                    nodes={virtualNodes}
                     variableFlows={variableFlows}
                     healthIssues={chainHealthIssues}
                     onFlowClick={handleVariableFlowClick}
@@ -771,7 +1111,7 @@ const PromptForge = () => {
               {/* Chain Health */}
               {showChainHealth && (
                 <ChainHealthValidation
-                  nodes={[]}
+                  nodes={virtualNodes}
                   variableFlows={variableFlows}
                   healthIssues={chainHealthIssues}
                   onIssueClick={handleHealthIssueClick}
@@ -781,7 +1121,7 @@ const PromptForge = () => {
               {/* Variable Flow */}
               {showVariableFlow && (
                 <VariableFlowVisualization
-                  nodes={[]}
+                  nodes={virtualNodes}
                   variableFlows={variableFlows}
                   healthIssues={chainHealthIssues}
                   onFlowClick={handleVariableFlowClick}
@@ -816,23 +1156,6 @@ const PromptForge = () => {
                 onAutoTestComplete={handleAutoTestComplete}
               />
 
-              {/* Welcome State - No Versions */}
-              {!currentVersion && (
-                <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-                  <div className="text-4xl mb-4">🦜</div>
-                  <h2 className="text-2xl font-bold text-black mb-2">Welcome to LangForge</h2>
-                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    Start by creating your first prompt version. You can write prompts, test them with multiple AI models, and track your progress over time.
-                  </p>
-                  <button
-                    onClick={() => handleCreateVersion('Initial Version', 'First prompt version')}
-                    className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors font-medium"
-                  >
-                    Create Your First Version
-                  </button>
-                </div>
-              )}
-
               <MultiModelRunner
                 models={models}
                 onRunModels={handleRunModels}
@@ -860,8 +1183,8 @@ const PromptForge = () => {
                   </div>
                   
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {filteredRuns.slice(-6).map((run) => {
-                      const model = models.find(m => m.id === run.modelId);
+                    {filteredRuns.slice(-6).map((run: any) => {
+                      const model = models.find((m: any) => m.id === run.modelId);
                       return (
                         <ModelOutput 
                           key={run.id}
@@ -954,7 +1277,7 @@ const PromptForge = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             {(() => {
-              const run = currentRuns.find(r => r.id === showFullScoreReport);
+              const run = currentRuns.find((r: any) => r.id === showFullScoreReport);
               return run?.score ? (
                 <div className="p-6">
                   <PromptScore score={run.score} />

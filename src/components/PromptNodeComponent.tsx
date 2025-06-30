@@ -26,13 +26,14 @@ import {
   Sparkles,
   FileText
 } from 'lucide-react';
-import { PromptNode, PromptScore, InputVariable, OutputVariable, ChainHealthIssue } from '../types';
+import { PromptNode, PromptScore, InputVariable, OutputVariable, ChainHealthIssue, Model, PromptVersion } from '../types';
 import PromptAutoTest, { AutoTestResult } from './PromptAutoTest';
 
 interface PromptNodeData extends PromptNode {
   onUpdate: (id: string, updates: Partial<PromptNode>) => void;
   onRun: (id: string) => void;
   onDelete: (id: string) => void;
+  promptId?: string;
 }
 
 const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) => {
@@ -47,6 +48,8 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
   const [modelSearchTerm, setModelSearchTerm] = useState('');
   const [showAutoTest, setShowAutoTest] = useState(false);
   const [autoTestResult, setAutoTestResult] = useState<AutoTestResult | null>(null);
+  const [availableVersions, setAvailableVersions] = useState<PromptVersion[]>([]);
+  const [currentVersionId, setCurrentVersionId] = useState<string>('');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const models: Model[] = [
@@ -73,9 +76,58 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
     { id: 'minimax/minimax-m1', name: 'MiniMax M1', description: 'MiniMax M1', provider: 'MiniMax', enabled: true },
   ];
 
+  // Get available versions for this prompt
+  useEffect(() => {
+    if (data.promptId) {
+      const saved = localStorage.getItem('promptVersions');
+      if (saved) {
+        const allVersions = JSON.parse(saved);
+        const promptVersions = allVersions.filter((v: any) => v.promptId === data.promptId);
+        setAvailableVersions(promptVersions.map((v: any) => ({
+          ...v,
+          createdAt: new Date(v.createdAt)
+        })));
+        
+        // Get current version ID
+        const savedCurrentVersionId = localStorage.getItem(`currentVersionId_${data.promptId}`);
+        if (savedCurrentVersionId && promptVersions.some((v: any) => v.id === savedCurrentVersionId)) {
+          setCurrentVersionId(savedCurrentVersionId);
+        } else if (promptVersions.length > 0) {
+          setCurrentVersionId(promptVersions[0].id);
+        }
+      }
+    }
+  }, [data.promptId]);
+
+  // Handle version selection
+  const handleVersionSelect = (versionId: string) => {
+    const selectedVersion = availableVersions.find(v => v.id === versionId);
+    if (selectedVersion) {
+      // Update the node with the selected version's content and variables
+      data.onUpdate(id, {
+        prompt: selectedVersion.content,
+        variables: selectedVersion.variables,
+        title: selectedVersion.title
+      });
+      
+      // Update current version ID in localStorage
+      localStorage.setItem(`currentVersionId_${data.promptId}`, versionId);
+      setCurrentVersionId(versionId);
+      
+      // Sync to editor
+      if (data.promptId) {
+        syncToEditor();
+      }
+    }
+  };
+
   const handleTitleSave = () => {
     data.onUpdate(id, { title: tempTitle });
     setIsEditingTitle(false);
+    // Sync to editor if this node has a promptId
+    if (data.promptId) {
+      syncToEditor();
+    }
   };
 
   const handleTitleCancel = () => {
@@ -85,14 +137,26 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
 
   const handlePromptChange = (prompt: string) => {
     data.onUpdate(id, { prompt });
+    // Sync to editor if this node has a promptId
+    if (data.promptId) {
+      syncToEditor();
+    }
   };
 
   const handleModelChange = (model: string) => {
     data.onUpdate(id, { model });
+    // Sync to editor if this node has a promptId
+    if (data.promptId) {
+      syncToEditor();
+    }
   };
 
   const handleTemperatureChange = (temperature: number) => {
     data.onUpdate(id, { temperature });
+    // Sync to editor if this node has a promptId
+    if (data.promptId) {
+      syncToEditor();
+    }
   };
 
   const handleConditionChange = (condition: string) => {
@@ -102,6 +166,10 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
   const handleVariableChange = (name: string, value: string) => {
     const updatedVariables = { ...data.variables, [name]: value };
     data.onUpdate(id, { variables: updatedVariables });
+    // Sync to editor if this node has a promptId
+    if (data.promptId) {
+      syncToEditor();
+    }
   };
 
   const handleAddVariable = () => {
@@ -109,6 +177,10 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
       const updatedVariables = { ...data.variables, [newVariableName.trim()]: '' };
       data.onUpdate(id, { variables: updatedVariables });
       setNewVariableName('');
+      // Sync to editor if this node has a promptId
+      if (data.promptId) {
+        syncToEditor();
+      }
     }
   };
 
@@ -116,6 +188,29 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
     const updatedVariables = { ...data.variables };
     delete updatedVariables[name];
     data.onUpdate(id, { variables: updatedVariables });
+    // Sync to editor if this node has a promptId
+    if (data.promptId) {
+      syncToEditor();
+    }
+  };
+
+  // Function to sync canvas node changes back to editor
+  const syncToEditor = () => {
+    if (data.promptId) {
+      const editorData = {
+        action: 'updateFromCanvas',
+        promptId: data.promptId,
+        data: {
+          title: data.title,
+          prompt: data.prompt,
+          variables: data.variables,
+          model: data.model,
+          temperature: data.temperature
+        },
+        updated: true
+      };
+      localStorage.setItem('canvasToEditorData', JSON.stringify(editorData));
+    }
   };
 
   const getScoreColor = (score: number) => {
@@ -295,6 +390,22 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
               </option>
             ))}
           </select>
+          
+          {/* Version Selector */}
+          {data.promptId && availableVersions.length > 1 && (
+            <select
+              value={currentVersionId}
+              onChange={(e) => handleVersionSelect(e.target.value)}
+              className="px-2 py-1 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+              title="Select Version"
+            >
+              {availableVersions.map((version, index) => (
+                <option key={version.id} value={version.id}>
+                  v{index + 1}: {version.title}
+                </option>
+              ))}
+            </select>
+          )}
           
           {healthStatus.count > 0 && (
             <div className="flex items-center space-x-1 px-2 py-1 bg-white rounded border border-gray-200">

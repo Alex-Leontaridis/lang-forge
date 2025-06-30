@@ -213,7 +213,24 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
   };
 
   const deleteNode = useCallback((nodeId: string) => {
-    setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+    setNodes((nds) => {
+      const nodeToDelete = nds.find(node => node.id === nodeId);
+      
+      // If this node has a promptId, notify the editor to delete the corresponding prompt
+      if (nodeToDelete?.data.promptId) {
+        const editorData = {
+          action: 'deletePromptFromCanvas',
+          data: {
+            promptId: nodeToDelete.data.promptId,
+            nodeId
+          },
+          updated: true
+        };
+        localStorage.setItem('canvasToEditorData', JSON.stringify(editorData));
+      }
+      
+      return nds.filter((node) => node.id !== nodeId);
+    });
     setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
   }, [setNodes, setEdges]);
 
@@ -280,41 +297,102 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
     localStorage.setItem(getStorageKey('systemMessage'), systemMessage);
   }, [systemMessage, canvasProjectId]);
 
-  // Check for updated data from editor
+  // Poll for updated data from editor (editor → canvas sync)
   React.useEffect(() => {
-    const editorData = localStorage.getItem('editorToCanvasData');
-    if (editorData) {
-      try {
-        const data = JSON.parse(editorData);
-        if (data.updated && data.nodeId) {
-          // Update the corresponding node
-          setNodes((nds) =>
-            nds.map((node) =>
-              node.id === data.nodeId
-                ? {
-                    ...node,
-                    data: {
-                      ...node.data,
-                      prompt: data.prompt,
-                      variables: data.variables,
-                      model: data.model,
-                      temperature: data.temperature,
-                      title: data.title
-                    }
+    const interval = setInterval(() => {
+      const editorData = localStorage.getItem('editorToCanvasData');
+      if (editorData) {
+        try {
+          const data = JSON.parse(editorData);
+          if ((data.action === 'createNode' || data.action === 'updateNode') && data.updated) {
+            setNodes((nds) => {
+              // Try to find node by promptId
+              const nodeIdx = nds.findIndex(node => node.data.promptId === data.data.promptId);
+              if (nodeIdx !== -1) {
+                // Update existing node
+                return nds.map((node, idx) =>
+                  idx === nodeIdx
+                    ? {
+                        ...node,
+                        data: {
+                          ...node.data,
+                          promptId: data.data.promptId,
+                          title: data.data.title || node.data.title,
+                          prompt: data.data.prompt || node.data.prompt,
+                          variables: data.data.variables || node.data.variables,
+                          model: data.data.model || node.data.model,
+                          temperature: data.data.temperature || node.data.temperature
+                        }
+                      }
+                    : node
+                );
+              } else {
+                // Create new node
+                const newNode: Node = {
+                  id: `node_${Date.now()}`,
+                  type: 'promptNode',
+                  position: data.data.position || { x: Math.random() * 400 + 100, y: Math.random() * 400 + 100 },
+                  data: {
+                    promptId: data.data.promptId,
+                    title: data.data.title,
+                    prompt: data.data.prompt || '',
+                    model: data.data.model || 'gpt-4',
+                    temperature: data.data.temperature || 0.7,
+                    maxTokens: data.data.maxTokens || 1000,
+                    variables: data.data.variables || {},
+                    inputVariables: data.data.inputVariables || [],
+                    outputVariables: data.data.outputVariables || [],
+                    output: '',
+                    isRunning: false,
+                    score: null,
+                    tokenUsage: null,
+                    error: undefined,
+                    healthIssues: [],
+                    onUpdate: (id: string, updates: Partial<PromptNodeType>) => {
+                      setNodes((nds2) =>
+                        nds2.map((n) =>
+                          n.id === id
+                            ? { ...n, data: { ...n.data, ...updates } }
+                            : n
+                        )
+                      );
+                    },
+                    onRun: (id: string) => runSingleNode(id),
+                    onDelete: (id: string) => deleteNode(id),
                   }
-                : node
-            )
-          );
-          
-          // Clear the localStorage data
+                };
+                return [...nds, newNode];
+              }
+            });
+            // Remove the sync message after processing
+            localStorage.removeItem('editorToCanvasData');
+          }
+        } catch (error) {
+          console.error('Error loading editor data:', error);
           localStorage.removeItem('editorToCanvasData');
         }
-      } catch (error) {
-        console.error('Error loading editor data:', error);
-        localStorage.removeItem('editorToCanvasData');
       }
-    }
-  }, [setNodes]);
+      
+      // Check for promptId updates (when temp promptId is replaced with real one)
+      setNodes((nds) => {
+        let updated = false;
+        const updatedNodes = nds.map((node) => {
+          if (node.data.promptId && node.data.promptId.startsWith('temp_prompt_')) {
+            const realPromptId = localStorage.getItem(`tempPromptToRealPrompt_${node.data.promptId}`);
+            if (realPromptId) {
+              updated = true;
+              // Clean up the mapping
+              localStorage.removeItem(`tempPromptToRealPrompt_${node.data.promptId}`);
+              return { ...node, data: { ...node.data, promptId: realPromptId } };
+            }
+          }
+          return node;
+        });
+        return updated ? updatedNodes : nds;
+      });
+    }, 300); // Poll every 300ms
+    return () => clearInterval(interval);
+  }, [setNodes, runSingleNode, deleteNode, reactFlowInstance]);
 
   // Initialize default condition
   const getDefaultCondition = (): ConnectionCondition => ({
@@ -478,12 +556,17 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
   }, [canvasProjectId]);
 
   const addPromptNode = useCallback(() => {
+    const nodeId = `node_${Date.now()}`;
+    const nodeTitle = `Node ${Date.now()}`;
+    const tempPromptId = `temp_prompt_${Date.now()}`;
+    
     const newNode: Node = {
-      id: `node_${Date.now()}`,
+      id: nodeId,
       type: 'promptNode',
       position: { x: Math.random() * 400 + 100, y: Math.random() * 400 + 100 },
       data: {
-        title: `Node ${Date.now()}`,
+        promptId: tempPromptId, // Temporary ID that will be updated when prompt is created
+        title: nodeTitle,
         prompt: '',
         model: 'gpt-4',
         temperature: 0.7,
@@ -510,6 +593,7 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
         onDelete: (id: string) => deleteNode(id),
       }
     };
+    
     setNodes((nds) => {
       const updated = [...nds, newNode];
       // Center and fit after node is added
@@ -520,6 +604,23 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
       }, 0);
       return updated;
     });
+    
+    // Automatically create a prompt in the editor for this node
+    const editorData = {
+      action: 'createPromptFromCanvas',
+      data: {
+        nodeId,
+        promptId: tempPromptId,
+        title: nodeTitle,
+        prompt: '',
+        model: 'gpt-4',
+        temperature: 0.7,
+        variables: {},
+        position: newNode.position
+      },
+      updated: true
+    };
+    localStorage.setItem('canvasToEditorData', JSON.stringify(editorData));
   }, [setNodes, runSingleNode, deleteNode, reactFlowInstance]);
 
   const getNextNodes = (nodeId: string): string[] => {

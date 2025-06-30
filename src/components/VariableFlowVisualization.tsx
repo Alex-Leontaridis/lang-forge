@@ -21,6 +21,7 @@ const VariableFlowVisualization: React.FC<VariableFlowVisualizationProps> = ({
   const [showDanglingOutputs, setShowDanglingOutputs] = useState(true);
   const [hoveredFlow, setHoveredFlow] = useState<VariableFlow | null>(null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<'all' | 'direct' | 'transformed' | 'conditional'>('all');
 
   // Analyze variable usage
   const getNodeVariableUsage = (nodeId: string) => {
@@ -95,12 +96,20 @@ const VariableFlowVisualization: React.FC<VariableFlowVisualizationProps> = ({
   };
 
   const filteredFlows = variableFlows.filter(flow => {
+    // Filter by type
+    if (filterType !== 'all' && flow.type !== filterType) {
+      return false;
+    }
+    
+    // Filter by unused inputs
     if (!showUnusedInputs) {
       const fromNodeUsage = getNodeVariableUsage(flow.fromNode);
       if (fromNodeUsage.unused.some(u => u.name === flow.fromVariable)) {
         return false;
       }
     }
+    
+    // Filter by dangling outputs
     if (!showDanglingOutputs) {
       const toNodeUsage = getNodeVariableUsage(flow.toNode);
       if (toNodeUsage.dangling.some(d => d.name === flow.toVariable)) {
@@ -138,6 +147,16 @@ const VariableFlowVisualization: React.FC<VariableFlowVisualizationProps> = ({
               />
               <span>Dangling</span>
             </label>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as any)}
+              className="text-xs border border-gray-300 rounded px-2 py-1"
+            >
+              <option value="all">All Types</option>
+              <option value="direct">Direct</option>
+              <option value="transformed">Transformed</option>
+              <option value="conditional">Conditional</option>
+            </select>
           </div>
         </div>
       </div>

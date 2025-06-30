@@ -690,14 +690,6 @@ export { runChain };
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
         <div className="flex items-center space-x-4">
-          <Link
-            to="/"
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back to Home</span>
-          </Link>
-          
           <div className="flex items-center space-x-2">
             <span className="text-lg font-semibold text-black">🦜 LangForge</span>
             <input
@@ -837,9 +829,7 @@ export { runChain };
                 position: 'absolute'
               }}>
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 max-w-md text-center">
-                  <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <span className="text-white text-2xl">🦜</span>
-                  </div>
+                  <div className="text-4xl mb-4">🦜</div>
                   <h2 className="text-2xl font-bold text-black mb-2">Welcome to LangForge Canvas</h2>
                   <p className="text-gray-600 mb-6">
                     Create visual LangChain workflows with conditional logic. Build complex multi-step reasoning chains with branching paths.

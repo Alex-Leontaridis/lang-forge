@@ -266,7 +266,9 @@ const Dashboard = () => {
                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
                   <FileText className="w-5 h-5 text-green-600" />
                 </div>
-                <span className="text-sm text-gray-600">Prompt Versions</span>
+                <div className="flex flex-col">
+                  <span className="text-sm text-gray-600">Prompt Versions</span>
+                </div>
               </div>
               <span className="text-2xl font-bold text-black">{analytics.totalPromptVersions}</span>
             </div>
@@ -278,7 +280,9 @@ const Dashboard = () => {
                 <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                   <Zap className="w-5 h-5 text-purple-600" />
                 </div>
-                <span className="text-sm text-gray-600">Tokens This Month</span>
+                <div className="flex flex-col">
+                  <span className="text-sm text-gray-600">Tokens This Month</span>
+                </div>
               </div>
               <span className="text-2xl font-bold text-black">{analytics.totalTokensThisMonth.toLocaleString()}</span>
             </div>

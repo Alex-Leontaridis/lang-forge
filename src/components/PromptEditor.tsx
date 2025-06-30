@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { FileText, Zap, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { FileText, Zap, Eye, EyeOff, Sparkles, FileCode, ChevronDown, Code } from 'lucide-react';
 import { Variable, Model } from '../types';
 import apiService from '../services/apiService';
 import PromptAutoTest, { AutoTestResult } from './PromptAutoTest';
@@ -32,7 +32,25 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   const [showPreview, setShowPreview] = React.useState(false);
   const [isOptimizing, setIsOptimizing] = React.useState(false);
   const [showAutoTest, setShowAutoTest] = React.useState(false);
-  const [autoTestResult, setAutoTestResult] = React.useState<AutoTestResult | null>(null);
+  const [showExportMenu, setShowExportMenu] = React.useState(false);
+
+  // Handle clicking outside export menu to close it
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showExportMenu && !target.closest('.export-menu-container')) {
+        setShowExportMenu(false);
+      }
+    };
+
+    if (showExportMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showExportMenu]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setPrompt(e.target.value);
@@ -107,7 +125,7 @@ OPTIMIZED PROMPT:`;
     if (JSON.stringify(currentNames) !== JSON.stringify(newNames)) {
       onVariablesChange(newVariables);
     }
-  }, [prompt, onVariablesChange]);
+  }, [prompt, onVariablesChange, variables]);
 
   // Replace variables in prompt for preview
   const getPreviewPrompt = () => {
@@ -124,6 +142,123 @@ OPTIMIZED PROMPT:`;
   };
 
   const hasVariablesWithValues = variables.some(v => v.value);
+
+  // Extract variables from prompt text
+  const extractVariables = (prompt: string): string[] => {
+    const variableRegex = /\{\{([^}]+)\}\}/g;
+    const matches = [...prompt.matchAll(variableRegex)];
+    return [...new Set(matches.map(match => match[1].trim()))];
+  };
+
+  const exportToLangChainPython = () => {
+    if (!prompt.trim()) {
+      alert('No prompt to export');
+      return;
+    }
+
+    const variables = extractVariables(prompt);
+    const varList = variables.length > 0 ? `[${variables.map(v => `"${v}"`).join(', ')}]` : '[]';
+    
+    const pythonCode = `from langchain.prompts import PromptTemplate
+from langchain.chat_models import ChatOpenAI
+from langchain.chains import LLMChain
+
+# Prompt Template
+prompt_template = PromptTemplate(
+    input_variables=${varList},
+    template="""${prompt.replace(/"/g, '\\"')}"""
+)
+
+# Initialize the language model
+llm = ChatOpenAI(
+    model_name="${selectedModel}",
+    temperature=${temperature}
+)
+
+# Create the chain
+chain = LLMChain(
+    llm=llm,
+    prompt=prompt_template
+)
+
+# Example usage:
+# inputs = {${variables.map(v => `"${v}": "value"`).join(', ')}}
+# result = chain.run(inputs)
+# print(result)
+
+def run_prompt(inputs):
+    """
+    Run the prompt with given inputs
+    """
+    return chain.run(inputs)
+`;
+
+    const blob = new Blob([pythonCode], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `prompt_langchain.py`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
+
+  const exportToLangChainJS = () => {
+    if (!prompt.trim()) {
+      alert('No prompt to export');
+      return;
+    }
+
+    const variables = extractVariables(prompt);
+    
+    const jsCode = `import { PromptTemplate } from "langchain/prompts";
+import { ChatOpenAI } from "langchain/chat_models/openai";
+import { LLMChain } from "langchain/chains";
+
+// Prompt Template
+const promptTemplate = PromptTemplate.fromTemplate(\`${prompt.replace(/`/g, '\\`')}\`);
+
+// Initialize the language model
+const llm = new ChatOpenAI({
+  modelName: "${selectedModel}",
+  temperature: ${temperature}
+});
+
+// Create the chain
+const chain = new LLMChain({
+  llm: llm,
+  prompt: promptTemplate
+});
+
+// Example usage:
+// const inputs = {${variables.map(v => `${v}: "value"`).join(', ')}};
+// const result = await chain.call(inputs);
+// console.log(result.text);
+
+async function runPrompt(inputs) {
+  /**
+   * Run the prompt with given inputs
+   */
+  const result = await chain.call(inputs);
+  return result.text;
+}
+
+export { runPrompt };
+`;
+
+    const blob = new Blob([jsCode], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `prompt_langchain.js`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
@@ -144,6 +279,42 @@ OPTIMIZED PROMPT:`;
                 <span className="hidden sm:inline">{showPreview ? 'Hide Preview' : 'Show Preview'}</span>
               </button>
             )}
+            
+            <div className="relative export-menu-container">
+              <button
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-colors text-sm ${
+                  showExportMenu 
+                    ? 'bg-black text-white' 
+                    : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
+                <FileCode className="w-4 h-4" />
+                <span className="hidden sm:inline">Export</span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+
+              {showExportMenu && (
+                <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-48">
+                  <div className="p-2">
+                    <button
+                      onClick={exportToLangChainPython}
+                      className="w-full flex items-center space-x-2 px-3 py-2 text-left hover:bg-gray-100 rounded transition-colors"
+                    >
+                      <Code className="w-4 h-4 text-blue-600" />
+                      <span>Export to LangChain Python</span>
+                    </button>
+                    <button
+                      onClick={exportToLangChainJS}
+                      className="w-full flex items-center space-x-2 px-3 py-2 text-left hover:bg-gray-100 rounded transition-colors"
+                    >
+                      <Code className="w-4 h-4 text-yellow-600" />
+                      <span>Export to LangChain JS</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             
             <button
               onClick={() => setShowAutoTest(!showAutoTest)}
@@ -223,7 +394,6 @@ OPTIMIZED PROMPT:`;
               selectedModels={selectedModels}
               temperature={temperature}
               onTestComplete={(result) => {
-                setAutoTestResult(result);
                 onAutoTestComplete?.(result);
               }}
               isRunning={isRunning}

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase, logAuthAttempt } from '../services/supabase';
 
 const Auth = () => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -171,6 +173,17 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-6">
       <div className="max-w-md w-full">
+        {/* Go back to home button */}
+        <div className="text-center mb-4">
+          <button
+            onClick={() => navigate('/')}
+            className="text-gray-600 hover:text-black transition-colors flex items-center justify-center space-x-2 mx-auto"
+          >
+            <span>←</span>
+            <span>Go back to home</span>
+          </button>
+        </div>
+
         {/* Bird Emoji */}
         <div className="text-center mb-8">
           <span className="text-6xl">🦜</span>

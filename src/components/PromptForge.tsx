@@ -931,19 +931,6 @@ const PromptForge = () => {
                 )}
               </div>
 
-              {/* Version Control */}
-              <div>
-                <VersionControl
-                  versions={versions}
-                  currentVersionId={currentVersionId}
-                  onVersionSelect={handleVersionSelect}
-                  onCreateVersion={handleCreateVersion}
-                  onDeleteVersion={handleDeleteVersion}
-                  onDuplicateVersion={handleDuplicateVersion}
-                  onUpdateVersion={handleUpdateVersion}
-                />
-              </div>
-
               {/* Prompt Actions */}
               <div>
                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm">

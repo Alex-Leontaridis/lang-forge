@@ -66,9 +66,9 @@ const MODEL_CONFIG = {
 };
 
 // API Keys - Using environment variables
-const OPENAI_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OPENAI_API_KEY) || 'sk-proj-yLhnoBJKOYaAYK4LOMqHT3BlbkFJLAto2uubebwFHilfUAPM';
-const GROQ_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_API_KEY) || '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';
-const OPENROUTER_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OPENROUTER_API_KEY) || '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';
+const OPENAI_API_KEY = import.meta.env?.VITE_OPENAI_API_KEY;
+const GROQ_API_KEY = import.meta.env?.VITE_GROQ_API_KEY;
+const OPENROUTER_API_KEY = import.meta.env?.VITE_OPENROUTER_API_KEY;
 
 class APIService {
   private config: APIConfig;

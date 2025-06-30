@@ -52,6 +52,14 @@ import { usePrompts } from '../hooks/usePrompts';
 import { Model, Variable, InputVariable, OutputVariable, AutoTestResult } from '../types';
 import apiService from '../services/apiService';
 
+// Import logo images
+import openaiLogo from '../logo/openai.png';
+import googleLogo from '../logo/google.png';
+import metaLogo from '../logo/meta.png';
+import deepseekLogo from '../logo/deepseek.png';
+import mistralLogo from '../logo/mistral.png';
+import qwenLogo from '../logo/qwen.png';
+
 // Custom debounce function
 const debounce = <T extends (...args: any[]) => any>(func: T, wait: number) => {
   let timeout: NodeJS.Timeout;
@@ -397,7 +405,7 @@ const PromptForge = () => {
       provider: 'OpenAI (OpenRouter)',
       description: 'Advanced reasoning and analysis',
       contextSize: '128K',
-      logo: '/src/logo/openai.png',
+      logo: openaiLogo,
       category: 'Premium',
       enabled: true
     },
@@ -407,7 +415,7 @@ const PromptForge = () => {
       provider: 'OpenAI (OpenRouter)',
       description: 'Fast and efficient generation',
       contextSize: '16K',
-      logo: '/src/logo/openai.png',
+      logo: openaiLogo,
       category: 'Standard',
       enabled: true
     },
@@ -419,7 +427,7 @@ const PromptForge = () => {
       provider: 'Groq',
       description: 'Instruction-tuned LLM',
       contextSize: '8K',
-      logo: '/src/logo/google.png',
+      logo: googleLogo,
       category: 'Efficient',
       enabled: true
     },
@@ -429,7 +437,7 @@ const PromptForge = () => {
       provider: 'Groq',
       description: 'Fast, general-purpose LLM',
       contextSize: '131K',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       category: 'Fast',
       enabled: true
     },
@@ -439,7 +447,7 @@ const PromptForge = () => {
       provider: 'Groq',
       description: 'High-quality generation LLM',
       contextSize: '131K',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       category: 'Premium',
       enabled: true
     },
@@ -449,7 +457,7 @@ const PromptForge = () => {
       provider: 'Groq',
       description: 'Distilled LLaMA LLM',
       contextSize: '131K',
-      logo: '/src/logo/deepseek.png',
+      logo: deepseekLogo,
       category: 'Premium',
       enabled: true
     },
@@ -459,7 +467,7 @@ const PromptForge = () => {
       provider: 'Groq',
       description: 'LLaMA 4 instruct LLM',
       contextSize: '131K',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       category: 'Standard',
       enabled: true
     },
@@ -469,7 +477,7 @@ const PromptForge = () => {
       provider: 'Groq',
       description: 'Smaller LLaMA 4 instruct LLM',
       contextSize: '131K',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       category: 'Standard',
       enabled: true
     },
@@ -479,7 +487,7 @@ const PromptForge = () => {
       provider: 'Groq',
       description: 'General-purpose LLM',
       contextSize: '32K',
-      logo: '/src/logo/mistral.png',
+      logo: mistralLogo,
       category: 'Standard',
       enabled: true
     },
@@ -489,7 +497,7 @@ const PromptForge = () => {
       provider: 'Groq',
       description: 'Multilingual LLM',
       contextSize: '131K',
-      logo: '/src/logo/qwen.png',
+      logo: qwenLogo,
       category: 'Standard',
       enabled: true
     },
@@ -499,7 +507,7 @@ const PromptForge = () => {
       provider: 'Groq',
       description: 'Advanced multilingual LLM',
       contextSize: '131K',
-      logo: '/src/logo/qwen.png',
+      logo: qwenLogo,
       category: 'Standard',
       enabled: true
     },
@@ -511,7 +519,7 @@ const PromptForge = () => {
       provider: 'Meta (OpenRouter)',
       description: 'Multilingual, strong benchmark performance',
       contextSize: '131K',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       category: 'Premium',
       enabled: true
     },
@@ -521,7 +529,7 @@ const PromptForge = () => {
       provider: 'Qwen (OpenRouter)',
       description: 'Advanced code generation and reasoning',
       contextSize: '33K',
-      logo: '/src/logo/qwen.png',
+      logo: qwenLogo,
       category: 'Code',
       enabled: true
     },
@@ -531,7 +539,7 @@ const PromptForge = () => {
       provider: 'Meta (OpenRouter)',
       description: 'Multimodal model (image + text)',
       contextSize: '131K',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       category: 'Vision',
       enabled: true
     },
@@ -541,7 +549,7 @@ const PromptForge = () => {
       provider: 'Meta (OpenRouter)',
       description: 'Lightweight multilingual LLM',
       contextSize: '131K',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       category: 'Lightweight',
       enabled: true
     },
@@ -551,7 +559,7 @@ const PromptForge = () => {
       provider: 'Qwen (OpenRouter)',
       description: 'Long-text, multilingual, structured output',
       contextSize: '33K',
-      logo: '/src/logo/qwen.png',
+      logo: qwenLogo,
       category: 'Premium',
       enabled: true
     },
@@ -561,7 +569,7 @@ const PromptForge = () => {
       provider: 'Meta (OpenRouter)',
       description: 'Fast and efficient generation',
       contextSize: '131K',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       category: 'Fast',
       enabled: true
     },
@@ -571,7 +579,7 @@ const PromptForge = () => {
       provider: 'Mistral (OpenRouter)',
       description: 'Multilingual with function calling',
       contextSize: '131K',
-      logo: '/src/logo/mistral.png',
+      logo: mistralLogo,
       category: 'Standard',
       enabled: true
     },
@@ -581,7 +589,7 @@ const PromptForge = () => {
       provider: 'Google (OpenRouter)',
       description: 'Versatile and efficient open-source LLM',
       contextSize: '8K',
-      logo: '/src/logo/google.png',
+      logo: googleLogo,
       category: 'Efficient',
       enabled: true
     },
@@ -591,7 +599,7 @@ const PromptForge = () => {
       provider: 'Mistral (OpenRouter)',
       description: 'High-performing 7B model',
       contextSize: '33K',
-      logo: '/src/logo/mistral.png',
+      logo: mistralLogo,
       category: 'Standard',
       enabled: true
     }

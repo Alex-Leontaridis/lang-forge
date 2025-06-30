@@ -53,6 +53,8 @@ import LiveChainVisualization from './LiveChainVisualization';
 import ConditionEditor from './ConditionEditor';
 import { PromptNode as PromptNodeType, PromptScore, ConnectionCondition, ConditionalEdge } from '../types';
 import apiService from '../services/apiService';
+import ChainHealthValidation from './ChainHealthValidation';
+import VariableFlowVisualization from './VariableFlowVisualization';
 
 interface PromptChainCanvasProps {
   projectId?: string;
@@ -97,6 +99,8 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
   const [selectedEdge, setSelectedEdge] = useState<ConditionalEdge | null>(null);
   const [showConditionEditor, setShowConditionEditor] = useState(false);
   const [showSystemMessage, setShowSystemMessage] = useState(false);
+  const [showChainHealth, setShowChainHealth] = useState(false);
+  const [showVariableFlow, setShowVariableFlow] = useState(false);
 
   const reactFlowInstance = useReactFlow();
 
@@ -838,6 +842,9 @@ export { runChain };
 
   console.log('RENDER: nodes passed to ReactFlow:', nodes);
 
+  // Map nodes to PromptNode[]
+  const promptNodes = nodes.map(n => ({ ...n.data, id: n.id, position: n.position }));
+
   return (
     <div className="h-screen flex flex-col bg-white">
       {/* Header */}
@@ -1071,6 +1078,27 @@ export { runChain };
                   </div>
                 </div>
               </Panel>
+            )}
+
+            {/* Chain Health Panel */}
+            {showChainHealth && (
+              <ChainHealthValidation
+                nodes={promptNodes}
+                variableFlows={[]} // TODO: implement variable flow extraction from nodes/edges if needed
+                healthIssues={[]} // TODO: implement health issue extraction if needed
+                onIssueClick={() => {}}
+              />
+            )}
+
+            {/* Variable Flow Panel */}
+            {showVariableFlow && (
+              <VariableFlowVisualization
+                nodes={promptNodes}
+                variableFlows={[]} // TODO: implement variable flow extraction from nodes/edges if needed
+                healthIssues={[]} // TODO: implement health issue extraction if needed
+                onFlowClick={() => {}}
+                onNodeClick={() => {}}
+              />
             )}
           </ReactFlow>
         </div>

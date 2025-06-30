@@ -3,6 +3,7 @@ import { Edge } from 'reactflow';
 export interface PromptVersion {
   id: string;
   projectId: string;
+  promptId: string; // Reference to the parent prompt
   title: string;
   content: string;
   variables: Record<string, string>;
@@ -201,4 +202,12 @@ export interface AutoTestResult {
     averageScore: number;
     modelResults: Record<string, { passed: number; failed: number; total: number }>;
   };
+}
+
+// New interface for managing prompts within a project
+export interface Prompt {
+  id: string;
+  projectId: string;
+  title: string;
+  description?: string;
 }

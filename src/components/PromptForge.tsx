@@ -6,6 +6,7 @@ import PromptEditor from './PromptEditor';
 import ModelOutput from './ModelOutput';
 import PromptScore from './PromptScore';
 import VariableManager from './VariableManager';
+import PromptManager from './PromptManager';
 import MultiModelRunner from './MultiModelRunner';
 import VersionComparison from './VersionComparison';
 import VersionControl from './VersionControl';
@@ -14,6 +15,7 @@ import PromptChainCanvas from './PromptChainCanvas';
 import ChainHealthValidation from './ChainHealthValidation';
 import VariableFlowVisualization from './VariableFlowVisualization';
 import { usePromptVersions } from '../hooks/usePromptVersions';
+import { usePrompts } from '../hooks/usePrompts';
 import { Model, Variable, InputVariable, OutputVariable, VariableFlow, ChainHealthIssue, AutoTestResult } from '../types';
 import apiService from '../services/apiService';
 
@@ -52,6 +54,10 @@ const PromptForge = () => {
     const saved = localStorage.getItem(`promptForgeCollapseVariables_${projectId || 'global'}`);
     return saved ? JSON.parse(saved) : false;
   });
+  const [collapsePrompts, setCollapsePrompts] = useState(() => {
+    const saved = localStorage.getItem(`promptForgeCollapsePrompts_${projectId || 'global'}`);
+    return saved ? JSON.parse(saved) : false;
+  });
   const [showVariableManagement, setShowVariableManagement] = useState(true);
   const [showChainHealth, setShowChainHealth] = useState(true);
   const [showVariableFlow, setShowVariableFlow] = useState(true);
@@ -66,6 +72,22 @@ const PromptForge = () => {
   const [fromCanvas, setFromCanvas] = useState(false);
   const [canvasNodeId, setCanvasNodeId] = useState<string | null>(null);
 
+  // Initialize prompt management
+  const {
+    prompts,
+    currentPromptId,
+    setCurrentPromptId,
+    createPrompt,
+    getCurrentPrompt,
+    updatePrompt,
+    deletePrompt,
+    duplicatePrompt,
+    selectPrompt
+  } = usePrompts(projectId);
+
+  const currentPrompt = getCurrentPrompt();
+
+  // Initialize version management with current prompt
   const {
     versions,
     runs,
@@ -78,7 +100,7 @@ const PromptForge = () => {
     updateVersion,
     deleteVersion,
     duplicateVersion
-  } = usePromptVersions(projectId);
+  } = usePromptVersions(projectId, currentPromptId);
 
   const currentVersion = getCurrentVersion();
   const currentRuns = getRunsForVersion(currentVersionId);
@@ -93,6 +115,17 @@ const PromptForge = () => {
           setFromCanvas(true);
           setCanvasNodeId(data.nodeId);
           setCurrentModel(data.model);
+          
+          // Create a new prompt if none exists
+          if (!currentPrompt) {
+            const newPrompt = createPrompt(
+              `Canvas Node: ${data.title}`,
+              'Imported from canvas'
+            );
+            if (newPrompt) {
+              setCurrentPromptId(newPrompt.id);
+            }
+          }
           
           // Create a new version with the canvas data
           const newVersion = createVersion(
@@ -120,7 +153,7 @@ const PromptForge = () => {
         localStorage.removeItem('canvasToEditorData');
       }
     }
-  }, [createVersion, setCurrentVersionId]);
+  }, [createVersion, setCurrentVersionId, createPrompt, setCurrentPromptId, currentPrompt]);
 
   // Persist state to localStorage with project-specific keys
   useEffect(() => {
@@ -146,6 +179,10 @@ const PromptForge = () => {
   useEffect(() => {
     localStorage.setItem(`promptForgeCollapseVariables_${projectId || 'global'}`, JSON.stringify(collapseVariables));
   }, [collapseVariables, projectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`promptForgeCollapsePrompts_${projectId || 'global'}`, JSON.stringify(collapsePrompts));
+  }, [collapsePrompts, projectId]);
 
   useEffect(() => {
     localStorage.setItem(`promptForgeSelectedModelsForAutoTest_${projectId || 'global'}`, JSON.stringify(selectedModelsForAutoTest));
@@ -398,6 +435,27 @@ const PromptForge = () => {
     setAutoTestResults(prev => [...prev, result]);
   };
 
+  // Prompt management handlers
+  const handleCreatePrompt = (title: string, description?: string) => {
+    createPrompt(title, description);
+  };
+
+  const handlePromptSelect = (promptId: string) => {
+    selectPrompt(promptId);
+  };
+
+  const handleDeletePrompt = (promptId: string) => {
+    deletePrompt(promptId);
+  };
+
+  const handleDuplicatePrompt = (promptId: string) => {
+    duplicatePrompt(promptId);
+  };
+
+  const handleUpdatePrompt = (promptId: string, updates: any) => {
+    updatePrompt(promptId, updates);
+  };
+
   const tabs = [
     { id: 'editor' as const, name: 'Editor', icon: Zap },
     { id: 'canvas' as const, name: 'Canvas', icon: Workflow },
@@ -426,6 +484,9 @@ const PromptForge = () => {
               </Link>
               <div className="flex items-center space-x-2">
                 <span className="text-base sm:text-lg font-semibold text-black">🦜 LangForge</span>
+                {currentPrompt && (
+                  <span className="text-sm text-gray-500">• {currentPrompt.title}</span>
+                )}
               </div>
             </div>
 
@@ -565,16 +626,6 @@ const PromptForge = () => {
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-                
-                <VariableManager
-                  variables={variables}
-                  inputVariables={inputVariables}
-                  prompt={currentVersion?.content || ''}
-                  onVariableChange={handleVariableChange}
-                  onAddVariable={handleAddVariable}
-                  onRemoveVariable={handleRemoveVariable}
-                  onInputVariableChange={handleInputVariableChange}
-                />
 
                 {/* System Message */}
                 <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
@@ -593,6 +644,67 @@ const PromptForge = () => {
                     />
                   </div>
                 </div>
+
+                {/* Prompts Collapsible */}
+                <div>
+                  <button onClick={() => setCollapsePrompts((v: boolean) => !v)} className="flex items-center w-full mb-2 text-left space-x-2">
+                    {collapsePrompts ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    <span className="font-semibold">Prompts</span>
+                  </button>
+                  {!collapsePrompts && (
+                    <PromptManager
+                      projectId={projectId}
+                      prompts={prompts}
+                      currentPromptId={currentPromptId}
+                      onPromptSelect={handlePromptSelect}
+                      onCreatePrompt={handleCreatePrompt}
+                      onDeletePrompt={handleDeletePrompt}
+                      onDuplicatePrompt={handleDuplicatePrompt}
+                      onUpdatePrompt={handleUpdatePrompt}
+                      collapsible={false}
+                    />
+                  )}
+                </div>
+
+                {/* Variables Collapsible */}
+                <div>
+                  <button onClick={() => setCollapseVariables((v: boolean) => !v)} className="flex items-center w-full mb-2 text-left space-x-2">
+                    {collapseVariables ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    <span className="font-semibold">Variables</span>
+                  </button>
+                  {!collapseVariables && (
+                    <VariableManager
+                      variables={variables}
+                      inputVariables={inputVariables}
+                      prompt={currentVersion?.content || ''}
+                      onVariableChange={handleVariableChange}
+                      onAddVariable={handleAddVariable}
+                      onRemoveVariable={handleRemoveVariable}
+                      onInputVariableChange={handleInputVariableChange}
+                    />
+                  )}
+                </div>
+
+                {/* Chain Health */}
+                {showChainHealth && (
+                  <ChainHealthValidation
+                    nodes={[]}
+                    variableFlows={variableFlows}
+                    healthIssues={chainHealthIssues}
+                    onIssueClick={handleHealthIssueClick}
+                  />
+                )}
+
+                {/* Variable Flow */}
+                {showVariableFlow && (
+                  <VariableFlowVisualization
+                    nodes={[]}
+                    variableFlows={variableFlows}
+                    healthIssues={chainHealthIssues}
+                    onFlowClick={handleVariableFlowClick}
+                    onNodeClick={handleNodeClick}
+                  />
+                )}
               </div>
             </div>
 
@@ -615,6 +727,28 @@ const PromptForge = () => {
                   />
                 </div>
               </div>
+
+              {/* Prompts Collapsible */}
+              <div>
+                <button onClick={() => setCollapsePrompts((v: boolean) => !v)} className="flex items-center w-full mb-2 text-left space-x-2">
+                  {collapsePrompts ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  <span className="font-semibold">Prompts</span>
+                </button>
+                {!collapsePrompts && (
+                  <PromptManager
+                    projectId={projectId}
+                    prompts={prompts}
+                    currentPromptId={currentPromptId}
+                    onPromptSelect={handlePromptSelect}
+                    onCreatePrompt={handleCreatePrompt}
+                    onDeletePrompt={handleDeletePrompt}
+                    onDuplicatePrompt={handleDuplicatePrompt}
+                    onUpdatePrompt={handleUpdatePrompt}
+                    collapsible={false}
+                  />
+                )}
+              </div>
+
               {/* Variables Collapsible */}
               <div>
                 <button onClick={() => setCollapseVariables((v: boolean) => !v)} className="flex items-center w-full mb-2 text-left space-x-2">
@@ -633,6 +767,27 @@ const PromptForge = () => {
                   />
                 )}
               </div>
+
+              {/* Chain Health */}
+              {showChainHealth && (
+                <ChainHealthValidation
+                  nodes={[]}
+                  variableFlows={variableFlows}
+                  healthIssues={chainHealthIssues}
+                  onIssueClick={handleHealthIssueClick}
+                />
+              )}
+
+              {/* Variable Flow */}
+              {showVariableFlow && (
+                <VariableFlowVisualization
+                  nodes={[]}
+                  variableFlows={variableFlows}
+                  healthIssues={chainHealthIssues}
+                  onFlowClick={handleVariableFlowClick}
+                  onNodeClick={handleNodeClick}
+                />
+              )}
             </div>
 
             {/* Main Content */}

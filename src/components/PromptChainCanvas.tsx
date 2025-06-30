@@ -60,7 +60,7 @@ const nodeTypes = {
   promptNode: PromptNodeComponent,
 };
 
-const PromptChainCanvas = () => {
+const PromptChainCanvasInner = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isRunningChain, setIsRunningChain] = useState(false);
@@ -68,6 +68,8 @@ const PromptChainCanvas = () => {
   const [showVisualization, setShowVisualization] = useState(false);
   const [executionHistory, setExecutionHistory] = useState<any[]>([]);
   const [showExportMenu, setShowExportMenu] = useState(false);
+
+  const reactFlowInstance = useReactFlow();
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -125,8 +127,17 @@ const PromptChainCanvas = () => {
         onDelete: (id: string) => deleteNode(id),
       },
     };
-    setNodes((nds) => nds.concat(newNode));
-  }, [nodes.length, setNodes]);
+    setNodes((nds) => {
+      const updated = nds.concat(newNode);
+      // If this is the first node, fit view after a short delay
+      if (updated.length === 1) {
+        setTimeout(() => {
+          reactFlowInstance.fitView({ padding: 0.2, maxZoom: 1 });
+        }, 100);
+      }
+      return updated;
+    });
+  }, [nodes.length, setNodes, reactFlowInstance]);
 
   const deleteNode = useCallback((nodeId: string) => {
     setNodes((nds) => nds.filter((node) => node.id !== nodeId));
@@ -143,7 +154,7 @@ const PromptChainCanvas = () => {
       const sentiment = 'positive'; // Mock sentiment
       
       // Replace variables in condition
-      let evaluatedCondition = condition
+      const evaluatedCondition = condition
         .replace(/\{\{score\}\}/g, score.toString())
         .replace(/\{\{sentiment\}\}/g, `"${sentiment}"`);
       
@@ -782,13 +793,6 @@ if __name__ == "__main__":
       {/* Top Navigation */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <Link 
-            to="/app" 
-            className="flex items-center space-x-2 text-gray-600 hover:text-black transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back to Editor</span>
-          </Link>
           <div className="flex items-center space-x-2">
             <div className="w-6 h-6 bg-black rounded-lg flex items-center justify-center">
               <Zap className="w-4 h-4 text-white" />
@@ -923,6 +927,16 @@ if __name__ == "__main__":
               className="bg-white border border-gray-200 rounded-lg shadow-sm"
               nodeColor="#000000"
               maskColor="rgba(0, 0, 0, 0.1)"
+              style={{
+                width: 200,
+                height: 150,
+                position: 'absolute',
+                bottom: 20,
+                right: 20,
+                zIndex: 10
+              }}
+              zoomable={true}
+              pannable={true}
             />
             
             {/* Welcome Panel */}
@@ -972,5 +986,11 @@ if __name__ == "__main__":
     </div>
   );
 };
+
+const PromptChainCanvas = () => (
+  <ReactFlowProvider>
+    <PromptChainCanvasInner />
+  </ReactFlowProvider>
+);
 
 export default PromptChainCanvas;

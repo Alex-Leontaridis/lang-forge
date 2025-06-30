@@ -198,33 +198,52 @@ class APIService {
     overall: number;
     critique: string;
   }> {
-    const systemMessage = `You are an expert prompt evaluator. Your task is to evaluate the quality of an AI model's response to a given prompt.
+    const systemMessage = `You are an expert prompt evaluator with specialized training in assessing AI model responses. Your task is to provide consistent, objective evaluations using a standardized 100-point scale.
 
-Evaluation Criteria:
-1. RELEVANCE (1-10): How well does the response address the prompt's intent and requirements?
-2. CLARITY (1-10): How clear, coherent, and well-structured is the response?
-3. CREATIVITY (1-10): How original, insightful, or innovative is the response?
+EVALUATION CRITERIA (100-point scale):
+1. RELEVANCE (0-100): How accurately and comprehensively does the response address the prompt's intent, requirements, and context?
+   - 90-100: Exceptional alignment with prompt intent
+   - 70-89: Strong alignment with minor gaps
+   - 50-69: Moderate alignment with some gaps
+   - 30-49: Weak alignment with significant gaps
+   - 0-29: Poor alignment or off-topic
 
-Instructions:
-- Score each criterion on a scale of 1-10 (1 = poor, 10 = excellent)
-- Calculate the overall score as the average of the three scores, rounded to 1 decimal place
-- Provide a brief, constructive critique explaining your scoring
-- Be objective and consistent in your evaluation
+2. CLARITY (0-100): How clear, coherent, well-structured, and understandable is the response?
+   - 90-100: Exceptionally clear and well-organized
+   - 70-89: Clear with minor structural issues
+   - 50-69: Generally clear with some confusion
+   - 30-49: Unclear with significant structural problems
+   - 0-29: Very unclear or incomprehensible
+
+3. CREATIVITY (0-100): How original, insightful, innovative, or engaging is the response?
+   - 90-100: Highly creative and original insights
+   - 70-89: Creative with good insights
+   - 50-69: Some creativity and basic insights
+   - 30-49: Limited creativity or insights
+   - 0-29: Minimal creativity or unoriginal
+
+EVALUATION PROCESS:
+- Analyze the prompt's intent, context, and requirements
+- Assess how well the response meets each criterion
+- Use the detailed scoring rubric above
+- Calculate overall score as weighted average: Relevance (40%) + Clarity (35%) + Creativity (25%)
+- Provide specific, constructive feedback explaining your scoring
+- Be consistent and objective across all evaluations
 
 Respond in the following JSON format only:
 {
-  "relevance": [score],
-  "clarity": [score], 
-  "creativity": [score],
-  "overall": [average_score],
-  "critique": "[your critique here]"
+  "relevance": [score_0-100],
+  "clarity": [score_0-100], 
+  "creativity": [score_0-100],
+  "overall": [weighted_average_score],
+  "critique": "[detailed explanation of scoring with specific examples]"
 }`;
 
     const evaluationPrompt = `PROMPT: "${originalPrompt}"
 
 RESPONSE: "${modelResponse}"
 
-Please evaluate this response according to the criteria above.`;
+Please evaluate this response according to the criteria above. Provide specific examples from the response to justify your scoring.`;
 
     try {
       const result = await this.generateCompletion(
@@ -232,27 +251,35 @@ Please evaluate this response according to the criteria above.`;
         evaluationPrompt,
         systemMessage,
         temperature,
-        500
+        800
       );
 
       // Parse the JSON response
       const evaluation = JSON.parse(result.content);
       
+      // Ensure scores are within valid range and calculate weighted overall
+      const relevance = Math.min(100, Math.max(0, evaluation.relevance || 50));
+      const clarity = Math.min(100, Math.max(0, evaluation.clarity || 50));
+      const creativity = Math.min(100, Math.max(0, evaluation.creativity || 50));
+      
+      // Calculate weighted overall score
+      const weightedOverall = Math.round(relevance * 0.4 + clarity * 0.35 + creativity * 0.25);
+      
       return {
-        relevance: Math.min(10, Math.max(1, evaluation.relevance || 5)),
-        clarity: Math.min(10, Math.max(1, evaluation.clarity || 5)),
-        creativity: Math.min(10, Math.max(1, evaluation.creativity || 5)),
-        overall: Math.min(10, Math.max(1, evaluation.overall || 5)),
-        critique: evaluation.critique || 'Evaluation completed.'
+        relevance,
+        clarity,
+        creativity,
+        overall: weightedOverall,
+        critique: evaluation.critique || 'Evaluation completed with weighted scoring.'
       };
     } catch (error) {
       console.error('Error evaluating prompt response:', error);
       // Fallback to default scores if evaluation fails
       return {
-        relevance: 5,
-        clarity: 5,
-        creativity: 5,
-        overall: 5,
+        relevance: 50,
+        clarity: 50,
+        creativity: 50,
+        overall: 50,
         critique: 'Evaluation failed. Using default scores.'
       };
     }

@@ -9,6 +9,8 @@ interface VersionControlProps {
   onCreateVersion: (title: string, message: string) => void;
   onDeleteVersion?: (versionId: string) => void;
   onDuplicateVersion?: (versionId: string) => void;
+  selectedVersionsForComparison?: string[];
+  onVersionSelectForComparison?: (versionId: string) => void;
 }
 
 const VersionControl: React.FC<VersionControlProps> = ({
@@ -17,7 +19,9 @@ const VersionControl: React.FC<VersionControlProps> = ({
   onVersionSelect,
   onCreateVersion,
   onDeleteVersion,
-  onDuplicateVersion
+  onDuplicateVersion,
+  selectedVersionsForComparison = [],
+  onVersionSelectForComparison
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -163,6 +167,32 @@ const VersionControl: React.FC<VersionControlProps> = ({
             </div>
           )}
 
+          {/* Comparison Selection Header */}
+          {onVersionSelectForComparison && selectedVersionsForComparison.length > 0 && (
+            <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-blue-800">
+                  {selectedVersionsForComparison.length} version{selectedVersionsForComparison.length !== 1 ? 's' : ''} selected for comparison
+                </span>
+                <button
+                  onClick={() => selectedVersionsForComparison.forEach(id => onVersionSelectForComparison(id))}
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  Clear all
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Comparison Instructions */}
+          {onVersionSelectForComparison && selectedVersionsForComparison.length === 0 && (
+            <div className="mb-3 p-2 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-xs text-gray-600">
+                💡 Click the circles next to versions to select them for comparison. View comparison in the right sidebar.
+              </p>
+            </div>
+          )}
+
           {/* Search */}
           {versions.length > 3 && (
             <div className="relative mb-4">
@@ -187,63 +217,79 @@ const VersionControl: React.FC<VersionControlProps> = ({
                     : 'bg-white hover:bg-gray-50 border-gray-200'
                 }`}
               >
-                <button
-                  onClick={() => onVersionSelect(version.id)}
-                  className="w-full text-left p-3 pr-10"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-sm">{version.title}</span>
-                    <div className="flex items-center space-x-1 text-xs opacity-75">
-                      <Clock className="w-3 h-3" />
-                      <span>{formatDate(version.createdAt)}</span>
-                    </div>
-                  </div>
-                  {version.message && (
-                    <div className="flex items-start space-x-1 text-xs opacity-75">
-                      <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                      <span className="line-clamp-2">{version.message}</span>
-                    </div>
+                <div className="flex items-center">
+                  {/* Comparison Checkbox */}
+                  {onVersionSelectForComparison && (
+                    <input
+                      type="checkbox"
+                      checked={selectedVersionsForComparison.includes(version.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        onVersionSelectForComparison(version.id);
+                      }}
+                      className="rounded border-gray-300 text-black focus:ring-black flex-shrink-0 mr-2"
+                    />
                   )}
-                </button>
-                
-                {/* Version Actions Menu */}
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2" ref={menuRef}>
+                  
+                  {/* Version Content */}
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowMenuFor(showMenuFor === version.id ? null : version.id);
-                    }}
-                    className={`p-1 rounded hover:bg-opacity-20 ${
-                      version.id === currentVersionId 
-                        ? 'hover:bg-white text-white' 
-                        : 'hover:bg-gray-200 text-gray-600'
-                    }`}
+                    onClick={() => onVersionSelect(version.id)}
+                    className="flex-1 text-left p-3 pr-10"
                   >
-                    <MoreVertical className="w-3 h-3" />
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-medium text-sm">{version.title}</span>
+                      <div className="flex items-center space-x-1 text-xs opacity-75">
+                        <Clock className="w-3 h-3" />
+                        <span>{formatDate(version.createdAt)}</span>
+                      </div>
+                    </div>
+                    {version.message && (
+                      <div className="flex items-start space-x-1 text-xs opacity-75">
+                        <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-2">{version.message}</span>
+                      </div>
+                    )}
                   </button>
                   
-                  {showMenuFor === version.id && (
-                    <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
-                      {onDuplicateVersion && (
-                        <button
-                          onClick={(e) => handleDuplicateVersion(version.id, e)}
-                          className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        >
-                          <Copy className="w-3 h-3" />
-                          <span>Duplicate</span>
-                        </button>
-                      )}
-                      {onDeleteVersion && versions.length > 1 && (
-                        <button
-                          onClick={(e) => handleDeleteVersion(version.id, e)}
-                          className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span>Delete</span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  {/* Version Actions Menu */}
+                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2" ref={menuRef}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMenuFor(showMenuFor === version.id ? null : version.id);
+                      }}
+                      className={`p-1 rounded hover:bg-opacity-20 ${
+                        version.id === currentVersionId 
+                          ? 'hover:bg-white text-white' 
+                          : 'hover:bg-gray-200 text-gray-600'
+                      }`}
+                    >
+                      <MoreVertical className="w-3 h-3" />
+                    </button>
+                    
+                    {showMenuFor === version.id && (
+                      <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+                        {onDuplicateVersion && (
+                          <button
+                            onClick={(e) => handleDuplicateVersion(version.id, e)}
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            <Copy className="w-3 h-3" />
+                            <span>Duplicate</span>
+                          </button>
+                        )}
+                        {onDeleteVersion && versions.length > 1 && (
+                          <button
+                            onClick={(e) => handleDeleteVersion(version.id, e)}
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>Delete</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

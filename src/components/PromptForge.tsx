@@ -1,17 +1,16 @@
 import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow, Menu, X, Search, Filter } from 'lucide-react';
+import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow, Menu, X, Search, ChevronRight, ChevronDown, Clock, MessageSquare } from 'lucide-react';
 import PromptEditor from './PromptEditor';
 import ModelOutput from './ModelOutput';
 import PromptScore from './PromptScore';
-import VersionControl from './VersionControl';
 import VariableManager from './VariableManager';
 import MultiModelRunner from './MultiModelRunner';
 import VersionComparison from './VersionComparison';
 import Analytics from './Analytics';
 import PromptChainCanvas from './PromptChainCanvas';
 import { usePromptVersions } from '../hooks/usePromptVersions';
-import { Model, Variable, PromptScore as PromptScoreType } from '../types';
+import { Model, Variable } from '../types';
 import apiService from '../services/apiService';
 
 const PromptForge = () => {
@@ -25,6 +24,7 @@ const PromptForge = () => {
   const [showFullScoreReport, setShowFullScoreReport] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [collapseVariables, setCollapseVariables] = useState(false);
 
   const {
     versions,
@@ -46,25 +46,25 @@ const PromptForge = () => {
   const models: Model[] = [
     { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', logo: '/src/logo/openai.png', enabled: true },
     { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient', provider: 'OpenAI', logo: '/src/logo/openai.png', enabled: true },
-    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', description: 'Google Gemma 2 9B IT (Groq)', provider: 'Groq', logo: '/src/logo/google.png', enabled: true },
-    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp', description: 'Google Gemini 2.5 Pro Exp (OpenRouter)', provider: 'OpenRouter', logo: '/src/logo/google.png', enabled: true },
-    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp', description: 'Google Gemini 2.0 Flash Exp (OpenRouter)', provider: 'OpenRouter', logo: '/src/logo/google.png', enabled: true },
-    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT', description: 'Google Gemma 3 12B IT (OpenRouter)', provider: 'OpenRouter', logo: '/src/logo/google.png', enabled: true },
-    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', description: 'Meta Llama 3.1 8B Instant (Groq)', provider: 'Groq', logo: '/src/logo/meta.png', enabled: true },
-    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', description: 'Meta Llama 3.3 70B Versatile (Groq)', provider: 'Groq', logo: '/src/logo/meta.png', enabled: true },
-    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', description: 'Meta Llama Guard 4 12B (Groq)', provider: 'Groq', logo: '/src/logo/meta.png', enabled: true },
-    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', description: 'DeepSeek R1 Distill Llama 70B (OpenRouter)', provider: 'OpenRouter', logo: '/src/logo/deepseek.png', enabled: true },
-    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528', description: 'DeepSeek R1 0528 (OpenRouter)', provider: 'OpenRouter', logo: '/src/logo/deepseek.png', enabled: true },
-    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B', description: 'DeepSeek R1 0528 Qwen3 8B (OpenRouter)', provider: 'OpenRouter', logo: '/src/logo/deepseek.png', enabled: true },
-    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base', description: 'DeepSeek V3 Base (OpenRouter)', provider: 'OpenRouter', logo: '/src/logo/deepseek.png', enabled: true },
-    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', description: 'Alibaba Qwen QWQ 32B (OpenRouter)', provider: 'OpenRouter', logo: '/src/logo/google.png', enabled: true },
-    { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B', description: 'Alibaba Qwen 3 32B (Groq)', provider: 'Groq', logo: '/src/logo/google.png', enabled: true },
-    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', description: 'Hugging Face Distil Whisper Large v3 EN (Groq)', provider: 'Groq', logo: '/src/logo/google.png', enabled: true },
-    { id: 'whisper-large-v3', name: 'Whisper Large v3', description: 'OpenAI Whisper Large v3 (Groq)', provider: 'Groq', logo: '/src/logo/openai.png', enabled: true },
-    { id: 'whisper-large-v3-turbo', name: 'Whisper Large v3 Turbo', description: 'OpenAI Whisper Large v3 Turbo (Groq)', provider: 'Groq', logo: '/src/logo/openai.png', enabled: true },
-    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B', description: 'Nvidia Llama 3.3 Nemotron Super 49B (OpenRouter)', provider: 'OpenRouter', logo: '/src/logo/google.png', enabled: true },
-    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', description: 'Mistral Small 3.2 24B Instruct (OpenRouter)', provider: 'OpenRouter', logo: '/src/logo/google.png', enabled: true },
-    { id: 'minimax/minimax-m1', name: 'MiniMax M1', description: 'MiniMax M1 (OpenRouter)', provider: 'OpenRouter', logo: '/src/logo/minimax.png', enabled: true },
+    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', description: 'Google Gemma 2 9B IT (Groq)', provider: 'Google', logo: '/src/logo/google.png', enabled: true },
+    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp', description: 'Google Gemini 2.5 Pro Exp (OpenRouter)', provider: 'Google', logo: '/src/logo/google.png', enabled: true },
+    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp', description: 'Google Gemini 2.0 Flash Exp (OpenRouter)', provider: 'Google', logo: '/src/logo/google.png', enabled: true },
+    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT', description: 'Google Gemma 3 12B IT (OpenRouter)', provider: 'Google', logo: '/src/logo/google.png', enabled: true },
+    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', description: 'Meta Llama 3.1 8B Instant (Groq)', provider: 'Meta', logo: '/src/logo/meta.png', enabled: true },
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', description: 'Meta Llama 3.3 70B Versatile (Groq)', provider: 'Meta', logo: '/src/logo/meta.png', enabled: true },
+    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', description: 'Meta Llama Guard 4 12B (Groq)', provider: 'Meta', logo: '/src/logo/meta.png', enabled: true },
+    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', description: 'DeepSeek R1 Distill Llama 70B (OpenRouter)', provider: 'DeepSeek', logo: '/src/logo/deepseek.png', enabled: true },
+    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528', description: 'DeepSeek R1 0528 (OpenRouter)', provider: 'DeepSeek', logo: '/src/logo/deepseek.png', enabled: true },
+    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B', description: 'DeepSeek R1 0528 Qwen3 8B (OpenRouter)', provider: 'DeepSeek', logo: '/src/logo/deepseek.png', enabled: true },
+    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base', description: 'DeepSeek V3 Base (OpenRouter)', provider: 'DeepSeek', logo: '/src/logo/deepseek.png', enabled: true },
+    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', description: 'Alibaba Qwen QWQ 32B (OpenRouter)', provider: 'Alibaba Cloud', logo: '/src/logo/google.png', enabled: true },
+    { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B', description: 'Alibaba Qwen 3 32B (Groq)', provider: 'Alibaba Cloud', logo: '/src/logo/google.png', enabled: true },
+    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', description: 'Hugging Face Distil Whisper Large v3 EN (Groq)', provider: 'Hugging Face', logo: '/src/logo/google.png', enabled: true },
+    { id: 'whisper-large-v3', name: 'Whisper Large v3', description: 'OpenAI Whisper Large v3 (Groq)', provider: 'OpenAI', logo: '/src/logo/openai.png', enabled: true },
+    { id: 'whisper-large-v3-turbo', name: 'Whisper Large v3 Turbo', description: 'OpenAI Whisper Large v3 Turbo (Groq)', provider: 'OpenAI', logo: '/src/logo/openai.png', enabled: true },
+    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B', description: 'Nvidia Llama 3.3 Nemotron Super 49B (OpenRouter)', provider: 'Nvidia', logo: '/src/logo/google.png', enabled: true },
+    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', description: 'Mistral Small 3.2 24B Instruct (OpenRouter)', provider: 'Mistral', logo: '/src/logo/google.png', enabled: true },
+    { id: 'minimax/minimax-m1', name: 'MiniMax M1', description: 'MiniMax M1 (OpenRouter)', provider: 'MiniMax', logo: '/src/logo/minimax.png', enabled: true },
   ];
 
   const handlePromptChange = (newPrompt: string) => {
@@ -180,6 +180,14 @@ const PromptForge = () => {
       const versionVariables = Object.entries(version.variables || {}).map(([name, value]) => ({ name, value }));
       setVariables(versionVariables);
     }
+  };
+
+  const handleVersionSelectForComparison = (versionId: string) => {
+    setSelectedVersionsForComparison(prev => 
+      prev.includes(versionId) 
+        ? prev.filter(id => id !== versionId)
+        : [...prev, versionId]
+    );
   };
 
   const handleDeleteVersion = (versionId: string) => {
@@ -313,15 +321,6 @@ const PromptForge = () => {
                   </button>
                 </div>
                 
-                <VersionControl
-                  versions={versions}
-                  currentVersionId={currentVersionId}
-                  onVersionSelect={handleVersionSelect}
-                  onCreateVersion={handleCreateVersion}
-                  onDeleteVersion={handleDeleteVersion}
-                  onDuplicateVersion={handleDuplicateVersion}
-                />
-                
                 <VariableManager
                   variables={variables}
                   onVariableChange={handleVariableChange}
@@ -351,22 +350,6 @@ const PromptForge = () => {
 
             {/* Desktop Left Sidebar */}
             <div className="hidden xl:block space-y-6">
-              <VersionControl
-                versions={versions}
-                currentVersionId={currentVersionId}
-                onVersionSelect={handleVersionSelect}
-                onCreateVersion={handleCreateVersion}
-                onDeleteVersion={handleDeleteVersion}
-                onDuplicateVersion={handleDuplicateVersion}
-              />
-              
-              <VariableManager
-                variables={variables}
-                onVariableChange={handleVariableChange}
-                onAddVariable={handleAddVariable}
-                onRemoveVariable={handleRemoveVariable}
-              />
-
               {/* System Message */}
               <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
                 <div className="p-4 border-b border-gray-200">
@@ -383,6 +366,21 @@ const PromptForge = () => {
                     className="w-full h-24 p-3 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-black text-sm"
                   />
                 </div>
+              </div>
+              {/* Variables Collapsible */}
+              <div>
+                <button onClick={() => setCollapseVariables(v => !v)} className="flex items-center w-full mb-2 text-left space-x-2">
+                  {collapseVariables ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  <span className="font-semibold">Variables</span>
+                </button>
+                {!collapseVariables && (
+                  <VariableManager
+                    variables={variables}
+                    onVariableChange={handleVariableChange}
+                    onAddVariable={handleAddVariable}
+                    onRemoveVariable={handleRemoveVariable}
+                  />
+                )}
               </div>
             </div>
 
@@ -466,26 +464,88 @@ const PromptForge = () => {
 
             {/* Right Sidebar */}
             <div className="hidden xl:block space-y-6">
+              {/* Version History */}
+              <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <GitBranch className="w-5 h-5 text-gray-700" />
+                      <span className="font-semibold text-gray-900">Version History</span>
+                    </div>
+                    <button
+                      onClick={() => handleCreateVersion(`Version ${versions.length + 1}`, 'Auto-created version')}
+                      className="px-3 py-1 bg-black text-white rounded text-sm hover:bg-gray-800 transition-colors"
+                    >
+                      Create
+                    </button>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {versions.slice().reverse().map((version) => (
+                      <div
+                        key={version.id}
+                        className={`relative rounded-lg border transition-colors ${
+                          version.id === currentVersionId
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white hover:bg-gray-50 border-gray-200'
+                        }`}
+                      >
+                          <div className="flex items-center pl-2">
+                            {/* Comparison Checkbox */}
+                            <input
+                              type="checkbox"
+                              checked={selectedVersionsForComparison.includes(version.id)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleVersionSelectForComparison(version.id);
+                              }}
+                              className="rounded border-gray-300 text-black focus:ring-black flex-shrink-0 mr-2"
+                            />
+                          
+                          {/* Version Content */}
+                          <button
+                            onClick={() => handleVersionSelect(version.id)}
+                            className="flex-1 text-left p-2 pr-8"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium text-sm">{version.title}</span>
+                              <div className="flex items-center space-x-1 text-xs opacity-75">
+                                <Clock className="w-3 h-3" />
+                                <span>{new Date(version.createdAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                            {version.message && (
+                              <div className="flex items-start space-x-1 text-xs opacity-75">
+                                <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                <span className="line-clamp-1">{version.message}</span>
+                              </div>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
               <VersionComparison
                 versions={versions}
                 runs={runs}
                 selectedVersions={selectedVersionsForComparison}
-                onVersionSelect={(versionId) => {
-                  setSelectedVersionsForComparison(prev => 
-                    prev.includes(versionId) 
-                      ? prev.filter(id => id !== versionId)
-                      : [...prev, versionId].slice(0, 3)
-                  );
-                }}
+                onVersionSelect={handleVersionSelectForComparison}
                 onDeleteVersion={handleDeleteVersion}
                 onDuplicateVersion={handleDuplicateVersion}
+                collapsible={true}
               />
             </div>
           </div>
         )}
 
         {activeTab === 'canvas' && (
-          <PromptChainCanvas />
+          <div className="h-[calc(100vh-140px)] overflow-hidden">
+            <PromptChainCanvas />
+          </div>
         )}
 
         {activeTab === 'analytics' && (
@@ -500,15 +560,10 @@ const PromptForge = () => {
               versions={versions}
               runs={runs}
               selectedVersions={selectedVersionsForComparison}
-              onVersionSelect={(versionId) => {
-                setSelectedVersionsForComparison(prev => 
-                  prev.includes(versionId) 
-                    ? prev.filter(id => id !== versionId)
-                    : [...prev, versionId]
-                );
-              }}
+              onVersionSelect={handleVersionSelectForComparison}
               onDeleteVersion={handleDeleteVersion}
               onDuplicateVersion={handleDuplicateVersion}
+              collapsible={true}
             />
           </div>
         )}

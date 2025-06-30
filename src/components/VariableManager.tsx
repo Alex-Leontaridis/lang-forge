@@ -25,6 +25,13 @@ const VariableManager: React.FC<VariableManagerProps> = ({
     }
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddVariable();
+    }
+  };
+
   const filteredVariables = variables.filter(variable =>
     searchTerm === '' || 
     variable.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -105,16 +112,20 @@ const VariableManager: React.FC<VariableManagerProps> = ({
               onChange={(e) => setNewVariableName(e.target.value)}
               placeholder="Add new variable"
               className="flex-1 p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
-              onKeyPress={(e) => e.key === 'Enter' && handleAddVariable()}
+              onKeyPress={handleKeyPress}
             />
             <button
               onClick={handleAddVariable}
-              className="px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center"
+              disabled={!newVariableName.trim() || !!variables.find(v => v.name === newVariableName.trim())}
+              className="px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="w-4 h-4" />
               <span className="ml-1 sm:hidden">Add</span>
             </button>
           </div>
+          {newVariableName.trim() && variables.find(v => v.name === newVariableName.trim()) && (
+            <p className="text-xs text-red-500 mt-1">Variable already exists</p>
+          )}
         </div>
       </div>
     </div>

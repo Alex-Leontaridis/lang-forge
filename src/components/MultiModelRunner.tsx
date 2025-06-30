@@ -44,17 +44,80 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
     return `${(time / 1000).toFixed(1)}s`;
   };
 
+  const providers = [...new Set(models.map(m => m.provider))];
+
+  // Enhanced provider options with better categorization
+  const providerOptions = [
+    { value: 'all', label: 'All Providers' },
+    { value: 'OpenAI', label: 'OpenAI' },
+    { value: 'Google', label: 'Google' },
+    { value: 'Alibaba Cloud', label: 'Alibaba Cloud' },
+    { value: 'Meta', label: 'Meta' },
+    { value: 'DeepSeek', label: 'DeepSeek' },
+    { value: 'Groq', label: 'Groq' },
+    { value: 'OpenRouter', label: 'OpenRouter' },
+    { value: 'Nvidia', label: 'Nvidia' },
+    { value: 'Mistral', label: 'Mistral' },
+    { value: 'MiniMax', label: 'MiniMax' },
+    { value: 'Hugging Face', label: 'Hugging Face' },
+    { value: 'Anthropic', label: 'Anthropic' }
+  ];
+
+  // Filter models based on provider mapping
+  const getProviderCategory = (provider: string) => {
+    const providerMap: Record<string, string> = {
+      'OpenAI': 'OpenAI',
+      'Google': 'Google',
+      'Alibaba Cloud': 'Alibaba Cloud',
+      'Meta': 'Meta',
+      'DeepSeek': 'DeepSeek',
+      'Groq': 'Groq',
+      'OpenRouter': 'OpenRouter',
+      'Nvidia': 'Nvidia',
+      'Mistral': 'Mistral',
+      'MiniMax': 'MiniMax',
+      'Hugging Face': 'Hugging Face',
+      'Anthropic': 'Anthropic'
+    };
+    
+    // Map specific providers to categories
+    if (provider.includes('google') || provider.includes('gemini') || provider.includes('gemma')) {
+      return 'Google';
+    }
+    if (provider.includes('alibaba') || provider.includes('qwen')) {
+      return 'Alibaba Cloud';
+    }
+    if (provider.includes('meta') || provider.includes('llama')) {
+      return 'Meta';
+    }
+    if (provider.includes('deepseek')) {
+      return 'DeepSeek';
+    }
+    if (provider.includes('mistral')) {
+      return 'Mistral';
+    }
+    if (provider.includes('minimax')) {
+      return 'MiniMax';
+    }
+    if (provider.includes('nvidia')) {
+      return 'Nvidia';
+    }
+    if (provider.includes('hugging') || provider.includes('distil')) {
+      return 'Hugging Face';
+    }
+    
+    return providerMap[provider] || provider;
+  };
+
   const filteredModels = models.filter(model => {
     const matchesSearch = searchTerm === '' || 
       model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       model.description.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesProvider = filterProvider === 'all' || model.provider === filterProvider;
+    const matchesProvider = filterProvider === 'all' || getProviderCategory(model.provider) === filterProvider;
     
     return matchesSearch && matchesProvider;
   });
-
-  const providers = [...new Set(models.map(m => m.provider))];
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
@@ -108,9 +171,8 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
                   onChange={(e) => setFilterProvider(e.target.value)}
                   className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black appearance-none bg-white"
                 >
-                  <option value="all">All Providers</option>
-                  {providers.map(provider => (
-                    <option key={provider} value={provider}>{provider}</option>
+                  {providerOptions.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
               </div>

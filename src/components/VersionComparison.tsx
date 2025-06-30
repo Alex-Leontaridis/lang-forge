@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GitCompare, ArrowRight, CheckCircle, Circle, Trash2, Copy, MoreVertical } from 'lucide-react';
+import { GitCompare, ArrowRight, CheckCircle, Circle, Trash2, Copy, MoreVertical, ChevronRight, ChevronDown } from 'lucide-react';
 import { PromptVersion, ModelRun } from '../types';
 
 interface VersionComparisonProps {
@@ -9,6 +9,7 @@ interface VersionComparisonProps {
   onVersionSelect: (versionId: string) => void;
   onDeleteVersion?: (versionId: string) => void;
   onDuplicateVersion?: (versionId: string) => void;
+  collapsible?: boolean;
 }
 
 const VersionComparison: React.FC<VersionComparisonProps> = ({
@@ -17,9 +18,11 @@ const VersionComparison: React.FC<VersionComparisonProps> = ({
   selectedVersions,
   onVersionSelect,
   onDeleteVersion,
-  onDuplicateVersion
+  onDuplicateVersion,
+  collapsible = false
 }) => {
   const [showMenuFor, setShowMenuFor] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -87,143 +90,137 @@ const VersionComparison: React.FC<VersionComparisonProps> = ({
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between cursor-pointer" onClick={() => collapsible && setCollapsed(v => !v)}>
         <div className="flex items-center space-x-2">
+          {collapsible && (collapsed ? <ChevronRight className="w-5 h-5 text-gray-700" /> : <ChevronDown className="w-5 h-5 text-gray-700" />)}
           <GitCompare className="w-5 h-5 text-gray-700" />
           <span className="font-semibold text-gray-900">Version Comparison</span>
           <span className="text-sm text-gray-500">({selectedVersions.length} selected)</span>
         </div>
       </div>
-
-      <div className="p-4">
-        {selectedVersions.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <GitCompare className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Select versions to compare</p>
-            <p className="text-xs text-gray-400 mt-1">Click on version checkboxes to add them to comparison</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {compareVersions.map((version, index) => {
-              const avgScore = getAverageScore(version.id);
-              const scoreBreakdown = getScoreBreakdown(version.id);
-              const versionRuns = getVersionRuns(version.id);
-              
-              return (
-                <div key={version.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <button
-                        onClick={() => handleVersionToggle(version.id)}
-                        className="flex items-center space-x-2"
-                      >
-                        {selectedVersions.includes(version.id) ? (
-                          <CheckCircle className="w-4 h-4 text-black" />
-                        ) : (
-                          <Circle className="w-4 h-4 text-gray-400" />
-                        )}
-                        <span className="font-medium text-gray-900">{version.title}</span>
-                      </button>
-                    </div>
-                    
-                    <div className="flex items-center space-x-3">
-                      <div className="text-right">
-                        {avgScore && (
-                          <div className="text-lg font-bold text-gray-900">
-                            {avgScore}/10
+      {!collapsed && (
+        <div className="p-4">
+          {selectedVersions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <GitCompare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Select versions to compare</p>
+              <p className="text-xs text-gray-400 mt-1">Click on version checkboxes to add them to comparison</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {compareVersions.map((version, index) => {
+                const avgScore = getAverageScore(version.id);
+                const scoreBreakdown = getScoreBreakdown(version.id);
+                const versionRuns = getVersionRuns(version.id);
+                return (
+                  <div key={version.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => handleVersionToggle(version.id)}
+                          className="flex items-center space-x-2"
+                        >
+                          {selectedVersions.includes(version.id) ? (
+                            <CheckCircle className="w-4 h-4 text-black" />
+                          ) : (
+                            <Circle className="w-4 h-4 text-gray-400" />
+                          )}
+                          <span className="font-medium text-gray-900">{version.title}</span>
+                        </button>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="text-right">
+                          {avgScore && (
+                            <div className="text-lg font-bold text-gray-900">
+                              {avgScore}/10
+                            </div>
+                          )}
+                          <div className="text-sm text-gray-500">
+                            {versionRuns.length} runs
                           </div>
-                        )}
-                        <div className="text-sm text-gray-500">
-                          {versionRuns.length} runs
+                        </div>
+                        {/* Version Actions Menu */}
+                        <div className="relative" ref={menuRef}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowMenuFor(showMenuFor === version.id ? null : version.id);
+                            }}
+                            className="p-1 rounded hover:bg-gray-100 text-gray-600"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                          {showMenuFor === version.id && (
+                            <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+                              {onDuplicateVersion && (
+                                <button
+                                  onClick={(e) => handleDuplicateVersion(version.id, e)}
+                                  className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                >
+                                  <Copy className="w-3 h-3" />
+                                  <span>Duplicate</span>
+                                </button>
+                              )}
+                              {onDeleteVersion && versions.length > 1 && (
+                                <button
+                                  onClick={(e) => handleDeleteVersion(version.id, e)}
+                                  className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                  <span>Delete</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      
-                      {/* Version Actions Menu */}
-                      <div className="relative" ref={menuRef}>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowMenuFor(showMenuFor === version.id ? null : version.id);
-                          }}
-                          className="p-1 rounded hover:bg-gray-100 text-gray-600"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                        
-                        {showMenuFor === version.id && (
-                          <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
-                            {onDuplicateVersion && (
-                              <button
-                                onClick={(e) => handleDuplicateVersion(version.id, e)}
-                                className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                              >
-                                <Copy className="w-3 h-3" />
-                                <span>Duplicate</span>
-                              </button>
-                            )}
-                            {onDeleteVersion && versions.length > 1 && (
-                              <button
-                                onClick={(e) => handleDeleteVersion(version.id, e)}
-                                className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                                <span>Delete</span>
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
                     </div>
+                    <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                      <p className="text-sm text-gray-700 font-mono">
+                        {version.content}
+                      </p>
+                    </div>
+                    {scoreBreakdown && (
+                      <div className="grid grid-cols-3 gap-3 mb-3">
+                        <div className="text-center p-2 bg-white rounded border">
+                          <div className="text-xs text-gray-500">Relevance</div>
+                          <div className="font-semibold">{scoreBreakdown.relevance.toFixed(1)}</div>
+                        </div>
+                        <div className="text-center p-2 bg-white rounded border">
+                          <div className="text-xs text-gray-500">Clarity</div>
+                          <div className="font-semibold">{scoreBreakdown.clarity.toFixed(1)}</div>
+                        </div>
+                        <div className="text-center p-2 bg-white rounded border">
+                          <div className="text-xs text-gray-500">Creativity</div>
+                          <div className="font-semibold">{scoreBreakdown.creativity.toFixed(1)}</div>
+                        </div>
+                      </div>
+                    )}
+                    {version.variables && Object.keys(version.variables).length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(version.variables).map(([key, value]) => (
+                          <span
+                            key={key}
+                            className="inline-flex items-center px-2 py-1 bg-gray-100 text-xs rounded"
+                          >
+                            <code className="text-gray-600">{key}:</code>
+                            <span className="ml-1 text-gray-800">{value}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {index < compareVersions.length - 1 && (
+                      <div className="flex justify-center mt-4">
+                        <ArrowRight className="w-5 h-5 text-gray-400" />
+                      </div>
+                    )}
                   </div>
-                  
-                  <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                    <p className="text-sm text-gray-700 font-mono">
-                      {version.content}
-                    </p>
-                  </div>
-                  
-                  {scoreBreakdown && (
-                    <div className="grid grid-cols-3 gap-3 mb-3">
-                      <div className="text-center p-2 bg-white rounded border">
-                        <div className="text-xs text-gray-500">Relevance</div>
-                        <div className="font-semibold">{scoreBreakdown.relevance.toFixed(1)}</div>
-                      </div>
-                      <div className="text-center p-2 bg-white rounded border">
-                        <div className="text-xs text-gray-500">Clarity</div>
-                        <div className="font-semibold">{scoreBreakdown.clarity.toFixed(1)}</div>
-                      </div>
-                      <div className="text-center p-2 bg-white rounded border">
-                        <div className="text-xs text-gray-500">Creativity</div>
-                        <div className="font-semibold">{scoreBreakdown.creativity.toFixed(1)}</div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {version.variables && Object.keys(version.variables).length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(version.variables).map(([key, value]) => (
-                        <span
-                          key={key}
-                          className="inline-flex items-center px-2 py-1 bg-gray-100 text-xs rounded"
-                        >
-                          <code className="text-gray-600">{key}:</code>
-                          <span className="ml-1 text-gray-800">{value}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {index < compareVersions.length - 1 && (
-                    <div className="flex justify-center mt-4">
-                      <ArrowRight className="w-5 h-5 text-gray-400" />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

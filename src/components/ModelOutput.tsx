@@ -39,21 +39,21 @@ const ModelOutput: React.FC<ModelOutputProps> = ({
   };
 
   const getScoreColor = (value: number) => {
-    if (value >= 8) return 'text-green-600';
-    if (value >= 6) return 'text-yellow-600';
+    if (value >= 80) return 'text-green-600';
+    if (value >= 60) return 'text-yellow-600';
     return 'text-red-600';
   };
 
   const getScoreStroke = (value: number) => {
-    if (value >= 8) return '#10b981';
-    if (value >= 6) return '#d97706';
+    if (value >= 80) return '#10b981';
+    if (value >= 60) return '#d97706';
     return '#dc2626';
   };
 
   const CircularProgress = ({ value, size = 32, strokeWidth = 3 }: { value: number; size?: number; strokeWidth?: number }) => {
     const radius = (size - strokeWidth) / 2;
     const circumference = radius * 2 * Math.PI;
-    const offset = circumference - (value / 10) * circumference;
+    const offset = circumference - (value / 100) * circumference;
 
     return (
       <div className="relative inline-flex items-center justify-center">
@@ -79,7 +79,7 @@ const ModelOutput: React.FC<ModelOutputProps> = ({
             className="transition-all duration-300"
           />
         </svg>
-        <span className={`absolute text-base font-bold ${getScoreColor(value)}`}>{value}</span>
+        <span className={`absolute text-xs font-bold ${getScoreColor(value)}`}>{value}</span>
       </div>
     );
   };

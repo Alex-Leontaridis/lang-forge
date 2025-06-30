@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { FileText, Zap, Eye, EyeOff } from 'lucide-react';
+import { FileText, Zap, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { Variable } from '../types';
+import apiService from '../services/apiService';
 
 interface PromptEditorProps {
   prompt: string;
@@ -18,9 +19,59 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   onVariablesChange 
 }) => {
   const [showPreview, setShowPreview] = React.useState(false);
+  const [isOptimizing, setIsOptimizing] = React.useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setPrompt(e.target.value);
+  };
+
+  const optimizePrompt = async () => {
+    if (!prompt.trim() || isOptimizing) return;
+    
+    setIsOptimizing(true);
+    try {
+      const systemMessage = `You are an expert prompt engineer specializing in optimizing AI prompts for maximum effectiveness, clarity, and performance. Your goal is to enhance prompts while preserving their core intent and variables.
+
+OPTIMIZATION PRINCIPLES:
+1. CLARITY: Make instructions explicit and unambiguous
+2. STRUCTURE: Organize prompts logically with clear sections
+3. CONTEXT: Provide sufficient context for better understanding
+4. CONSTRAINTS: Add helpful constraints to guide the AI
+5. EXAMPLES: Include relevant examples when beneficial
+6. VARIABLES: Preserve all {{variable}} placeholders exactly as they appear
+7. LENGTH: Optimize for effectiveness, not necessarily brevity
+
+OPTIMIZATION PROCESS:
+- Analyze the original prompt's intent and purpose
+- Identify areas for improvement in clarity, structure, and effectiveness
+- Enhance the prompt while maintaining all variables
+- Ensure the optimized version is more likely to produce high-quality outputs
+- Provide a brief explanation of the improvements made
+
+Respond with the optimized prompt only, maintaining all {{variable}} placeholders exactly as they appear.`;
+
+      const optimizationPrompt = `Please optimize this prompt for better AI performance while preserving all variables:
+
+ORIGINAL PROMPT:
+${prompt}
+
+OPTIMIZED PROMPT:`;
+
+      const result = await apiService.generateCompletion(
+        'gpt-4',
+        optimizationPrompt,
+        systemMessage,
+        0.3,
+        1000
+      );
+
+      setPrompt(result.content.trim());
+    } catch (error) {
+      console.error('Error optimizing prompt:', error);
+      // You could add a toast notification here
+    } finally {
+      setIsOptimizing(false);
+    }
   };
 
   // Extract variables from prompt
@@ -70,15 +121,26 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
             <span className="font-semibold text-gray-900 text-sm sm:text-base">Prompt Editor</span>
           </div>
           
-          {hasVariablesWithValues && (
+          <div className="flex items-center space-x-2">
+            {hasVariablesWithValues && (
+              <button
+                onClick={() => setShowPreview(!showPreview)}
+                className="flex items-center space-x-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
+              >
+                {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <span className="hidden sm:inline">{showPreview ? 'Hide Preview' : 'Show Preview'}</span>
+              </button>
+            )}
+            
             <button
-              onClick={() => setShowPreview(!showPreview)}
-              className="flex items-center space-x-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
+              onClick={optimizePrompt}
+              disabled={!prompt.trim() || isOptimizing || isRunning}
+              className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
             >
-              {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              <span className="hidden sm:inline">{showPreview ? 'Hide Preview' : 'Show Preview'}</span>
+              <Sparkles className={`w-4 h-4 ${isOptimizing ? 'animate-pulse' : ''}`} />
+              <span className="hidden sm:inline">{isOptimizing ? 'Optimizing...' : 'Optimize'}</span>
             </button>
-          )}
+          </div>
         </div>
       </div>
 

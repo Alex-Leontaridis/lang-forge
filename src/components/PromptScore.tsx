@@ -12,20 +12,20 @@ interface PromptScoreProps {
 
 const PromptScore: React.FC<PromptScoreProps> = ({ score }) => {
   const getScoreColor = (value: number) => {
-    if (value >= 8) return 'bg-green-500';
-    if (value >= 6) return 'bg-yellow-500';
+    if (value >= 80) return 'bg-green-500';
+    if (value >= 60) return 'bg-yellow-500';
     return 'bg-red-500';
   };
 
   const getScoreTextColor = (value: number) => {
-    if (value >= 8) return 'text-green-700';
-    if (value >= 6) return 'text-yellow-700';
+    if (value >= 80) return 'text-green-700';
+    if (value >= 60) return 'text-yellow-700';
     return 'text-red-700';
   };
 
   const getScoreStroke = (value: number) => {
-    if (value >= 8) return '#10b981';
-    if (value >= 6) return '#d97706';
+    if (value >= 80) return '#10b981';
+    if (value >= 60) return '#d97706';
     return '#dc2626';
   };
 
@@ -50,12 +50,12 @@ const PromptScore: React.FC<PromptScoreProps> = ({ score }) => {
     }
   ];
 
-  const averageScore = Math.round((score.relevance + score.clarity + score.creativity) / 3 * 10) / 10;
+  const averageScore = Math.round((score.relevance + score.clarity + score.creativity) / 3);
 
   const CircularProgress = ({ value, size = 40, strokeWidth = 3 }: { value: number; size?: number; strokeWidth?: number }) => {
     const radius = (size - strokeWidth) / 2;
     const circumference = radius * 2 * Math.PI;
-    const offset = circumference - (value / 10) * circumference;
+    const offset = circumference - (value / 100) * circumference;
 
     return (
       <div className="relative inline-flex items-center justify-center">
@@ -81,7 +81,7 @@ const PromptScore: React.FC<PromptScoreProps> = ({ score }) => {
             className="transition-all duration-500"
           />
         </svg>
-        <span className={`absolute text-base font-bold ${getScoreTextColor(value)}`}>
+        <span className={`absolute text-xs font-bold ${getScoreTextColor(value)}`}>
           {value}
         </span>
       </div>

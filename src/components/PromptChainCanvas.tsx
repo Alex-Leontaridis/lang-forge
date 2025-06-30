@@ -46,13 +46,179 @@ import {
   Workflow,
   FileCode,
   Activity,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Sparkles,
+  MessageSquare,
+  BookOpen
 } from 'lucide-react';
 import PromptNodeComponent from './PromptNodeComponent';
 import LiveChainVisualization from './LiveChainVisualization';
 import ConditionEditor from './ConditionEditor';
 import { PromptNode as PromptNodeType, PromptScore, ConnectionCondition, ConditionalEdge } from '../types';
 import apiService from '../services/apiService';
+
+// LangChain Template Interface
+interface LangChainTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: 'prompt' | 'chain' | 'agent' | 'memory' | 'retrieval';
+  template: string;
+  variables: string[];
+  example: string;
+  tags: string[];
+}
+
+// Predefined LangChain Templates
+const predefinedTemplates: LangChainTemplate[] = [
+  {
+    id: 'translation',
+    name: 'Translation Assistant',
+    description: 'Translate text between languages with context preservation',
+    category: 'prompt',
+    template: `You are a professional translator with expertise in {source_language} and {target_language}.
+
+Context: {context}
+
+Please translate the following text from {source_language} to {target_language}:
+
+Text to translate: {text}
+
+Requirements:
+- Maintain the original tone and style
+- Preserve cultural nuances where possible
+- Ensure accuracy and fluency
+
+Translation:`,
+    variables: ['source_language', 'target_language', 'context', 'text'],
+    example: 'Translate "Hello, how are you?" from English to Spanish',
+    tags: ['translation', 'multilingual', 'language']
+  },
+  {
+    id: 'code-review',
+    name: 'Code Review Assistant',
+    description: 'Comprehensive code review with security and best practices analysis',
+    category: 'prompt',
+    template: `You are an expert software engineer conducting a code review. Please analyze the following code:
+
+Programming Language: {language}
+Code to Review:
+\`\`\`{language}
+{code}
+\`\`\`
+
+Review Criteria:
+1. **Code Quality**: Check for readability, maintainability, and best practices
+2. **Security**: Identify potential security vulnerabilities
+3. **Performance**: Suggest optimizations if applicable
+4. **Documentation**: Assess code documentation and comments
+
+Please provide a detailed review with:
+- Overall assessment (Pass/Fail with reasoning)
+- Specific issues found with line numbers
+- Suggestions for improvement
+- Security concerns (if any)
+
+Code Review:`,
+    variables: ['language', 'code'],
+    example: 'Review a JavaScript function for security and best practices',
+    tags: ['code-review', 'security', 'best-practices', 'programming']
+  },
+  {
+    id: 'content-summarizer',
+    name: 'Content Summarizer',
+    description: 'Create concise and accurate summaries of long-form content',
+    category: 'prompt',
+    template: `You are a skilled content summarizer. Please create a comprehensive summary of the following content:
+
+Content Type: {content_type}
+Target Length: {target_length} words
+Key Focus Areas: {focus_areas}
+
+Content to Summarize:
+{content}
+
+Summary Requirements:
+- Maintain the main ideas and key points
+- Use clear, concise language
+- Include important statistics or data if present
+- Preserve the original tone and perspective
+
+Please provide:
+1. A concise summary within the target word count
+2. Key takeaways or main points
+3. Important statistics or data (if applicable)
+
+Summary:`,
+    variables: ['content_type', 'target_length', 'focus_areas', 'content'],
+    example: 'Summarize a 2000-word article about AI trends in 200 words',
+    tags: ['summarization', 'content', 'analysis', 'clarity']
+  },
+  {
+    id: 'creative-writing',
+    name: 'Creative Writing Assistant',
+    description: 'Generate creative content with specific style and genre requirements',
+    category: 'prompt',
+    template: `You are a creative writing assistant. Please help create content based on the following specifications:
+
+Genre: {genre}
+Style: {style}
+Tone: {tone}
+Target Audience: {audience}
+Word Count: {word_count} words
+
+Story Elements:
+- Setting: {setting}
+- Characters: {characters}
+- Plot Elements: {plot_elements}
+- Theme: {theme}
+
+Please create a {genre} piece that:
+- Matches the specified style and tone
+- Appeals to the target audience
+- Incorporates the provided story elements
+- Meets the word count requirement
+- Demonstrates creativity and originality
+
+Creative Content:`,
+    variables: ['genre', 'style', 'tone', 'audience', 'word_count', 'setting', 'characters', 'plot_elements', 'theme'],
+    example: 'Create a 500-word sci-fi story with descriptive style and serious tone',
+    tags: ['creative-writing', 'fiction', 'storytelling', 'imagination']
+  },
+  {
+    id: 'data-analysis',
+    name: 'Data Analysis Assistant',
+    description: 'Analyze and interpret data with statistical insights and recommendations',
+    category: 'prompt',
+    template: `You are a data analyst. Please analyze the following dataset and provide insights:
+
+Dataset Description: {dataset_description}
+Analysis Type: {analysis_type}
+Key Questions: {key_questions}
+
+Data:
+{data}
+
+Analysis Requirements:
+1. **Descriptive Statistics**: Provide summary statistics and key metrics
+2. **Pattern Recognition**: Identify trends, patterns, or anomalies
+3. **Correlation Analysis**: Find relationships between variables (if applicable)
+4. **Insights**: Extract meaningful insights from the data
+5. **Recommendations**: Provide actionable recommendations based on findings
+
+Please provide:
+- Executive summary of findings
+- Detailed analysis with supporting evidence
+- Key insights and their implications
+- Actionable recommendations
+- Limitations of the analysis
+
+Data Analysis Report:`,
+    variables: ['dataset_description', 'analysis_type', 'key_questions', 'data'],
+    example: 'Analyze quarterly sales data to identify trends and provide recommendations',
+    tags: ['data-analysis', 'statistics', 'insights', 'business-intelligence']
+  }
+];
 
 interface PromptChainCanvasProps {
   projectId?: string;
@@ -250,10 +416,47 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
         localStorage.setItem('canvasToEditorData', JSON.stringify(editorData));
       }
       
+      // Also remove from project-specific storage
+      const projectKey = `canvasNodes_${canvasProjectId || 'default'}`;
+      const canvasNodesData = localStorage.getItem(projectKey);
+      if (canvasNodesData) {
+        try {
+          const canvasNodes = JSON.parse(canvasNodesData);
+          const updatedCanvasNodes = canvasNodes.filter((node: any) => node.id !== nodeId);
+          localStorage.setItem(projectKey, JSON.stringify(updatedCanvasNodes));
+        } catch (error) {
+          console.error('Error updating canvas nodes storage:', error);
+        }
+      }
+      
       return nds.filter((node) => node.id !== nodeId);
     });
     setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, canvasProjectId]);
+
+  // Function to update project-specific storage
+  const updateCanvasNodesStorage = useCallback((updatedNodes: Node[]) => {
+    const projectKey = `canvasNodes_${canvasProjectId || 'default'}`;
+    const nodesData = updatedNodes.map(node => ({
+      id: node.id,
+      promptId: node.data.promptId,
+      title: node.data.title,
+      prompt: node.data.prompt,
+      model: node.data.model,
+      temperature: node.data.temperature,
+      maxTokens: node.data.maxTokens,
+      variables: node.data.variables,
+      inputVariables: node.data.inputVariables,
+      outputVariables: node.data.outputVariables,
+      output: node.data.output,
+      score: node.data.score,
+      tokenUsage: node.data.tokenUsage,
+      error: node.data.error,
+      healthIssues: node.data.healthIssues,
+      position: node.position
+    }));
+    localStorage.setItem(projectKey, JSON.stringify(nodesData));
+  }, [canvasProjectId]);
 
   // Load nodes and edges from localStorage on mount
   React.useEffect(() => {
@@ -300,8 +503,10 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
   React.useEffect(() => {
     if (nodes.length > 0) {
       localStorage.setItem(getStorageKey('nodes'), JSON.stringify(nodes));
+      // Also update project-specific storage
+      updateCanvasNodesStorage(nodes);
     }
-  }, [nodes, canvasProjectId]);
+  }, [nodes, canvasProjectId, updateCanvasNodesStorage]);
 
   // Save edges to localStorage whenever they change
   React.useEffect(() => {
@@ -404,6 +609,7 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
               updated = true;
               // Clean up the mapping
               localStorage.removeItem(`tempPromptToRealPrompt_${node.data.promptId}`);
+              console.log(`Updated node ${node.id} with real prompt ID: ${realPromptId}`);
               return { ...node, data: { ...node.data, promptId: realPromptId } };
             }
           }
@@ -411,9 +617,72 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
         });
         return updated ? updatedNodes : nds;
       });
+      
+      // Also check for any nodes that might have been created while editor was closed
+      setNodes((currentNodes) => {
+        const projectKey = `canvasNodes_${canvasProjectId || 'default'}`;
+        const canvasNodesData = localStorage.getItem(projectKey);
+        if (canvasNodesData) {
+          try {
+            const canvasNodes = JSON.parse(canvasNodesData);
+            const currentNodeIds = currentNodes.map(node => node.id);
+            
+            // Find nodes that exist in storage but not in current state
+            const orphanedNodes: Node[] = [];
+            canvasNodes.forEach((storedNode: any) => {
+              if (!currentNodeIds.includes(storedNode.id)) {
+                console.log('Found orphaned canvas node, recreating:', storedNode.id);
+                
+                // Recreate the node
+                const newNode: Node = {
+                  id: storedNode.id,
+                  type: 'promptNode',
+                  position: storedNode.position || { x: Math.random() * 400 + 100, y: Math.random() * 400 + 100 },
+                  data: {
+                    promptId: storedNode.promptId,
+                    title: storedNode.title,
+                    prompt: storedNode.prompt || '',
+                    model: storedNode.model || 'gpt-4',
+                    temperature: storedNode.temperature || 0.7,
+                    maxTokens: storedNode.maxTokens || 1000,
+                    variables: storedNode.variables || {},
+                    inputVariables: storedNode.inputVariables || [],
+                    outputVariables: storedNode.outputVariables || [],
+                    output: storedNode.output || '',
+                    isRunning: false,
+                    score: storedNode.score || null,
+                    tokenUsage: storedNode.tokenUsage || null,
+                    error: storedNode.error || undefined,
+                    healthIssues: storedNode.healthIssues || [],
+                    onUpdate: (id: string, updates: Partial<PromptNodeType>) => {
+                      setNodes((nds2) =>
+                        nds2.map((n) =>
+                          n.id === id
+                            ? { ...n, data: { ...n.data, ...updates } }
+                            : n
+                        )
+                      );
+                    },
+                    onRun: (id: string) => runSingleNode(id),
+                    onDelete: (id: string) => deleteNode(id),
+                  }
+                };
+                
+                orphanedNodes.push(newNode);
+              }
+            });
+            
+            return orphanedNodes.length > 0 ? [...currentNodes, ...orphanedNodes] : currentNodes;
+          } catch (error) {
+            console.error('Error checking for orphaned nodes:', error);
+            return currentNodes;
+          }
+        }
+        return currentNodes;
+      });
     }, 300); // Poll every 300ms
     return () => clearInterval(interval);
-  }, [setNodes, runSingleNode, deleteNode, reactFlowInstance]);
+  }, [setNodes, runSingleNode, deleteNode, reactFlowInstance, canvasProjectId]);
 
   // Initialize default condition
   const getDefaultCondition = (): ConnectionCondition => ({
@@ -424,6 +693,101 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
     variable: '',
     field: 'overall'
   });
+
+  // LangChain Template Functions
+  const handleTemplateSelect = (template: LangChainTemplate) => {
+    const newNode: Node = {
+      id: `node_${Date.now()}`,
+      type: 'promptNode',
+      position: { x: Math.random() * 400 + 100, y: Math.random() * 400 + 100 },
+      data: {
+        promptId: `template_${template.id}_${Date.now()}`,
+        title: template.name,
+        prompt: template.template,
+        model: 'gpt-4',
+        temperature: 0.7,
+        maxTokens: 1000,
+        variables: template.variables.reduce((acc, variable) => {
+          acc[variable] = '';
+          return acc;
+        }, {} as Record<string, string>),
+        inputVariables: template.variables.map(variable => ({
+          name: variable,
+          type: 'string' as const,
+          required: true,
+          description: `Input for ${variable}`
+        })),
+        outputVariables: [],
+        output: '',
+        isRunning: false,
+        score: null,
+        tokenUsage: null,
+        error: undefined,
+        healthIssues: [],
+        onUpdate: (id: string, updates: Partial<PromptNodeType>) => {
+          setNodes((nds) =>
+            nds.map((n) =>
+              n.id === id
+                ? { ...n, data: { ...n.data, ...updates } }
+                : n
+            )
+          );
+        },
+        onRun: (id: string) => runSingleNode(id),
+        onDelete: (id: string) => deleteNode(id),
+      }
+    };
+    setNodes((nds) => [...nds, newNode]);
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'prompt': return <MessageSquare className="w-4 h-4" />;
+      case 'chain': return <Workflow className="w-4 h-4" />;
+      case 'agent': return <Bot className="w-4 h-4" />;
+      case 'memory': return <Database className="w-4 h-4" />;
+      case 'retrieval': return <BookOpen className="w-4 h-4" />;
+      default: return <FileCode className="w-4 h-4" />;
+    }
+  };
+
+  const exportTemplate = (template: LangChainTemplate, type: 'python' | 'javascript') => {
+    const code = type === 'python' 
+      ? `from langchain.prompts import PromptTemplate
+
+prompt = PromptTemplate.from_template("""${template.template.replace(/"/g, '\\"')}""")
+
+variables = {
+${template.variables.map(v => `    "${v}": "value"`).join(',\n')}
+}
+
+formatted_prompt = prompt.format(**variables)
+print(formatted_prompt)`
+      : `const template = \`${template.template.replace(/`/g, '\\`')}\`;
+
+const variables = {
+${template.variables.map(v => `  ${v}: "value"`).join(',\n')}
+};
+
+function formatTemplate(template, variables) {
+  return template.replace(/\\{([^}]+)\\}/g, (match, key) => {
+    return variables[key] || match;
+  });
+}
+
+const formattedPrompt = formatTemplate(template, variables);
+console.log(formattedPrompt);`;
+
+    const blob = new Blob([code], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${template.name.toLowerCase().replace(/\s+/g, '-')}.${type}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -642,7 +1006,59 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
       updated: true
     };
     localStorage.setItem('canvasToEditorData', JSON.stringify(editorData));
-  }, [setNodes, runSingleNode, deleteNode, reactFlowInstance]);
+    
+    // Also store the node data in a project-specific storage for better persistence
+    const projectKey = `canvasNodes_${canvasProjectId || 'default'}`;
+    const existingNodes = localStorage.getItem(projectKey);
+    const canvasNodes = existingNodes ? JSON.parse(existingNodes) : [];
+    canvasNodes.push({
+      ...newNode.data,
+      id: nodeId,
+      position: newNode.position
+    });
+    localStorage.setItem(projectKey, JSON.stringify(canvasNodes));
+    
+    // Set up a retry mechanism to ensure the prompt gets created
+    let retryCount = 0;
+    const maxRetries = 5;
+    const checkPromptCreated = () => {
+      // Check if the prompt was created by looking for the real prompt ID
+      const realPromptId = localStorage.getItem(`tempPromptToRealPrompt_${tempPromptId}`);
+      if (realPromptId) {
+        // Update the node with the real prompt ID
+        setNodes((nds) =>
+          nds.map((node) =>
+            node.id === nodeId
+              ? { ...node, data: { ...node.data, promptId: realPromptId } }
+              : node
+          )
+        );
+        // Clean up the temporary mapping
+        localStorage.removeItem(`tempPromptToRealPrompt_${tempPromptId}`);
+        console.log(`Node ${nodeId} successfully linked to prompt ${realPromptId}`);
+      } else if (retryCount < maxRetries) {
+        retryCount++;
+        console.log(`Retrying prompt creation for node ${nodeId}, attempt ${retryCount}`);
+        // Re-send the creation request
+        localStorage.setItem('canvasToEditorData', JSON.stringify(editorData));
+        setTimeout(checkPromptCreated, 1000);
+      } else {
+        console.warn(`Failed to create prompt for node ${nodeId} after ${maxRetries} attempts`);
+        // Create a fallback prompt ID to prevent issues
+        const fallbackPromptId = `fallback_prompt_${Date.now()}`;
+        setNodes((nds) =>
+          nds.map((node) =>
+            node.id === nodeId
+              ? { ...node, data: { ...node.data, promptId: fallbackPromptId } }
+              : node
+          )
+        );
+      }
+    };
+    
+    // Start checking after a short delay
+    setTimeout(checkPromptCreated, 500);
+  }, [setNodes, runSingleNode, deleteNode, reactFlowInstance, canvasProjectId]);
 
   const getNextNodes = (nodeId: string): string[] => {
     const outgoingEdges = edges.filter(edge => edge.source === nodeId);
@@ -1136,13 +1552,15 @@ export { runChain };
                   <p className="text-gray-600 mb-6">
                     Create visual LangChain workflows with conditional logic. Build complex multi-step reasoning chains with branching paths.
                   </p>
-                  <button
-                    onClick={addPromptNode}
-                    className="flex items-center space-x-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors mx-auto"
-                  >
-                    <Plus className="w-5 h-5" />
-                    <span>Add Your First Node</span>
-                  </button>
+                  <div className="flex flex-col space-y-3">
+                    <button
+                      onClick={addPromptNode}
+                      className="flex items-center justify-center space-x-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                    >
+                      <Plus className="w-5 h-5" />
+                      <span>Add Your First Node</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

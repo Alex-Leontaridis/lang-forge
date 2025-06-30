@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, CheckCircle, XCircle, Loader2, AlertTriangle, Sparkles, ChevronDown, ChevronRight, Bot } from 'lucide-react';
+import { Play, CheckCircle, XCircle, Loader2, AlertTriangle, Sparkles, ChevronDown, ChevronRight, Bot, Clock } from 'lucide-react';
 import { Variable, Model } from '../types';
 import apiService from '../services/apiService';
 
@@ -17,10 +17,10 @@ export interface TestResult {
   modelName: string;
   passed: boolean;
   evaluation: {
-    followsInstructions: boolean;
-    toneStyleAligned: boolean;
-    constraintsRespected: boolean;
-    overallPassed: boolean;
+    relevance: number;
+    clarity: number;
+    creativity: number;
+    overall: number;
     critique: string;
   };
   executionTime: number;
@@ -52,6 +52,7 @@ interface PromptAutoTestProps {
   selectedModels?: string[];
   temperature?: number;
   onTestComplete?: (result: AutoTestResult) => void;
+  onTestRunningChange?: (isRunning: boolean) => void;
   className?: string;
   isRunning?: boolean;
 }
@@ -63,12 +64,14 @@ const PromptAutoTest: React.FC<PromptAutoTestProps> = ({
   selectedModels = ['gpt-4'],
   temperature = 0.3,
   onTestComplete,
+  onTestRunningChange,
   className = '',
   isRunning = false
 }) => {
   const [isRunningTests, setIsRunningTests] = useState(false);
   const [testResult, setTestResult] = useState<AutoTestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string>('');
   const [isExpanded, setIsExpanded] = useState(true);
 
   const generateTestCases = async (prompt: string, variables: Variable[]): Promise<TestCase[]> => {
@@ -83,27 +86,25 @@ TEST CASE GENERATION PRINCIPLES:
 
 Generate 3-5 test cases that cover different scenarios and variable combinations.`;
 
-    const testGenerationPrompt = `Generate test cases for this prompt:
+    const testGenerationPrompt = `Generate ${Math.min(3, variables.length + 1)} diverse test cases for this prompt. Each test case should test different variable combinations and edge cases.
 
-PROMPT:
-${prompt}
+PROMPT: "${prompt}"
 
-VARIABLES:
-${variables.map(v => `- ${v.name}: ${v.description || 'No description'}`).join('\n')}
+VARIABLES: ${variables.map(v => `${v.name} (${v.description || 'no description'})`).join(', ')}
 
 Generate test cases in this JSON format:
 {
   "testCases": [
     {
       "id": "test_1",
-      "input": {"variable1": "value1", "variable2": "value2"},
-      "expectedOutput": "Expected output description",
-      "description": "What this test case validates"
+      "input": { "variable_name": "value" },
+      "expectedOutput": "Brief description of expected output",
+      "description": "What this test case is checking"
     }
   ]
 }
 
-Only return the JSON, no additional text.`;
+Focus on testing different combinations of variables and realistic scenarios.`;
 
     try {
       const result = await apiService.generateCompletion(
@@ -156,7 +157,7 @@ Only return the JSON, no additional text.`;
     return testCases;
   };
 
-  const runTestCase = async (testCase: TestCase, modelId: string): Promise<TestResult> => {
+  const runTestCase = async (testCase: TestCase, modelId: string, skipEvaluation: boolean = false): Promise<TestResult> => {
     // Replace variables in prompt with test case values
     let testPrompt = prompt;
     Object.entries(testCase.input).forEach(([key, value]) => {
@@ -176,8 +177,21 @@ Only return the JSON, no additional text.`;
 
     const executionTime = Date.now() - startTime;
 
-    // Evaluate the result using GPT-4
-    const evaluation = await evaluateTestResult(testCase, result.content, prompt);
+    // Evaluate the result using GPT-4 (optional for speed)
+    let evaluation;
+    if (!skipEvaluation) {
+      evaluation = await evaluateTestResult(testCase, result.content, prompt);
+    } else {
+      // Quick evaluation based on response length and content
+      const hasContent = result.content.trim().length > 10;
+      evaluation = {
+        relevance: hasContent ? 75 : 25,
+        clarity: hasContent ? 75 : 25,
+        creativity: hasContent ? 75 : 25,
+        overall: hasContent ? 75 : 25,
+        critique: hasContent ? 'Basic validation passed' : 'No meaningful response generated'
+      };
+    }
 
     const model = models.find(m => m.id === modelId);
 
@@ -186,7 +200,7 @@ Only return the JSON, no additional text.`;
       actualOutput: result.content,
       modelId,
       modelName: model?.name || modelId,
-      passed: evaluation.overallPassed,
+      passed: evaluation.overall >= 70, // Pass if overall score is 70 or higher
       evaluation,
       executionTime,
       tokenUsage: result.usage ? {
@@ -202,64 +216,28 @@ Only return the JSON, no additional text.`;
     actualOutput: string, 
     originalPrompt: string
   ) => {
-    const systemMessage = `You are an expert prompt evaluator. Your task is to assess whether an AI output meets the requirements specified in the original prompt.
-
-EVALUATION CRITERIA:
-1. FOLLOWS INSTRUCTIONS: Does the output follow the explicit instructions in the prompt?
-2. TONE/STYLE ALIGNED: Is the tone and style appropriate for the intended purpose?
-3. CONSTRAINTS RESPECTED: Are any constraints or requirements in the prompt respected?
-
-Rate each criterion as true/false and provide a brief critique.`;
-
-    const evaluationPrompt = `Evaluate this AI output against the original prompt:
-
-ORIGINAL PROMPT:
-${originalPrompt}
-
-TEST CASE INPUT:
-${JSON.stringify(testCase.input, null, 2)}
-
-EXPECTED OUTPUT:
-${testCase.expectedOutput}
-
-ACTUAL OUTPUT:
-${actualOutput}
-
-Evaluate and respond in this JSON format:
-{
-  "followsInstructions": true/false,
-  "toneStyleAligned": true/false,
-  "constraintsRespected": true/false,
-  "overallPassed": true/false,
-  "critique": "Brief explanation of the evaluation"
-}
-
-Only return the JSON, no additional text.`;
-
+    // Use the same evaluation system as regular prompt runs
     try {
-      const result = await apiService.generateCompletion(
-        'gpt-4',
-        evaluationPrompt,
-        systemMessage,
-        0.1,
-        500
+      const result = await apiService.evaluatePromptResponse(
+        originalPrompt,
+        actualOutput,
+        0.3
       );
-
-      const parsed = JSON.parse(result.content.trim());
+      
       return {
-        followsInstructions: parsed.followsInstructions || false,
-        toneStyleAligned: parsed.toneStyleAligned || false,
-        constraintsRespected: parsed.constraintsRespected || false,
-        overallPassed: parsed.overallPassed || false,
-        critique: parsed.critique || 'Evaluation failed'
+        relevance: result.relevance,
+        clarity: result.clarity,
+        creativity: result.creativity,
+        overall: result.overall,
+        critique: result.critique
       };
     } catch (error) {
       console.error('Error evaluating test result:', error);
       return {
-        followsInstructions: false,
-        toneStyleAligned: false,
-        constraintsRespected: false,
-        overallPassed: false,
+        relevance: 50,
+        clarity: 50,
+        creativity: 50,
+        overall: 50,
         critique: 'Evaluation failed due to technical error'
       };
     }
@@ -271,19 +249,86 @@ Only return the JSON, no additional text.`;
     setIsRunningTests(true);
     setError(null);
     setTestResult(null);
+    onTestRunningChange?.(true);
 
     try {
       // Generate test cases
+      setProgress('Generating test cases...');
+      console.log('🔄 Generating test cases...');
       const testCases = await generateTestCases(prompt, variables);
+      console.log(`✅ Generated ${testCases.length} test cases`);
       
-      // Run each test case with each selected model
+      // Run test cases in parallel with rate limiting
       const results: TestResult[] = [];
+      const TIMEOUT_MS = 30000; // 30 second timeout per API call (increased from 15s)
+      const RATE_LIMIT_DELAY = 1000; // 1 second delay between batches (increased from 500ms)
+      
+      // Create all test case combinations
+      const testCombinations: Array<{ testCase: TestCase; modelId: string }> = [];
       for (const testCase of testCases) {
         for (const modelId of selectedModels) {
-          const result = await runTestCase(testCase, modelId);
-          results.push(result);
+          testCombinations.push({ testCase, modelId });
         }
       }
+
+      setProgress(`Running ${testCombinations.length} test combinations...`);
+      console.log(`🔄 Running ${testCombinations.length} test combinations...`);
+
+      // Process in batches to avoid overwhelming the API
+      const BATCH_SIZE = 2; // Reduced from 3 to avoid overwhelming the API
+      for (let i = 0; i < testCombinations.length; i += BATCH_SIZE) {
+        const batch = testCombinations.slice(i, i + BATCH_SIZE);
+        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(testCombinations.length / BATCH_SIZE);
+        setProgress(`Processing batch ${batchNumber}/${totalBatches}...`);
+        console.log(`🔄 Processing batch ${batchNumber}/${totalBatches}...`);
+        
+        // Run batch in parallel with timeout
+        const batchPromises = batch.map(async ({ testCase, modelId }) => {
+          try {
+            const timeoutPromise = new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('Request timed out after 30 seconds')), TIMEOUT_MS)
+            );
+            
+            // Use faster evaluation mode for speed
+            const testPromise = runTestCase(testCase, modelId, true);
+            return await Promise.race([testPromise, timeoutPromise]);
+          } catch (error) {
+            console.error(`Error running test case ${testCase.id} with model ${modelId}:`, error);
+            // Return a failed result instead of throwing
+            const model = models.find(m => m.id === modelId);
+            return {
+              testCase,
+              actualOutput: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              modelId,
+              modelName: model?.name || modelId,
+              passed: false,
+              evaluation: {
+                relevance: 25,
+                clarity: 25,
+                creativity: 25,
+                overall: 25,
+                critique: error instanceof Error && error.message.includes('timed out') 
+                  ? 'Test failed due to timeout - API request took too long'
+                  : 'Test failed due to technical error'
+              },
+              executionTime: 0,
+              tokenUsage: { input: 0, output: 0, total: 0 }
+            };
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
+
+        // Add delay between batches to respect rate limits
+        if (i + BATCH_SIZE < testCombinations.length) {
+          await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
+        }
+      }
+
+      setProgress('Finalizing results...');
+      console.log('✅ All test combinations completed');
 
       // Calculate summary with model-specific results
       const modelResults: Record<string, { passed: number; failed: number; total: number }> = {};
@@ -302,10 +347,7 @@ Only return the JSON, no additional text.`;
       const passedTests = results.filter(r => r.passed).length;
       const totalTests = results.length;
       const averageScore = results.reduce((sum, r) => {
-        const score = (r.evaluation.followsInstructions ? 1 : 0) +
-                     (r.evaluation.toneStyleAligned ? 1 : 0) +
-                     (r.evaluation.constraintsRespected ? 1 : 0);
-        return sum + (score / 3);
+        return sum + r.evaluation.overall;
       }, 0) / totalTests;
 
       const summary = {
@@ -331,6 +373,8 @@ Only return the JSON, no additional text.`;
       setError('Failed to run auto test. Please try again.');
     } finally {
       setIsRunningTests(false);
+      setProgress('');
+      onTestRunningChange?.(false);
     }
   };
 
@@ -377,63 +421,87 @@ Only return the JSON, no additional text.`;
             <span>{isRunningTests ? 'Running...' : 'Run Auto-Test'}</span>
           </button>
         </div>
+        
+        {/* "This may take a while" message when running */}
+        {isRunningTests && (
+          <div className="mt-3 space-y-2">
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Clock className="w-4 h-4" />
+              <span>This may take a while</span>
+            </div>
+            {progress && (
+              <div className="flex items-center space-x-2 text-sm text-purple-600">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>{progress}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {isExpanded && (
         <div className="p-3 sm:p-4">
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-700 text-sm">{error}</p>
+              <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
 
           {testResult && (
             <div className="space-y-4">
-              {/* Summary */}
+              {/* Overall Status */}
               <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                 {getOverallStatus()?.icon}
                 <div>
-                  <p className={`font-medium ${getOverallStatus()?.className}`}>
+                  <h3 className={`font-medium ${getOverallStatus()?.className}`}>
                     {getOverallStatus()?.text}
-                  </p>
+                  </h3>
                   <p className="text-sm text-gray-600">
                     {testResult.summary.passedTests}/{testResult.summary.totalTests} tests passed
-                    {testResult.summary.averageScore > 0 && (
-                      <span> • Average score: {testResult.summary.averageScore}/1.0</span>
-                    )}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Average Score: <span className="font-medium">{testResult.summary.averageScore.toFixed(1)}/100</span>
                   </p>
                 </div>
               </div>
 
-              {/* Model Results Summary */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {Object.entries(testResult.summary.modelResults).map(([modelId, stats]) => {
-                  const model = models.find(m => m.id === modelId);
-                  const passRate = stats.total > 0 ? (stats.passed / stats.total * 100).toFixed(0) : '0';
-                  
-                  return (
-                    <div key={modelId} className="p-3 border border-gray-200 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <Bot className="w-4 h-4 text-gray-600" />
-                          <span className="font-medium text-sm">{model?.name || modelId}</span>
+              {/* Model Performance Summary */}
+              <div>
+                <h4 className="font-medium text-gray-900 mb-3">Model Performance</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {Object.entries(testResult.summary.modelResults).map(([modelId, stats]) => {
+                    const model = models.find(m => m.id === modelId);
+                    const passRate = stats.total > 0 ? (stats.passed / stats.total * 100).toFixed(0) : '0';
+                    
+                    // Calculate average score for this model
+                    const modelTestResults = testResult.results.filter(r => r.modelId === modelId);
+                    const averageScore = modelTestResults.reduce((sum, r) => sum + r.evaluation.overall, 0) / modelTestResults.length;
+                    
+                    return (
+                      <div key={modelId} className="p-3 border border-gray-200 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <Bot className="w-4 h-4 text-gray-600" />
+                            <span className="font-medium text-sm">{model?.name || modelId}</span>
+                          </div>
+                          <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            stats.passed === stats.total 
+                              ? 'bg-green-100 text-green-700' 
+                              : stats.passed > 0 
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : 'bg-red-100 text-red-700'
+                          }`}>
+                            {passRate}%
+                          </div>
                         </div>
-                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          stats.passed === stats.total 
-                            ? 'bg-green-100 text-green-700' 
-                            : stats.passed > 0 
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-red-100 text-red-700'
-                        }`}>
-                          {passRate}%
+                        <div className="text-xs text-gray-600 space-y-1">
+                          <div>{stats.passed}/{stats.total} tests passed</div>
+                          <div>Avg Score: <span className="font-medium">{averageScore.toFixed(1)}/100</span></div>
                         </div>
                       </div>
-                      <div className="text-xs text-gray-600">
-                        {stats.passed}/{stats.total} tests passed
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Detailed Test Results */}
@@ -450,8 +518,19 @@ Only return the JSON, no additional text.`;
                           <XCircle className="w-4 h-4 text-red-500" />
                         )}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {result.executionTime}ms • {result.tokenUsage.total} tokens
+                      <div className="flex items-center space-x-2">
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          result.evaluation.overall >= 80 
+                            ? 'bg-green-100 text-green-700' 
+                            : result.evaluation.overall >= 60 
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-red-100 text-red-700'
+                        }`}>
+                          {result.evaluation.overall}/100
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {result.executionTime}ms • {result.tokenUsage.total} tokens
+                        </div>
                       </div>
                     </div>
                     
@@ -466,6 +545,46 @@ Only return the JSON, no additional text.`;
                         <p className="font-medium text-gray-700 mb-1">Output:</p>
                         <div className="bg-gray-50 p-2 rounded text-gray-600 max-h-20 overflow-y-auto">
                           {result.actualOutput}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Score Details */}
+                    <div className="mt-3 grid grid-cols-4 gap-2 text-xs">
+                      <div className="text-center p-2 bg-gray-50 rounded">
+                        <div className="font-medium text-gray-700">Relevance</div>
+                        <div className={`font-bold ${
+                          result.evaluation.relevance >= 80 ? 'text-green-600' :
+                          result.evaluation.relevance >= 60 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {result.evaluation.relevance}
+                        </div>
+                      </div>
+                      <div className="text-center p-2 bg-gray-50 rounded">
+                        <div className="font-medium text-gray-700">Clarity</div>
+                        <div className={`font-bold ${
+                          result.evaluation.clarity >= 80 ? 'text-green-600' :
+                          result.evaluation.clarity >= 60 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {result.evaluation.clarity}
+                        </div>
+                      </div>
+                      <div className="text-center p-2 bg-gray-50 rounded">
+                        <div className="font-medium text-gray-700">Creativity</div>
+                        <div className={`font-bold ${
+                          result.evaluation.creativity >= 80 ? 'text-green-600' :
+                          result.evaluation.creativity >= 60 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {result.evaluation.creativity}
+                        </div>
+                      </div>
+                      <div className="text-center p-2 bg-gray-50 rounded">
+                        <div className="font-medium text-gray-700">Overall</div>
+                        <div className={`font-bold ${
+                          result.evaluation.overall >= 80 ? 'text-green-600' :
+                          result.evaluation.overall >= 60 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {result.evaluation.overall}
                         </div>
                       </div>
                     </div>

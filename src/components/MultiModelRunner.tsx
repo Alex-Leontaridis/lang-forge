@@ -34,6 +34,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
   const handleRunSelected = () => {
     if (selectedModels.length > 0) {
       onRunModels(selectedModels);
+      setIsExpanded(false); // Auto-collapse after run
     }
   };
 
@@ -121,6 +122,175 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
     
     return matchesSearch && matchesProvider;
   });
+
+  // Mock data for testing
+  const mockModels: Model[] = [
+    // OpenAI models (direct API)
+    {
+      id: 'gpt-4',
+      name: 'GPT-4',
+      description: 'Advanced reasoning and analysis',
+      provider: 'OpenAI',
+      logo: '/src/logo/openai.png',
+      enabled: true
+    },
+    {
+      id: 'gpt-3.5-turbo',
+      name: 'GPT-3.5 Turbo',
+      description: 'Fast and efficient generation',
+      provider: 'OpenAI',
+      logo: '/src/logo/openai.png',
+      enabled: true
+    },
+    
+    // Groq models (direct API)
+    {
+      id: 'gemma2-9b-it',
+      name: 'Gemma 2 9B IT',
+      description: '8K context, 8K output - Instruction-tuned LLM',
+      provider: 'Groq',
+      logo: '/src/logo/google.png',
+      enabled: true
+    },
+    {
+      id: 'llama-3.1-8b-instant',
+      name: 'Llama 3.1 8B Instant',
+      description: '131K context, 131K output - Fast, general-purpose LLM',
+      provider: 'Groq',
+      logo: '/src/logo/meta.png',
+      enabled: true
+    },
+    {
+      id: 'llama-3.3-70b-versatile',
+      name: 'Llama 3.3 70B Versatile',
+      description: '131K context, 32K output - High-quality generation LLM',
+      provider: 'Groq',
+      logo: '/src/logo/meta.png',
+      enabled: true
+    },
+    {
+      id: 'deepseek-r1-distill-llama-70b',
+      name: 'DeepSeek R1 Distill Llama 70B',
+      description: '131K context, 131K output - Distilled LLaMA LLM',
+      provider: 'Groq',
+      logo: '/src/logo/deepseek.png',
+      enabled: true
+    },
+    {
+      id: 'llama-4-maverick-17b-128e-instruct',
+      name: 'Llama 4 Maverick 17B',
+      description: '131K context, 8K output - LLaMA 4 instruct LLM',
+      provider: 'Groq',
+      logo: '/src/logo/meta.png',
+      enabled: true
+    },
+    {
+      id: 'llama-4-scout-17b-16e-instruct',
+      name: 'Llama 4 Scout 17B',
+      description: '131K context, 8K output - Smaller LLaMA 4 instruct LLM',
+      provider: 'Groq',
+      logo: '/src/logo/meta.png',
+      enabled: true
+    },
+    {
+      id: 'mistral-saba-24b',
+      name: 'Mistral Saba 24B',
+      description: '32K context, 32K output - General-purpose LLM',
+      provider: 'Groq',
+      logo: '/src/logo/mistral.png',
+      enabled: true
+    },
+    {
+      id: 'qwen-qwq-32b',
+      name: 'Qwen QWQ 32B',
+      description: '131K context, 131K output - Multilingual LLM',
+      provider: 'Groq',
+      logo: '/src/logo/qwen.png',
+      enabled: true
+    },
+    {
+      id: 'qwen3-32b',
+      name: 'Qwen3 32B',
+      description: '131K context, 40K output - Advanced multilingual LLM',
+      provider: 'Groq',
+      logo: '/src/logo/qwen.png',
+      enabled: true
+    },
+    
+    // OpenRouter models
+    {
+      id: 'meta-llama/llama-3.3-70b-instruct',
+      name: 'Llama 3.3 70B Instruct',
+      description: '131K context - Multilingual, strong benchmark performance',
+      provider: 'Meta (OpenRouter)',
+      logo: '/src/logo/meta.png',
+      enabled: true
+    },
+    {
+      id: 'qwen/qwen-2.5-coder-32b-instruct',
+      name: 'Qwen2.5 Coder 32B Instruct',
+      description: '33K context - Advanced code generation and reasoning',
+      provider: 'Qwen (OpenRouter)',
+      logo: '/src/logo/qwen.png',
+      enabled: true
+    },
+    {
+      id: 'meta-llama/llama-3.2-11b-vision-instruct',
+      name: 'Llama 3.2 11B Vision Instruct',
+      description: '131K context - Multimodal model (image + text)',
+      provider: 'Meta (OpenRouter)',
+      logo: '/src/logo/meta.png',
+      enabled: true
+    },
+    {
+      id: 'meta-llama/llama-3.2-1b-instruct',
+      name: 'Llama 3.2 1B Instruct',
+      description: '131K context - Lightweight multilingual LLM',
+      provider: 'Meta (OpenRouter)',
+      logo: '/src/logo/meta.png',
+      enabled: true
+    },
+    {
+      id: 'qwen/qwen-2.5-72b-instruct',
+      name: 'Qwen2.5 72B Instruct',
+      description: '33K context - Long-text, multilingual, structured output',
+      provider: 'Qwen (OpenRouter)',
+      logo: '/src/logo/qwen.png',
+      enabled: true
+    },
+    {
+      id: 'meta-llama/llama-3.1-8b-instruct',
+      name: 'Llama 3.1 8B Instruct',
+      description: '131K context - Fast and efficient generation',
+      provider: 'Meta (OpenRouter)',
+      logo: '/src/logo/meta.png',
+      enabled: true
+    },
+    {
+      id: 'mistralai/mistral-nemo',
+      name: 'Mistral Nemo',
+      description: '131K context - Multilingual with function calling',
+      provider: 'Mistral (OpenRouter)',
+      logo: '/src/logo/mistral.png',
+      enabled: true
+    },
+    {
+      id: 'google/gemma-2-9b-it',
+      name: 'Gemma 2 9B IT',
+      description: '8K context - Versatile and efficient open-source LLM',
+      provider: 'Google (OpenRouter)',
+      logo: '/src/logo/google.png',
+      enabled: true
+    },
+    {
+      id: 'mistralai/mistral-7b-instruct',
+      name: 'Mistral 7B Instruct',
+      description: '33K context - High-performing 7B model',
+      provider: 'Mistral (OpenRouter)',
+      logo: '/src/logo/mistral.png',
+      enabled: true
+    }
+  ];
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg shadow-sm">

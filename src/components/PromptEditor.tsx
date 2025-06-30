@@ -1,8 +1,10 @@
 import React, { useEffect } from 'react';
-import { FileText, Zap, Eye, EyeOff, Sparkles, FileCode, ChevronDown, Code } from 'lucide-react';
-import { Variable, Model } from '../types';
+import { FileText, Zap, Eye, EyeOff, Sparkles, FileCode, ChevronDown, Code, Brain } from 'lucide-react';
+import { Variable, Model, MemoryConfig, ConversationMessage } from '../types';
 import apiService from '../services/apiService';
 import PromptAutoTest, { AutoTestResult } from './PromptAutoTest';
+import MemoryConfigComponent from './MemoryConfig';
+import ConversationHistory from './ConversationHistory';
 
 interface PromptEditorProps {
   prompt: string;
@@ -15,6 +17,12 @@ interface PromptEditorProps {
   models?: Model[];
   selectedModels?: string[];
   onAutoTestComplete?: (result: AutoTestResult) => void;
+  onAutoTestRunningChange?: (isRunning: boolean) => void;
+  memory?: MemoryConfig;
+  onMemoryChange?: (memory: MemoryConfig) => void;
+  conversationHistory?: ConversationMessage[];
+  onClearHistory?: () => void;
+  onDeleteMessage?: (index: number) => void;
 }
 
 const PromptEditor: React.FC<PromptEditorProps> = ({ 
@@ -27,12 +35,34 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   temperature = 0.3,
   models = [],
   selectedModels = ['gpt-4'],
-  onAutoTestComplete
+  onAutoTestComplete,
+  onAutoTestRunningChange,
+  memory,
+  onMemoryChange,
+  conversationHistory = [],
+  onClearHistory,
+  onDeleteMessage
 }) => {
   const [showPreview, setShowPreview] = React.useState(false);
   const [isOptimizing, setIsOptimizing] = React.useState(false);
   const [showAutoTest, setShowAutoTest] = React.useState(false);
   const [showExportMenu, setShowExportMenu] = React.useState(false);
+  const [showMemory, setShowMemory] = React.useState(false);
+
+  // Default memory configuration
+  const defaultMemory: MemoryConfig = {
+    enabled: false,
+    type: 'conversation_buffer',
+    maxMessages: 10,
+    returnMessages: true,
+    inputKey: 'input',
+    outputKey: 'output',
+    memoryKey: 'history',
+    humanPrefix: 'Human',
+    aiPrefix: 'Assistant'
+  };
+
+  const currentMemory = memory || defaultMemory;
 
   // Handle clicking outside export menu to close it
   React.useEffect(() => {
@@ -54,6 +84,24 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setPrompt(e.target.value);
+  };
+
+  const handleMemoryChange = (newMemory: MemoryConfig) => {
+    if (onMemoryChange) {
+      onMemoryChange(newMemory);
+    }
+  };
+
+  const handleClearHistory = () => {
+    if (onClearHistory) {
+      onClearHistory();
+    }
+  };
+
+  const handleDeleteMessage = (index: number) => {
+    if (onDeleteMessage) {
+      onDeleteMessage(index);
+    }
   };
 
   const optimizePrompt = async () => {
@@ -159,9 +207,32 @@ OPTIMIZED PROMPT:`;
     const variables = extractVariables(prompt);
     const varList = variables.length > 0 ? `[${variables.map(v => `"${v}"`).join(', ')}]` : '[]';
     
+    let memoryCode = '';
+    if (currentMemory.enabled) {
+      memoryCode = `
+# Memory Configuration
+from langchain.memory import ${getMemoryImport(currentMemory.type)}
+
+memory = ${getMemoryInitialization(currentMemory.type, currentMemory)}
+
+# Create the chain with memory
+chain = LLMChain(
+    llm=llm,
+    prompt=prompt_template,
+    memory=memory
+)`;
+    } else {
+      memoryCode = `
+# Create the chain
+chain = LLMChain(
+    llm=llm,
+    prompt=prompt_template
+)`;
+    }
+    
     const pythonCode = `from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
-from langchain.chains import LLMChain
+from langchain.chains import LLMChain${currentMemory.enabled ? '\nfrom langchain.memory import ' + getMemoryImport(currentMemory.type) : ''}
 
 # Prompt Template
 prompt_template = PromptTemplate(
@@ -173,13 +244,7 @@ prompt_template = PromptTemplate(
 llm = ChatOpenAI(
     model_name="${selectedModel}",
     temperature=${temperature}
-)
-
-# Create the chain
-chain = LLMChain(
-    llm=llm,
-    prompt=prompt_template
-)
+)${memoryCode}
 
 # Example usage:
 # inputs = {${variables.map(v => `"${v}": "value"`).join(', ')}}
@@ -213,9 +278,32 @@ def run_prompt(inputs):
 
     const variables = extractVariables(prompt);
     
+    let memoryCode = '';
+    if (currentMemory.enabled) {
+      memoryCode = `
+// Memory Configuration
+import { ${getMemoryImportJS(currentMemory.type)} } from "langchain/memory";
+
+const memory = new ${getMemoryImportJS(currentMemory.type)}(${getMemoryInitializationJS(currentMemory.type, currentMemory)});
+
+// Create the chain with memory
+const chain = new LLMChain({
+  llm: llm,
+  prompt: promptTemplate,
+  memory: memory
+});`;
+    } else {
+      memoryCode = `
+// Create the chain
+const chain = new LLMChain({
+  llm: llm,
+  prompt: promptTemplate
+});`;
+    }
+    
     const jsCode = `import { PromptTemplate } from "langchain/prompts";
 import { ChatOpenAI } from "langchain/chat_models/openai";
-import { LLMChain } from "langchain/chains";
+import { LLMChain } from "langchain/chains";${currentMemory.enabled ? '\nimport { ' + getMemoryImportJS(currentMemory.type) + ' } from "langchain/memory";' : ''}
 
 // Prompt Template
 const promptTemplate = PromptTemplate.fromTemplate(\`${prompt.replace(/`/g, '\\`')}\`);
@@ -224,13 +312,7 @@ const promptTemplate = PromptTemplate.fromTemplate(\`${prompt.replace(/`/g, '\\`
 const llm = new ChatOpenAI({
   modelName: "${selectedModel}",
   temperature: ${temperature}
-});
-
-// Create the chain
-const chain = new LLMChain({
-  llm: llm,
-  prompt: promptTemplate
-});
+});${memoryCode}
 
 // Example usage:
 // const inputs = {${variables.map(v => `${v}: "value"`).join(', ')}};
@@ -260,147 +342,234 @@ export { runPrompt };
     setShowExportMenu(false);
   };
 
+  // Helper functions for memory export
+  const getMemoryImport = (type: string) => {
+    switch (type) {
+      case 'conversation_buffer':
+        return 'ConversationBufferMemory';
+      case 'conversation_summary':
+        return 'ConversationSummaryMemory';
+      case 'conversation_token_window':
+        return 'ConversationTokenWindowMemory';
+      case 'entity_memory':
+        return 'ConversationEntityMemory';
+      case 'knowledge_graph':
+        return 'ConversationKGMemory';
+      case 'vector_store':
+        return 'VectorStoreRetrieverMemory';
+      default:
+        return 'ConversationBufferMemory';
+    }
+  };
+
+  const getMemoryImportJS = (type: string) => {
+    switch (type) {
+      case 'conversation_buffer':
+        return 'ConversationBufferMemory';
+      case 'conversation_summary':
+        return 'ConversationSummaryMemory';
+      case 'conversation_token_window':
+        return 'ConversationTokenWindowMemory';
+      case 'entity_memory':
+        return 'ConversationEntityMemory';
+      case 'knowledge_graph':
+        return 'ConversationKGMemory';
+      case 'vector_store':
+        return 'VectorStoreRetrieverMemory';
+      default:
+        return 'ConversationBufferMemory';
+    }
+  };
+
+  const getMemoryInitialization = (type: string, memory: MemoryConfig) => {
+    const baseConfig = `return_messages=${memory.returnMessages || true}`;
+    
+    switch (type) {
+      case 'conversation_buffer':
+        return `(${baseConfig})`;
+      case 'conversation_summary':
+        return `(llm=llm, ${baseConfig})`;
+      case 'conversation_token_window':
+        return `(max_token_limit=${memory.maxTokens || 2000}, ${baseConfig})`;
+      case 'entity_memory':
+        return `(llm=llm, ${baseConfig})`;
+      case 'knowledge_graph':
+        return `(llm=llm, ${baseConfig})`;
+      case 'vector_store':
+        return `(retriever=vectorstore.as_retriever(), ${baseConfig})`;
+      default:
+        return `(${baseConfig})`;
+    }
+  };
+
+  const getMemoryInitializationJS = (type: string, memory: MemoryConfig) => {
+    const baseConfig = `returnMessages: ${memory.returnMessages || true}`;
+    
+    switch (type) {
+      case 'conversation_buffer':
+        return `{ ${baseConfig} }`;
+      case 'conversation_summary':
+        return `{ llm, ${baseConfig} }`;
+      case 'conversation_token_window':
+        return `{ maxTokenLimit: ${memory.maxTokens || 2000}, ${baseConfig} }`;
+      case 'entity_memory':
+        return `{ llm, ${baseConfig} }`;
+      case 'knowledge_graph':
+        return `{ llm, ${baseConfig} }`;
+      case 'vector_store':
+        return `{ retriever: vectorstore.asRetriever(), ${baseConfig} }`;
+      default:
+        return `{ ${baseConfig} }`;
+    }
+  };
+
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-      <div className="p-3 sm:p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
-            <span className="font-semibold text-gray-900 text-sm sm:text-base">Prompt Editor</span>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {hasVariablesWithValues && (
-              <button
-                onClick={() => setShowPreview(!showPreview)}
-                className="flex items-center space-x-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
-              >
-                {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                <span className="hidden sm:inline">{showPreview ? 'Hide Preview' : 'Show Preview'}</span>
-              </button>
-            )}
+    <div className="space-y-4">
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+        <div className="p-3 sm:p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+              <span className="font-semibold text-gray-900 text-sm sm:text-base">Prompt Editor</span>
+            </div>
             
-            <div className="relative export-menu-container">
+            <div className="flex items-center space-x-2">
               <button
-                onClick={() => setShowExportMenu(!showExportMenu)}
+                onClick={() => setShowMemory(!showMemory)}
                 className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-colors text-sm ${
-                  showExportMenu 
-                    ? 'bg-black text-white' 
+                  currentMemory.enabled 
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
                     : 'bg-gray-100 hover:bg-gray-200'
                 }`}
               >
-                <FileCode className="w-4 h-4" />
-                <span className="hidden sm:inline">Export</span>
-                <ChevronDown className="w-4 h-4" />
+                <Brain className="w-4 h-4" />
+                <span className="hidden sm:inline">Memory</span>
               </button>
-
-              {showExportMenu && (
-                <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-48">
-                  <div className="p-2">
-                    <button
-                      onClick={exportToLangChainPython}
-                      className="w-full flex items-center space-x-2 px-3 py-2 text-left hover:bg-gray-100 rounded transition-colors"
-                    >
-                      <Code className="w-4 h-4 text-blue-600" />
-                      <span>Export to LangChain Python</span>
-                    </button>
-                    <button
-                      onClick={exportToLangChainJS}
-                      className="w-full flex items-center space-x-2 px-3 py-2 text-left hover:bg-gray-100 rounded transition-colors"
-                    >
-                      <Code className="w-4 h-4 text-yellow-600" />
-                      <span>Export to LangChain JS</span>
-                    </button>
-                  </div>
-                </div>
+              
+              {hasVariablesWithValues && (
+                <button
+                  onClick={() => setShowPreview(!showPreview)}
+                  className="flex items-center space-x-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors text-sm"
+                >
+                  {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <span className="hidden sm:inline">{showPreview ? 'Hide Preview' : 'Show Preview'}</span>
+                </button>
               )}
-            </div>
-            
-            <button
-              onClick={() => setShowAutoTest(!showAutoTest)}
-              className="flex items-center space-x-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span className="hidden sm:inline">Auto-Test</span>
-            </button>
-            
-            <button
-              onClick={optimizePrompt}
-              disabled={!prompt.trim() || isOptimizing || isRunning}
-              className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
-            >
-              <Sparkles className={`w-4 h-4 ${isOptimizing ? 'animate-pulse' : ''}`} />
-              <span className="hidden sm:inline">{isOptimizing ? 'Optimizing...' : 'Optimize'}</span>
-            </button>
-          </div>
-        </div>
-      </div>
+              
+              <div className="relative export-menu-container">
+                <button
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-colors text-sm ${
+                    showExportMenu 
+                      ? 'bg-black text-white' 
+                      : 'bg-gray-100 hover:bg-gray-200'
+                  }`}
+                >
+                  <FileCode className="w-4 h-4" />
+                  <span className="hidden sm:inline">Export</span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
 
-      <div className="p-3 sm:p-4">
-        <div className="relative mb-4">
-          <textarea
-            value={prompt}
-            onChange={handleInputChange}
-            placeholder="Write your AI prompt here... Use {{variables}} for dynamic content like {{name}}, {{topic}}, or {{context}}."
-            className={`w-full h-48 sm:h-64 p-3 sm:p-4 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all duration-200 text-black placeholder-gray-500 text-sm sm:text-base ${
-              isRunning ? 'opacity-75 cursor-not-allowed' : ''
-            }`}
-            disabled={isRunning}
-          />
-        </div>
-
-        {/* Preview with variables replaced */}
-        {showPreview && hasVariablesWithValues && (
-          <div className="mb-4">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Preview with variables:</h4>
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-gray-800 whitespace-pre-wrap">
-                {getPreviewPrompt()}
-              </p>
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm text-gray-500">
-          <div className="flex items-center space-x-2">
-            <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span>Use {"{{variable}}"} syntax for dynamic placeholders</span>
-          </div>
-          <div>
-            {prompt.length} characters
-          </div>
-        </div>
-
-        {/* Variable Examples */}
-        {!prompt && (
-          <div className="mt-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h3 className="font-medium text-black mb-2 text-sm sm:text-base">Example Variables:</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs sm:text-sm">
-              <code className="bg-white px-2 py-1 rounded text-gray-700 border border-gray-200">{"{{name}}"}</code>
-              <code className="bg-white px-2 py-1 rounded text-gray-700 border border-gray-200">{"{{topic}}"}</code>
-              <code className="bg-white px-2 py-1 rounded text-gray-700 border border-gray-200">{"{{context}}"}</code>
-              <code className="bg-white px-2 py-1 rounded text-gray-700 border border-gray-200">{"{{style}}"}</code>
+                {showExportMenu && (
+                  <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-48">
+                    <div className="p-2">
+                      <button
+                        onClick={exportToLangChainPython}
+                        className="w-full flex items-center space-x-2 px-3 py-2 text-left hover:bg-gray-100 rounded transition-colors"
+                      >
+                        <Code className="w-4 h-4 text-blue-600" />
+                        <span>Export to LangChain Python</span>
+                      </button>
+                      <button
+                        onClick={exportToLangChainJS}
+                        className="w-full flex items-center space-x-2 px-3 py-2 text-left hover:bg-gray-100 rounded transition-colors"
+                      >
+                        <Code className="w-4 h-4 text-yellow-600" />
+                        <span>Export to LangChain JS</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <button
+                onClick={() => setShowAutoTest(!showAutoTest)}
+                className="flex items-center space-x-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="hidden sm:inline">Auto-Test</span>
+              </button>
+              
+              <button
+                onClick={optimizePrompt}
+                disabled={!prompt.trim() || isOptimizing || isRunning}
+                className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
+              >
+                <Sparkles className={`w-4 h-4 ${isOptimizing ? 'animate-pulse' : ''}`} />
+                <span className="hidden sm:inline">{isOptimizing ? 'Optimizing...' : 'Optimize'}</span>
+              </button>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Auto-Test Component */}
-        {showAutoTest && prompt.trim() && (
-          <div className="mt-4">
-            <PromptAutoTest
-              prompt={prompt}
-              variables={variables}
-              models={models}
-              selectedModels={selectedModels}
-              temperature={temperature}
-              onTestComplete={(result) => {
-                onAutoTestComplete?.(result);
-              }}
-              isRunning={isRunning}
+        <div className="p-3 sm:p-4">
+          <div className="relative mb-4">
+            <textarea
+              value={prompt}
+              onChange={handleInputChange}
+              placeholder="Write your AI prompt here... Use {{variables}} for dynamic content like {{name}}, {{topic}}, or {{context}}."
+              className={`w-full h-48 sm:h-64 p-3 sm:p-4 bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition-all duration-200 text-black placeholder-gray-500 text-sm sm:text-base ${
+                isRunning ? 'opacity-75 cursor-not-allowed' : ''
+              }`}
+              disabled={isRunning}
             />
           </div>
-        )}
+
+          {/* Preview with variables replaced */}
+          {showPreview && hasVariablesWithValues && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h4 className="font-medium text-blue-900 mb-2">Preview (with variables replaced):</h4>
+              <div className="text-sm text-blue-800 whitespace-pre-wrap">
+                {getPreviewPrompt()}
+              </div>
+            </div>
+          )}
+
+          {/* Auto-Test Panel */}
+          {showAutoTest && (
+            <div className="mt-4">
+              <PromptAutoTest
+                prompt={prompt}
+                variables={variables}
+                models={models}
+                selectedModels={selectedModels}
+                temperature={temperature}
+                onTestComplete={onAutoTestComplete}
+                onTestRunningChange={onAutoTestRunningChange}
+                isRunning={isRunning}
+              />
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Memory Configuration */}
+      {showMemory && (
+        <MemoryConfigComponent
+          memory={currentMemory}
+          onMemoryChange={handleMemoryChange}
+        />
+      )}
+
+      {/* Conversation History */}
+      {currentMemory.enabled && (
+        <ConversationHistory
+          messages={conversationHistory}
+          onClearHistory={handleClearHistory}
+          onDeleteMessage={handleDeleteMessage}
+          memoryEnabled={currentMemory.enabled}
+        />
+      )}
     </div>
   );
 };

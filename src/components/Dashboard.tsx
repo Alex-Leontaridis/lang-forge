@@ -40,36 +40,11 @@ interface Project {
   totalTokens: number;
 }
 
-interface Template {
-  id: string;
-  name: string;
-  description: string;
-  category: 'LangChain' | 'LangGraph' | 'Chat' | 'Tools' | 'QA' | 'Summarizer';
-  complexity: 'Beginner' | 'Intermediate' | 'Advanced';
-  tags: string[];
-  preview: string;
-}
-
-interface Analytics {
-  totalProjects: number;
-  totalPromptVersions: number;
-  totalTokensThisMonth: number;
-  topPerformingPrompt: {
-    title: string;
-    score: number;
-  };
-  mostUsedModel: {
-    name: string;
-    usage: number;
-  };
-}
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [analytics, setAnalytics] = useState<Analytics>({
+  const [analytics, setAnalytics] = useState({
     totalProjects: 0,
     totalPromptVersions: 0,
     totalTokensThisMonth: 0,
@@ -83,7 +58,6 @@ const Dashboard = () => {
     name: '',
     type: 'blank' as 'blank' | 'template' | 'import'
   });
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
 
   // Mock data - in real app this would come from API
   useEffect(() => {
@@ -105,8 +79,6 @@ const Dashboard = () => {
       setProjects([]);
     }
 
-    // Initialize with empty data - in real app this would come from API
-    setTemplates([]);
     setAnalytics({
       totalProjects: 0,
       totalPromptVersions: 0,
@@ -146,22 +118,17 @@ const Dashboard = () => {
       };
       const updatedProjects = [newProject, ...projects];
       setProjects(updatedProjects);
-      
-      // Save to localStorage
       localStorage.setItem('dashboardProjects', JSON.stringify(updatedProjects));
-      
       setShowNewProjectModal(false);
       setNewProjectData({ name: '', type: 'blank' });
-      
+
+      // Do NOT create any default prompt node for the new project
+      localStorage.setItem(`canvas_${newProject.id}_nodes`, JSON.stringify([]));
+      localStorage.setItem(`canvas_${newProject.id}_edges`, JSON.stringify([]));
+
       // Navigate to the app with the new project
       navigate('/app', { state: { projectId: newProject.id } });
     }
-  };
-
-  const handleLoadTemplate = (template: Template) => {
-    setSelectedTemplate(template);
-    setNewProjectData(prev => ({ ...prev, type: 'template' }));
-    setShowNewProjectModal(true);
   };
 
   const handleOpenProject = (projectId: string) => {
@@ -314,164 +281,123 @@ const Dashboard = () => {
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Projects Section */}
-          <div className="lg:col-span-2">
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-black">Projects</h2>
-                <button
-                  onClick={() => setShowNewProjectModal(true)}
-                  className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-all duration-200 flex items-center space-x-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>New Project</span>
-                </button>
-              </div>
-
-              {/* Search and Filter */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Search projects..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                  />
-                </div>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                >
-                  <option value="All">All Status</option>
-                  <option value="Draft">Draft</option>
-                  <option value="Testing">Testing</option>
-                  <option value="Exported">Exported</option>
-                </select>
-              </div>
-
-              {/* Projects List */}
-              <div className="space-y-4">
-                {filteredProjects.map((project) => (
-                  <div 
-                    key={project.id} 
-                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer"
-                    onClick={() => handleOpenProject(project.id)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-lg font-semibold text-black">{project.title}</h3>
-                          <select
-                            value={project.status}
-                            onChange={(e) => updateProjectStatus(project.id, e.target.value as 'Draft' | 'Testing' | 'Exported')}
-                            className={`px-2 py-1 rounded-full text-xs font-medium border-0 ${getStatusColor(project.status)}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <option value="Draft">Draft</option>
-                            <option value="Testing">Testing</option>
-                            <option value="Exported">Exported</option>
-                          </select>
-                          {project.exportType !== 'None' && (
-                            <div className="flex items-center space-x-1 text-gray-500">
-                              {getExportTypeIcon(project.exportType)}
-                              <span className="text-xs">{project.exportType}</span>
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-gray-600 mb-3">{project.description}</p>
-                        <div className="flex items-center space-x-6 text-sm text-gray-500">
-                          <div className="flex items-center space-x-1">
-                            <Clock className="w-4 h-4" />
-                            <span>Updated {project.lastUpdated.toLocaleDateString()}</span>
-                          </div>
-                          <div className="flex items-center space-x-4">
-                            <span>{project.promptCount} prompts</span>
-                            <span>{project.versionCount} versions</span>
-                            <span>{project.totalTokens.toLocaleString()} tokens</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => handleDuplicateProject(project)}
-                          className="p-2 text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors"
-                          title="Duplicate"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
-                        <button
-                          className="p-2 text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors"
-                          title="Export"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProject(project.id)}
-                          className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {filteredProjects.length === 0 && (
-                  <div className="text-center py-12">
-                    <FolderOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No projects found</p>
-                    <button
-                      onClick={() => setShowNewProjectModal(true)}
-                      className="mt-4 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-all duration-200"
-                    >
-                      Create your first project
-                    </button>
-                  </div>
-                )}
-              </div>
+        <div className="mt-8">
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-black">Projects</h2>
+              <button
+                onClick={() => setShowNewProjectModal(true)}
+                className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-all duration-200 flex items-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>New Project</span>
+              </button>
             </div>
-          </div>
 
-          {/* Templates Section */}
-          <div className="lg:col-span-1">
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
-              <h2 className="text-xl font-semibold text-black mb-6">Templates</h2>
-              <div className="space-y-4">
-                {templates.map((template) => (
-                  <div key={template.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-black mb-1">{template.name}</h3>
-                        <p className="text-sm text-gray-600 mb-2">{template.description}</p>
-                        <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            template.complexity === 'Beginner' ? 'bg-green-100 text-green-700' :
-                            template.complexity === 'Intermediate' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-red-100 text-red-700'
-                          }`}>
-                            {template.complexity}
-                          </span>
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                            {template.category}
-                          </span>
+            {/* Search and Filter */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search projects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="All">All Status</option>
+                <option value="Draft">Draft</option>
+                <option value="Testing">Testing</option>
+                <option value="Exported">Exported</option>
+              </select>
+            </div>
+
+            {/* Projects List */}
+            <div className="space-y-4">
+              {filteredProjects.map((project) => (
+                <div 
+                  key={project.id} 
+                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer"
+                  onClick={() => handleOpenProject(project.id)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <h3 className="text-lg font-semibold text-black">{project.title}</h3>
+                        <select
+                          value={project.status}
+                          onChange={(e) => updateProjectStatus(project.id, e.target.value as 'Draft' | 'Testing' | 'Exported')}
+                          className={`px-2 py-1 rounded-full text-xs font-medium border-0 ${getStatusColor(project.status)}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <option value="Draft">Draft</option>
+                          <option value="Testing">Testing</option>
+                          <option value="Exported">Exported</option>
+                        </select>
+                        {project.exportType !== 'None' && (
+                          <div className="flex items-center space-x-1 text-gray-500">
+                            {getExportTypeIcon(project.exportType)}
+                            <span className="text-xs">{project.exportType}</span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-gray-600 mb-3">{project.description}</p>
+                      <div className="flex items-center space-x-6 text-sm text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <Clock className="w-4 h-4" />
+                          <span>Updated {project.lastUpdated.toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <span>{project.promptCount} prompts</span>
+                          <span>{project.versionCount} versions</span>
+                          <span>{project.totalTokens.toLocaleString()} tokens</span>
                         </div>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-500 mb-3">{template.preview}</p>
-                    <button
-                      onClick={() => handleLoadTemplate(template)}
-                      className="w-full bg-gray-100 text-black px-3 py-2 rounded-lg hover:bg-gray-200 transition-all duration-200 text-sm font-medium"
-                    >
-                      Load Template
-                    </button>
+                    <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleDuplicateProject(project)}
+                        className="p-2 text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Duplicate"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                      <button
+                        className="p-2 text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors"
+                        title="Export"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProject(project.id)}
+                        className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
+              
+              {filteredProjects.length === 0 && (
+                <div className="text-center py-12">
+                  <FolderOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">No projects found</p>
+                  <button
+                    onClick={() => setShowNewProjectModal(true)}
+                    className="mt-4 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-all duration-200"
+                  >
+                    Create your first project
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -482,14 +408,8 @@ const Dashboard = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
             <h3 className="text-xl font-semibold text-black mb-4">
-              {newProjectData.type === 'template' && selectedTemplate ? `Create from ${selectedTemplate.name}` : 'Create New Project'}
+              {newProjectData.type === 'template' ? 'Create New Project' : 'Create New Project'}
             </h3>
-            
-            {newProjectData.type === 'template' && selectedTemplate && (
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">{selectedTemplate.description}</p>
-              </div>
-            )}
             
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Project Name</label>

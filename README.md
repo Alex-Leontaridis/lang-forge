@@ -1,5 +1,9 @@
 # LangForge 🦜
 
+<p align="center">
+  <img src="./langforge-parrot.png" alt="LangForge Parrot" width="300" />
+</p>
+
 The visual IDE for crafting, testing, and exporting LangChain-ready prompt chains.
 Design prompts like a pro, visualize logic flows, validate with AI, and export production-ready chains — all in one elegant workspace.
 ---

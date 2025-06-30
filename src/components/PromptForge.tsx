@@ -49,7 +49,7 @@ import PromptChainCanvas from './PromptChainCanvas';
 import PromptAutoTest from './PromptAutoTest';
 import { usePromptVersions } from '../hooks/usePromptVersions';
 import { usePrompts } from '../hooks/usePrompts';
-import { Model, Variable, InputVariable, OutputVariable, AutoTestResult } from '../types';
+import { Model, Variable, InputVariable, OutputVariable, AutoTestResult, MemoryConfig, ConversationMessage } from '../types';
 import apiService from '../services/apiService';
 
 // Custom debounce function
@@ -109,8 +109,68 @@ const PromptForge = () => {
     const saved = localStorage.getItem(`promptForgeAutoTestResults_${projectId || 'global'}`);
     return saved ? JSON.parse(saved) : [];
   });
+  const [isAutoTestRunning, setIsAutoTestRunning] = useState(false);
   const [fromCanvas, setFromCanvas] = useState(false);
   const [canvasNodeId, setCanvasNodeId] = useState<string | null>(null);
+
+  // Memory state
+  const [memory, setMemory] = useState<MemoryConfig>(() => {
+    const saved = localStorage.getItem(`promptForgeMemory_${projectId || 'global'}`);
+    return saved ? JSON.parse(saved) : {
+      enabled: false,
+      type: 'conversation_buffer',
+      maxMessages: 10,
+      returnMessages: true,
+      inputKey: 'input',
+      outputKey: 'output',
+      memoryKey: 'history',
+      humanPrefix: 'Human',
+      aiPrefix: 'Assistant'
+    };
+  });
+
+  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>(() => {
+    const saved = localStorage.getItem(`promptForgeConversationHistory_${projectId || 'global'}`);
+    return saved ? JSON.parse(saved).map((msg: any) => ({
+      ...msg,
+      timestamp: new Date(msg.timestamp)
+    })) : [];
+  });
+
+  // Save memory configuration to localStorage
+  useEffect(() => {
+    localStorage.setItem(`promptForgeMemory_${projectId || 'global'}`, JSON.stringify(memory));
+  }, [memory, projectId]);
+
+  // Save conversation history to localStorage
+  useEffect(() => {
+    localStorage.setItem(`promptForgeConversationHistory_${projectId || 'global'}`, JSON.stringify(conversationHistory));
+  }, [conversationHistory, projectId]);
+
+  // Memory handlers
+  const handleMemoryChange = (newMemory: MemoryConfig) => {
+    setMemory(newMemory);
+  };
+
+  const handleClearHistory = () => {
+    setConversationHistory([]);
+  };
+
+  const handleDeleteMessage = (index: number) => {
+    setConversationHistory(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addToConversationHistory = (role: 'human' | 'ai' | 'system', content: string, metadata?: Record<string, any>) => {
+    if (memory.enabled) {
+      const newMessage: ConversationMessage = {
+        role,
+        content,
+        timestamp: new Date(),
+        metadata
+      };
+      setConversationHistory(prev => [...prev, newMessage]);
+    }
+  };
 
   // Initialize prompt management
   const {
@@ -151,14 +211,19 @@ const PromptForge = () => {
     if (canvasData) {
       try {
         const data = JSON.parse(canvasData);
+        console.log('Processing canvas data:', data);
         
         if (data.action === 'createPromptFromCanvas' && data.updated) {
+          console.log('Creating prompt from canvas node:', data.data);
+          
           // Create a new prompt from canvas node
           const newPrompt = createPrompt(
             data.data.title,
             'Created from canvas node'
           );
+          
           if (newPrompt) {
+            console.log('Successfully created prompt:', newPrompt.id);
             setCurrentPromptId(newPrompt.id);
             
             // Create a new version with the canvas data
@@ -169,6 +234,7 @@ const PromptForge = () => {
               'Created from canvas node'
             );
             if (newVersion) {
+              console.log('Successfully created version:', newVersion.id);
               setCurrentVersionId(newVersion.id);
             }
             
@@ -185,6 +251,10 @@ const PromptForge = () => {
             // Store the mapping between the new prompt ID and the temporary prompt ID from canvas
             localStorage.setItem(`promptToNode_${newPrompt.id}`, data.data.nodeId);
             localStorage.setItem(`tempPromptToRealPrompt_${data.data.promptId}`, newPrompt.id);
+            
+            console.log(`Mapped temp prompt ${data.data.promptId} to real prompt ${newPrompt.id}`);
+          } else {
+            console.error('Failed to create prompt from canvas data');
           }
           
           // Clear the localStorage data
@@ -273,6 +343,58 @@ const PromptForge = () => {
     }
   }, [createVersion, setCurrentVersionId, createPrompt, setCurrentPromptId, currentPrompt, currentVersion, currentVersionId, updatePrompt, updateVersion, currentModel, deletePrompt]);
 
+  // Check for pending canvas nodes that need prompts created
+  useEffect(() => {
+    const projectKey = `canvasNodes_${projectId || 'default'}`;
+    const canvasNodesData = localStorage.getItem(projectKey);
+    
+    if (canvasNodesData) {
+      try {
+        const canvasNodes = JSON.parse(canvasNodesData);
+        console.log('Checking for pending canvas nodes:', canvasNodes);
+        
+        // Check for nodes with temporary prompt IDs that need real prompts created
+        canvasNodes.forEach((nodeData: any) => {
+          if (nodeData.promptId && nodeData.promptId.startsWith('temp_prompt_')) {
+            console.log('Found pending canvas node with temp prompt ID:', nodeData.promptId);
+            
+            // Check if a real prompt was already created for this temp ID
+            const realPromptId = localStorage.getItem(`tempPromptToRealPrompt_${nodeData.promptId}`);
+            if (!realPromptId) {
+              console.log('Creating prompt for pending canvas node:', nodeData.title);
+              
+              // Create a new prompt for this pending node
+              const newPrompt = createPrompt(
+                nodeData.title,
+                'Created from pending canvas node'
+              );
+              
+              if (newPrompt) {
+                console.log('Created prompt for pending node:', newPrompt.id);
+                
+                // Create a new version
+                const newVersion = createVersion(
+                  nodeData.prompt || '',
+                  nodeData.variables || {},
+                  nodeData.title,
+                  'Created from pending canvas node'
+                );
+                
+                // Store the mapping
+                localStorage.setItem(`promptToNode_${newPrompt.id}`, nodeData.id);
+                localStorage.setItem(`tempPromptToRealPrompt_${nodeData.promptId}`, newPrompt.id);
+                
+                console.log(`Mapped pending temp prompt ${nodeData.promptId} to real prompt ${newPrompt.id}`);
+              }
+            }
+          }
+        });
+      } catch (error) {
+        console.error('Error processing pending canvas nodes:', error);
+      }
+    }
+  }, [projectId, createPrompt, createVersion]);
+
   // Persist state to localStorage with project-specific keys
   useEffect(() => {
     localStorage.setItem(`promptForgeVariables_${projectId || 'global'}`, JSON.stringify(variables));
@@ -310,32 +432,248 @@ const PromptForge = () => {
     localStorage.setItem(`promptForgeAutoTestResults_${projectId || 'global'}`, JSON.stringify(autoTestResults));
   }, [autoTestResults, projectId]);
 
-  const models: Model[] = [
-    { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', logo: '/src/logo/openai.png', enabled: true },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient', provider: 'OpenAI', logo: '/src/logo/openai.png', enabled: true },
-    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', description: 'Google Gemma 2 9B IT (Groq)', provider: 'Google', logo: '/src/logo/google.png', enabled: true },
-    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp', description: 'Google Gemini 2.5 Pro Exp (OpenRouter)', provider: 'Google', logo: '/src/logo/google.png', enabled: true },
-    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp', description: 'Google Gemini 2.0 Flash Exp (OpenRouter)', provider: 'Google', logo: '/src/logo/google.png', enabled: true },
-    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT', description: 'Google Gemma 3 12B IT (OpenRouter)', provider: 'Google', logo: '/src/logo/google.png', enabled: true },
-    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', description: 'Meta Llama 3.1 8B Instant (Groq)', provider: 'Meta', logo: '/src/logo/meta.png', enabled: true },
-    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', description: 'Meta Llama 3.3 70B Versatile (Groq)', provider: 'Meta', logo: '/src/logo/meta.png', enabled: true },
-    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', description: 'Meta Llama Guard 4 12B (Groq)', provider: 'Meta', logo: '/src/logo/meta.png', enabled: true },
-    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', description: 'DeepSeek R1 Distill Llama 70B (OpenRouter)', provider: 'DeepSeek', logo: '/src/logo/deepseek.png', enabled: true },
-    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528', description: 'DeepSeek R1 0528 (OpenRouter)', provider: 'DeepSeek', logo: '/src/logo/deepseek.png', enabled: true },
-    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B', description: 'DeepSeek R1 0528 Qwen3 8B (OpenRouter)', provider: 'DeepSeek', logo: '/src/logo/deepseek.png', enabled: true },
-    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base', description: 'DeepSeek V3 Base (OpenRouter)', provider: 'DeepSeek', logo: '/src/logo/deepseek.png', enabled: true },
-    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', description: 'Alibaba Qwen QWQ 32B (OpenRouter)', provider: 'Alibaba Cloud', logo: '/src/logo/google.png', enabled: true },
-    { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B', description: 'Alibaba Qwen 3 32B (Groq)', provider: 'Alibaba Cloud', logo: '/src/logo/google.png', enabled: true },
-    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', description: 'Hugging Face Distil Whisper Large v3 EN (Groq)', provider: 'Hugging Face', logo: '/src/logo/google.png', enabled: true },
-    { id: 'whisper-large-v3', name: 'Whisper Large v3', description: 'OpenAI Whisper Large v3 (Groq)', provider: 'OpenAI', logo: '/src/logo/openai.png', enabled: true },
-    { id: 'whisper-large-v3-turbo', name: 'Whisper Large v3 Turbo', description: 'OpenAI Whisper Large v3 Turbo (Groq)', provider: 'OpenAI', logo: '/src/logo/openai.png', enabled: true },
-    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B', description: 'Nvidia Llama 3.3 Nemotron Super 49B (OpenRouter)', provider: 'Nvidia', logo: '/src/logo/google.png', enabled: true },
-    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', description: 'Mistral Small 3.2 24B Instruct (OpenRouter)', provider: 'Mistral', logo: '/src/logo/google.png', enabled: true },
-    { id: 'minimax/minimax-m1', name: 'MiniMax M1', description: 'MiniMax M1 (OpenRouter)', provider: 'MiniMax', logo: '/src/logo/minimax.png', enabled: true },
+  const models = [
+    // OpenAI models (direct API)
+    {
+      id: 'gpt-4',
+      name: 'GPT-4',
+      provider: 'OpenAI',
+      description: 'Advanced reasoning and analysis',
+      contextSize: '128K',
+      logo: '/src/logo/openai.png',
+      category: 'Premium',
+      enabled: true
+    },
+    {
+      id: 'gpt-3.5-turbo',
+      name: 'GPT-3.5 Turbo',
+      provider: 'OpenAI',
+      description: 'Fast and efficient generation',
+      contextSize: '16K',
+      logo: '/src/logo/openai.png',
+      category: 'Standard',
+      enabled: true
+    },
+    
+    // Groq models (direct API)
+    {
+      id: 'gemma2-9b-it',
+      name: 'Gemma 2 9B IT',
+      provider: 'Groq',
+      description: 'Instruction-tuned LLM',
+      contextSize: '8K',
+      logo: '/src/logo/google.png',
+      category: 'Efficient',
+      enabled: true
+    },
+    {
+      id: 'llama-3.1-8b-instant',
+      name: 'Llama 3.1 8B Instant',
+      provider: 'Groq',
+      description: 'Fast, general-purpose LLM',
+      contextSize: '131K',
+      logo: '/src/logo/meta.png',
+      category: 'Fast',
+      enabled: true
+    },
+    {
+      id: 'llama-3.3-70b-versatile',
+      name: 'Llama 3.3 70B Versatile',
+      provider: 'Groq',
+      description: 'High-quality generation LLM',
+      contextSize: '131K',
+      logo: '/src/logo/meta.png',
+      category: 'Premium',
+      enabled: true
+    },
+    {
+      id: 'deepseek-r1-distill-llama-70b',
+      name: 'DeepSeek R1 Distill Llama 70B',
+      provider: 'Groq',
+      description: 'Distilled LLaMA LLM',
+      contextSize: '131K',
+      logo: '/src/logo/deepseek.png',
+      category: 'Premium',
+      enabled: true
+    },
+    {
+      id: 'llama-4-maverick-17b-128e-instruct',
+      name: 'Llama 4 Maverick 17B',
+      provider: 'Groq',
+      description: 'LLaMA 4 instruct LLM',
+      contextSize: '131K',
+      logo: '/src/logo/meta.png',
+      category: 'Standard',
+      enabled: true
+    },
+    {
+      id: 'llama-4-scout-17b-16e-instruct',
+      name: 'Llama 4 Scout 17B',
+      provider: 'Groq',
+      description: 'Smaller LLaMA 4 instruct LLM',
+      contextSize: '131K',
+      logo: '/src/logo/meta.png',
+      category: 'Standard',
+      enabled: true
+    },
+    {
+      id: 'mistral-saba-24b',
+      name: 'Mistral Saba 24B',
+      provider: 'Groq',
+      description: 'General-purpose LLM',
+      contextSize: '32K',
+      logo: '/src/logo/mistral.png',
+      category: 'Standard',
+      enabled: true
+    },
+    {
+      id: 'qwen-qwq-32b',
+      name: 'Qwen QWQ 32B',
+      provider: 'Groq',
+      description: 'Multilingual LLM',
+      contextSize: '131K',
+      logo: '/src/logo/qwen.png',
+      category: 'Standard',
+      enabled: true
+    },
+    {
+      id: 'qwen3-32b',
+      name: 'Qwen3 32B',
+      provider: 'Groq',
+      description: 'Advanced multilingual LLM',
+      contextSize: '131K',
+      logo: '/src/logo/qwen.png',
+      category: 'Standard',
+      enabled: true
+    },
+    
+    // OpenRouter models
+    {
+      id: 'meta-llama/llama-3.3-70b-instruct',
+      name: 'Llama 3.3 70B Instruct',
+      provider: 'Meta (OpenRouter)',
+      description: 'Multilingual, strong benchmark performance',
+      contextSize: '131K',
+      logo: '/src/logo/meta.png',
+      category: 'Premium',
+      enabled: true
+    },
+    {
+      id: 'qwen/qwen-2.5-coder-32b-instruct',
+      name: 'Qwen2.5 Coder 32B Instruct',
+      provider: 'Qwen (OpenRouter)',
+      description: 'Advanced code generation and reasoning',
+      contextSize: '33K',
+      logo: '/src/logo/qwen.png',
+      category: 'Code',
+      enabled: true
+    },
+    {
+      id: 'meta-llama/llama-3.2-11b-vision-instruct',
+      name: 'Llama 3.2 11B Vision Instruct',
+      provider: 'Meta (OpenRouter)',
+      description: 'Multimodal model (image + text)',
+      contextSize: '131K',
+      logo: '/src/logo/meta.png',
+      category: 'Vision',
+      enabled: true
+    },
+    {
+      id: 'meta-llama/llama-3.2-1b-instruct',
+      name: 'Llama 3.2 1B Instruct',
+      provider: 'Meta (OpenRouter)',
+      description: 'Lightweight multilingual LLM',
+      contextSize: '131K',
+      logo: '/src/logo/meta.png',
+      category: 'Lightweight',
+      enabled: true
+    },
+    {
+      id: 'qwen/qwen-2.5-72b-instruct',
+      name: 'Qwen2.5 72B Instruct',
+      provider: 'Qwen (OpenRouter)',
+      description: 'Long-text, multilingual, structured output',
+      contextSize: '33K',
+      logo: '/src/logo/qwen.png',
+      category: 'Premium',
+      enabled: true
+    },
+    {
+      id: 'meta-llama/llama-3.1-8b-instruct',
+      name: 'Llama 3.1 8B Instruct',
+      provider: 'Meta (OpenRouter)',
+      description: 'Fast and efficient generation',
+      contextSize: '131K',
+      logo: '/src/logo/meta.png',
+      category: 'Fast',
+      enabled: true
+    },
+    {
+      id: 'mistralai/mistral-nemo',
+      name: 'Mistral Nemo',
+      provider: 'Mistral (OpenRouter)',
+      description: 'Multilingual with function calling',
+      contextSize: '131K',
+      logo: '/src/logo/mistral.png',
+      category: 'Standard',
+      enabled: true
+    },
+    {
+      id: 'google/gemma-2-9b-it',
+      name: 'Gemma 2 9B IT',
+      provider: 'Google (OpenRouter)',
+      description: 'Versatile and efficient open-source LLM',
+      contextSize: '8K',
+      logo: '/src/logo/google.png',
+      category: 'Efficient',
+      enabled: true
+    },
+    {
+      id: 'mistralai/mistral-7b-instruct',
+      name: 'Mistral 7B Instruct',
+      provider: 'Mistral (OpenRouter)',
+      description: 'High-performing 7B model',
+      contextSize: '33K',
+      logo: '/src/logo/mistral.png',
+      category: 'Standard',
+      enabled: true
+    }
   ];
 
   const handlePromptChange = (newPrompt: string) => {
-    updateVersion(currentVersionId, { content: newPrompt });
+    if (currentVersionId) {
+      // Update existing version
+      updateVersion(currentVersionId, { content: newPrompt });
+    } else if (currentPromptId) {
+      // Create a new version if none exists
+      const variablesRecord = Object.fromEntries(variables.map(v => [v.name, v.value]));
+      const newVersion = createVersion(
+        newPrompt,
+        variablesRecord,
+        currentPrompt?.title || 'Untitled Version',
+        'Initial version'
+      );
+      if (newVersion) {
+        setCurrentVersionId(newVersion.id);
+      }
+    } else {
+      // Create a new prompt and version if none exist
+      const newPromptObj = createPrompt('Prompt 1', 'Initial prompt');
+      if (newPromptObj) {
+        setCurrentPromptId(newPromptObj.id);
+        
+        const variablesRecord = Object.fromEntries(variables.map(v => [v.name, v.value]));
+        const newVersion = createVersion(
+          newPrompt,
+          variablesRecord,
+          'Prompt 1',
+          'Initial version'
+        );
+        if (newVersion) {
+          setCurrentVersionId(newVersion.id);
+        }
+      }
+    }
   };
 
   const handleVariableChange = (name: string, value: string) => {
@@ -377,10 +715,29 @@ const PromptForge = () => {
   };
 
   const handleRunModels = async (selectedModels: string[]) => {
-    if (!currentVersion?.content.trim()) return;
+    console.log('🚀 handleRunModels called with models:', selectedModels);
+    console.log('Current version content:', currentVersion?.content);
+    console.log('Current version ID:', currentVersionId);
+    
+    if (!currentVersion?.content.trim()) {
+      console.log('❌ No content to run - currentVersion is empty or has no content');
+      return;
+    }
+    
     setIsRunning(true);
     setSelectedModelsForAutoTest(selectedModels);
     const processedPrompt = replaceVariables(currentVersion?.content || '');
+    console.log('Processed prompt:', processedPrompt);
+    
+    // Add user message to conversation history if memory is enabled
+    if (memory.enabled) {
+      addToConversationHistory('human', processedPrompt, {
+        models: selectedModels,
+        temperature: 0.7,
+        variables: Object.fromEntries(variables.map(v => [v.name, v.value]))
+      });
+    }
+    
     const TIMEOUT_MS = 20000;
     const withTimeout = (promise: Promise<any>, ms: number) => {
       return Promise.race([
@@ -388,8 +745,12 @@ const PromptForge = () => {
         new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), ms))
       ]);
     };
+    
+    console.log('📞 Starting API calls for models:', selectedModels);
     await Promise.allSettled(selectedModels.map(async (modelId) => {
       const startTime = Date.now();
+      console.log(`🔄 Running model: ${modelId}`);
+      
       try {
         const result = await withTimeout(
           apiService.generateCompletion(
@@ -400,6 +761,8 @@ const PromptForge = () => {
           ),
           TIMEOUT_MS
         );
+        console.log(`✅ Model ${modelId} completed successfully:`, result);
+        
         const output = result.content;
         const tokenUsage = result.usage ? {
           input: result.usage.prompt_tokens,
@@ -407,6 +770,8 @@ const PromptForge = () => {
           total: result.usage.total_tokens
         } : { input: 0, output: 0, total: 0 };
         const executionTime = Date.now() - startTime;
+        
+        console.log(`📊 Evaluating response for model ${modelId}...`);
         const score = await withTimeout(
           apiService.evaluatePromptResponse(
             processedPrompt,
@@ -415,6 +780,9 @@ const PromptForge = () => {
           ),
           TIMEOUT_MS
         );
+        console.log(`📈 Score for model ${modelId}:`, score);
+        
+        console.log(`📝 Adding run to history for model ${modelId}...`);
         addRun({
           versionId: currentVersionId,
           modelId,
@@ -423,30 +791,79 @@ const PromptForge = () => {
           executionTime,
           tokenUsage
         });
+        console.log(`✅ Run added to history for model ${modelId}`);
+        
+        // Add AI response to conversation history if memory is enabled
+        if (memory.enabled) {
+          addToConversationHistory('ai', output, {
+            model: modelId,
+            tokenUsage: result.usage,
+            executionTime,
+            score
+          });
+        }
+        
         if (selectedModels[0] === modelId) {
           setCurrentOutput(output);
           setCurrentModel(modelId);
+          console.log(`🎯 Set current output and model to ${modelId}`);
         }
       } catch (error) {
-        console.error(`Error running model ${modelId}:`, error);
+        console.error(`❌ Error running model ${modelId}:`, error);
+        const errorMessage = `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`;
+        
         addRun({
           versionId: currentVersionId,
           modelId,
-          output: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
+          output: errorMessage,
           executionTime: Date.now() - startTime,
           tokenUsage: { input: 0, output: 0, total: 0 }
         });
+        
+        // Add error message to conversation history if memory is enabled
+        if (memory.enabled) {
+          addToConversationHistory('system', errorMessage, {
+            model: modelId,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            timestamp: Date.now()
+          });
+        }
       }
     }));
+    
+    console.log('🏁 handleRunModels completed');
     setIsRunning(false);
   };
 
   const handleRunPrompt = async () => {
-    if (!currentVersion?.content.trim()) return;
+    console.log('🚀 handleRunPrompt called');
+    console.log('Current version content:', currentVersion?.content);
+    console.log('Current model:', currentModel);
+    console.log('System message:', systemMessage);
+    
+    if (!currentVersion?.content.trim()) {
+      console.log('❌ No content to run - currentVersion is empty or has no content');
+      return;
+    }
 
     setIsRunning(true);
+    const startTime = Date.now();
+    console.log('✅ Starting API call...');
+    
     try {
       const processedPrompt = replaceVariables(currentVersion?.content || '');
+      console.log('Processed prompt:', processedPrompt);
+      
+      // Add user message to conversation history if memory is enabled
+      if (memory.enabled) {
+        addToConversationHistory('human', processedPrompt, {
+          model: currentModel,
+          temperature: 0.7,
+          variables: Object.fromEntries(variables.map(v => [v.name, v.value]))
+        });
+      }
+      
+      console.log('📞 Calling API service...');
       const result = await apiService.generateCompletion(
         currentModel,
         processedPrompt,
@@ -454,27 +871,50 @@ const PromptForge = () => {
         0.7,
         1000
       );
+      console.log('✅ API call successful:', result);
 
+      const executionTime = Date.now() - startTime;
       setCurrentOutput(result.content);
+      console.log('✅ Output set:', result.content);
+      
+      // Add AI response to conversation history if memory is enabled
+      if (memory.enabled) {
+        addToConversationHistory('ai', result.content, {
+          model: currentModel,
+          tokenUsage: result.usage,
+          executionTime
+        });
+      }
       
       // Add run to version history
+      console.log('📝 Adding run to version history...');
       addRun({
         versionId: currentVersionId,
         modelId: currentModel,
         output: result.content,
-        executionTime: 0, // Will be calculated by the hook
+        executionTime,
         tokenUsage: result.usage ? {
           input: result.usage.prompt_tokens,
           output: result.usage.completion_tokens,
           total: result.usage.total_tokens
         } : { input: 0, output: 0, total: 0 }
       });
+      console.log('✅ Run added to history');
 
     } catch (error) {
-      console.error('Error running prompt:', error);
+      console.error('❌ Error running prompt:', error);
       setCurrentOutput('Error: Failed to generate response');
+      
+      // Add error message to conversation history if memory is enabled
+      if (memory.enabled) {
+        addToConversationHistory('system', 'Error: Failed to generate response', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: Date.now()
+        });
+      }
     } finally {
       setIsRunning(false);
+      console.log('🏁 handleRunPrompt completed');
     }
   };
 
@@ -515,6 +955,10 @@ const PromptForge = () => {
 
   const handleAutoTestComplete = (result: AutoTestResult) => {
     setAutoTestResults(prev => [...prev, result]);
+  };
+
+  const handleAutoTestRunningChange = (isRunning: boolean) => {
+    setIsAutoTestRunning(isRunning);
   };
 
   // Prompt management handlers
@@ -985,17 +1429,26 @@ const PromptForge = () => {
                   models={models}
                   selectedModels={selectedModelsForAutoTest}
                   onAutoTestComplete={handleAutoTestComplete}
+                  onAutoTestRunningChange={handleAutoTestRunningChange}
+                  memory={memory}
+                  onMemoryChange={handleMemoryChange}
+                  conversationHistory={conversationHistory}
+                  onClearHistory={handleClearHistory}
+                  onDeleteMessage={handleDeleteMessage}
                 />
               </div>
 
-              <div>
-                <MultiModelRunner
-                  models={models}
-                  onRunModels={handleRunModels}
-                  isRunning={isRunning}
-                  runs={currentRuns}
-                />
-              </div>
+              {/* Only show MultiModelRunner when Auto-Test is not running */}
+              {!isAutoTestRunning && (
+                <div>
+                  <MultiModelRunner
+                    models={models}
+                    onRunModels={handleRunModels}
+                    isRunning={isRunning}
+                    runs={currentRuns}
+                  />
+                </div>
+              )}
 
               {/* Search and Filter for Recent Runs */}
               {currentRuns.length > 0 && (
@@ -1030,22 +1483,13 @@ const PromptForge = () => {
                           modelLogo={model?.logo}
                           modelName={model?.name || run.modelId}
                           onShowFullReport={() => setShowFullScoreReport(run.id)}
+                          timestamp={run.createdAt}
+                          executionTime={run.executionTime}
                         />
                       );
                     })}
                   </div>
                 </div>
-              )}
-
-              {/* Current Output */}
-              {(currentOutput || isRunning) && (
-                <ModelOutput 
-                  output={currentOutput} 
-                  isRunning={isRunning}
-                  selectedModel={currentModel}
-                  modelLogo={models.find(m => m.id === currentModel)?.logo}
-                  modelName={models.find(m => m.id === currentModel)?.name || currentModel}
-                />
               )}
             </div>
 

@@ -39,37 +39,36 @@ const MODEL_CONFIG = {
   'gpt-4': { provider: 'openai', modelId: 'gpt-4' },
   'gpt-3.5-turbo': { provider: 'openai', modelId: 'gpt-3.5-turbo' },
   
-  // Groq models
+  // Groq models (using direct Groq API)
   'gemma2-9b-it': { provider: 'groq', modelId: 'gemma2-9b-it' },
   'llama-3.1-8b-instant': { provider: 'groq', modelId: 'llama-3.1-8b-instant' },
   'llama-3.3-70b-versatile': { provider: 'groq', modelId: 'llama-3.3-70b-versatile' },
-  'meta-llama/llama-guard-4-12b': { provider: 'groq', modelId: 'meta-llama/llama-guard-4-12b' },
-  'whisper-large-v3': { provider: 'groq', modelId: 'whisper-large-v3' },
-  'whisper-large-v3-turbo': { provider: 'groq', modelId: 'whisper-large-v3-turbo' },
-  'distil-whisper-large-v3-en': { provider: 'groq', modelId: 'distil-whisper-large-v3-en' },
-  'qwen/qwen3-32b': { provider: 'groq', modelId: 'qwen/qwen3-32b' },
+  'deepseek-r1-distill-llama-70b': { provider: 'groq', modelId: 'deepseek-r1-distill-llama-70b' },
+  'llama-4-maverick-17b-128e-instruct': { provider: 'groq', modelId: 'llama-4-maverick-17b-128e-instruct' },
+  'llama-4-scout-17b-16e-instruct': { provider: 'groq', modelId: 'llama-4-scout-17b-16e-instruct' },
+  'mistral-saba-24b': { provider: 'groq', modelId: 'mistral-saba-24b' },
+  'qwen-qwq-32b': { provider: 'groq', modelId: 'qwen-qwq-32b' },
+  'qwen3-32b': { provider: 'groq', modelId: 'qwen3-32b' },
   
-  // OpenRouter models
-  'qwen-qwq-32b': { provider: 'openrouter', modelId: 'alibaba/qwen-qwq-32b' },
-  'google/gemini-2.5-pro-exp-03-25': { provider: 'openrouter', modelId: 'google/gemini-2.5-pro-exp-03-25' },
-  'google/gemini-2.0-flash-exp:free': { provider: 'openrouter', modelId: 'google/gemini-2.0-flash-exp:free' },
-  'google/gemma-3-12b-it:free': { provider: 'openrouter', modelId: 'google/gemma-3-12b-it:free' },
-  'deepseek-r1-distill-llama-70b': { provider: 'openrouter', modelId: 'deepseek-r1-distill-llama-70b' },
-  'deepseek/deepseek-r1-0528:free': { provider: 'openrouter', modelId: 'deepseek/deepseek-r1-0528:free' },
-  'deepseek/deepseek-r1-0528-qwen3-8b:free': { provider: 'openrouter', modelId: 'deepseek/deepseek-r1-0528-qwen3-8b:free' },
-  'deepseek/deepseek-v3-base:free': { provider: 'openrouter', modelId: 'deepseek/deepseek-v3-base:free' },
-  'nvidia/llama-3.3-nemotron-super-49b-v1:free': { provider: 'openrouter', modelId: 'nvidia/llama-3.3-nemotron-super-49b-v1:free' },
-  'mistralai/mistral-small-3.2-24b-instruct:free': { provider: 'openrouter', modelId: 'mistralai/mistral-small-3.2-24b-instruct:free' },
-  'minimax/minimax-m1': { provider: 'openrouter', modelId: 'minimax/minimax-m1' },
+  // OpenRouter models - Using verified model IDs
+  'meta-llama/llama-3.3-70b-instruct': { provider: 'openrouter', modelId: 'meta-llama/llama-3.3-70b-instruct' },
+  'qwen/qwen-2.5-coder-32b-instruct': { provider: 'openrouter', modelId: 'qwen/qwen-2.5-coder-32b-instruct' },
+  'meta-llama/llama-3.2-11b-vision-instruct': { provider: 'openrouter', modelId: 'meta-llama/llama-3.2-11b-vision-instruct' },
+  'meta-llama/llama-3.2-1b-instruct': { provider: 'openrouter', modelId: 'meta-llama/llama-3.2-1b-instruct' },
+  'qwen/qwen-2.5-72b-instruct': { provider: 'openrouter', modelId: 'qwen/qwen-2.5-72b-instruct' },
+  'meta-llama/llama-3.1-8b-instruct': { provider: 'openrouter', modelId: 'meta-llama/llama-3.1-8b-instruct' },
+  'mistralai/mistral-nemo': { provider: 'openrouter', modelId: 'mistralai/mistral-nemo' },
+  'google/gemma-2-9b-it': { provider: 'openrouter', modelId: 'google/gemma-2-9b-it' },
+  'mistralai/mistral-7b-instruct': { provider: 'openrouter', modelId: 'mistralai/mistral-7b-instruct' },
   
   // Default to OpenRouter for other models
-  'default': { provider: 'openrouter', modelId: 'openai/gpt-4' }
+  'default': { provider: 'openrouter', modelId: 'openai/gpt-4o' }
 };
 
-// API Keys - In production, these should be stored securely on the backend
-const OPENAI_API_KEY = 'sk-proj-yLhnoBJKOYaAYK4LOMqHT3BlbkFJLAto2uubebwFHilfUAPM';
-const GROQ_API_KEY = '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';
-const OPENROUTER_API_KEY = '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';
+// API Keys - Using environment variables
+const OPENAI_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OPENAI_API_KEY) || 'sk-proj-yLhnoBJKOYaAYK4LOMqHT3BlbkFJLAto2uubebwFHilfUAPM';
+const GROQ_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_API_KEY) || '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';
+const OPENROUTER_API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OPENROUTER_API_KEY) || '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';
 
 class APIService {
   private config: APIConfig;
@@ -117,19 +116,30 @@ class APIService {
   }
 
   private async callOpenRouterAPI(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${this.config.openRouterApiKey}`,
+      'Content-Type': 'application/json',
+      'X-Title': 'PromptForge',
+    };
+
+    // Add HTTP-Referer only in browser environment
+    if (typeof window !== 'undefined' && window.location) {
+      headers['HTTP-Referer'] = window.location.origin;
+    }
+
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.config.openRouterApiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': window.location.origin,
-        'X-Title': 'PromptForge',
-      },
-      body: JSON.stringify(request),
+      headers,
+      body: JSON.stringify({
+        ...request,
+        stream: false, // Ensure streaming is disabled
+      }),
     });
 
     if (!response.ok) {
-      throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('OpenRouter API error details:', errorText);
+      throw new Error(`OpenRouter API error: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     return response.json();

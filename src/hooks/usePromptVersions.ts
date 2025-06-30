@@ -126,6 +126,9 @@ export const usePromptVersions = (projectId?: string, promptId?: string) => {
     allRuns.push(newRun);
     localStorage.setItem('modelRuns', JSON.stringify(allRuns));
     
+    // Force a re-render to update the UI immediately
+    setVersionUpdateTrigger(prev => prev + 1);
+    
     return newRun;
   }, []);
 

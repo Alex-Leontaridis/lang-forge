@@ -119,6 +119,7 @@ export interface PromptNode {
     total: number;
   };
   healthIssues?: ChainHealthIssue[]; // Health validation issues for this node
+  autoTestResult?: AutoTestResult; // Auto-test results for this node
 }
 
 export interface ChainEdge {
@@ -156,4 +157,44 @@ export interface PromptChain {
   updatedAt: Date;
   variableFlows: VariableFlow[]; // Track variable flow between nodes
   healthIssues: ChainHealthIssue[]; // Chain-level health issues
+}
+
+// Auto-Test related types
+export interface TestCase {
+  id: string;
+  input: Record<string, string>;
+  expectedOutput: string;
+  description: string;
+}
+
+export interface TestResult {
+  testCase: TestCase;
+  actualOutput: string;
+  passed: boolean;
+  evaluation: {
+    followsInstructions: boolean;
+    toneStyleAligned: boolean;
+    constraintsRespected: boolean;
+    overallPassed: boolean;
+    critique: string;
+  };
+  executionTime: number;
+  tokenUsage: {
+    input: number;
+    output: number;
+    total: number;
+  };
+}
+
+export interface AutoTestResult {
+  prompt: string;
+  testCases: TestCase[];
+  results: TestResult[];
+  summary: {
+    totalTests: number;
+    passedTests: number;
+    failedTests: number;
+    overallPassed: boolean;
+    averageScore: number;
+  };
 }

@@ -492,6 +492,8 @@ const PromptForge = () => {
                 isRunning={isRunning}
                 variables={variables}
                 onVariablesChange={handleVariablesChange}
+                selectedModel={currentModel}
+                temperature={0.7}
               />
 
               <MultiModelRunner

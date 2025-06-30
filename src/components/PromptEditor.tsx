@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { FileText, Zap, Eye, EyeOff, Sparkles } from 'lucide-react';
 import { Variable } from '../types';
 import apiService from '../services/apiService';
+import PromptAutoTest, { AutoTestResult } from './PromptAutoTest';
 
 interface PromptEditorProps {
   prompt: string;
@@ -9,6 +10,8 @@ interface PromptEditorProps {
   isRunning: boolean;
   variables: Variable[];
   onVariablesChange: (variables: Variable[]) => void;
+  selectedModel?: string;
+  temperature?: number;
 }
 
 const PromptEditor: React.FC<PromptEditorProps> = ({ 
@@ -16,10 +19,14 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   setPrompt, 
   isRunning, 
   variables,
-  onVariablesChange 
+  onVariablesChange,
+  selectedModel = 'gpt-4',
+  temperature = 0.3
 }) => {
   const [showPreview, setShowPreview] = React.useState(false);
   const [isOptimizing, setIsOptimizing] = React.useState(false);
+  const [showAutoTest, setShowAutoTest] = React.useState(false);
+  const [autoTestResult, setAutoTestResult] = React.useState<AutoTestResult | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setPrompt(e.target.value);
@@ -133,6 +140,14 @@ OPTIMIZED PROMPT:`;
             )}
             
             <button
+              onClick={() => setShowAutoTest(!showAutoTest)}
+              className="flex items-center space-x-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="hidden sm:inline">Auto-Test</span>
+            </button>
+            
+            <button
               onClick={optimizePrompt}
               disabled={!prompt.trim() || isOptimizing || isRunning}
               className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm"
@@ -189,6 +204,19 @@ OPTIMIZED PROMPT:`;
               <code className="bg-white px-2 py-1 rounded text-gray-700 border border-gray-200">{"{{context}}"}</code>
               <code className="bg-white px-2 py-1 rounded text-gray-700 border border-gray-200">{"{{style}}"}</code>
             </div>
+          </div>
+        )}
+
+        {/* Auto-Test Component */}
+        {showAutoTest && prompt.trim() && (
+          <div className="mt-4">
+            <PromptAutoTest
+              prompt={prompt}
+              variables={variables}
+              model={selectedModel}
+              temperature={temperature}
+              onTestComplete={setAutoTestResult}
+            />
           </div>
         )}
       </div>

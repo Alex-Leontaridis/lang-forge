@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo, useEffect, useRef } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { 
   Play, 
@@ -21,9 +21,12 @@ import {
   Settings,
   Type,
   Hash,
-  Plus
+  Plus,
+  Search,
+  Sparkles
 } from 'lucide-react';
 import { PromptNode, PromptScore, InputVariable, OutputVariable, ChainHealthIssue } from '../types';
+import PromptAutoTest, { AutoTestResult } from './PromptAutoTest';
 
 interface PromptNodeData extends PromptNode {
   onUpdate: (id: string, updates: Partial<PromptNode>) => void;
@@ -39,6 +42,11 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showVariableValues, setShowVariableValues] = useState(false);
   const [newVariableName, setNewVariableName] = useState('');
+  const [showModelDropdown, setShowModelDropdown] = useState(false);
+  const [modelSearchTerm, setModelSearchTerm] = useState('');
+  const [showAutoTest, setShowAutoTest] = useState(false);
+  const [autoTestResult, setAutoTestResult] = useState<AutoTestResult | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const models = [
     { id: 'gpt-4', name: 'GPT-4' },
@@ -217,6 +225,32 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
           
           <div className="flex items-center space-x-2">
             {getExecutionStatusIcon()}
+            
+            {/* Auto-Test Badge */}
+            {data.autoTestResult && (
+              <div className="flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium">
+                {data.autoTestResult.summary.overallPassed ? (
+                  <div className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Test Passed</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-700 rounded-full">
+                    <XCircle className="w-3 h-3" />
+                    <span>Test Failed</span>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <button
+              onClick={() => setShowAutoTest(!showAutoTest)}
+              className="text-gray-400 hover:text-purple-500 transition-colors"
+              title="Run Auto-Test"
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
+            
             <button
               onClick={() => data.onDelete(id)}
               className="text-gray-400 hover:text-red-500 transition-colors"
@@ -412,6 +446,23 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
                 </div>
               )}
             </div>
+
+            {/* Auto-Test Component */}
+            {showAutoTest && data.prompt.trim() && (
+              <div className="mt-3">
+                <PromptAutoTest
+                  prompt={data.prompt}
+                  variables={variables.map(name => ({ name, value: data.variables[name] || '' }))}
+                  model={data.model}
+                  temperature={data.temperature || 0.7}
+                  onTestComplete={(result) => {
+                    setAutoTestResult(result);
+                    data.onUpdate(id, { autoTestResult: result });
+                  }}
+                  className="text-xs"
+                />
+              </div>
+            )}
 
             {/* Run Button */}
             <button

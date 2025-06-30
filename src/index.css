@@ -56,3 +56,35 @@
   background: transparent;
   border: none;
 }
+
+/* Walkthrough styles */
+.walkthrough-highlight {
+  position: relative;
+  z-index: 51 !important;
+  animation: walkthrough-pulse 2s ease-in-out infinite;
+}
+
+@keyframes walkthrough-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.3);
+  }
+}
+
+/* Ensure walkthrough elements are above the overlay */
+[data-walkthrough] {
+  position: relative;
+  z-index: 52;
+}
+
+/* Walkthrough backdrop blur effect */
+.walkthrough-backdrop {
+  backdrop-filter: blur(2px);
+}
+
+/* Smooth transitions for walkthrough elements */
+.walkthrough-transition {
+  transition: all 0.3s ease-in-out;
+}

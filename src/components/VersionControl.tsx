@@ -145,7 +145,7 @@ const VersionControl: React.FC<VersionControlProps> = ({
   );
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm" data-walkthrough="version-control">
       <div className="p-3 sm:p-4 border-b border-gray-200">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
@@ -272,7 +272,7 @@ const VersionControl: React.FC<VersionControlProps> = ({
                         e.stopPropagation();
                         onVersionSelectForComparison(version.id);
                       }}
-                      className="rounded border-gray-300 text-black focus:ring-black flex-shrink- mr-2"
+                      className="rounded border-gray-300 text-black focus:ring-black flex-shrink-0 mr-2 ml-3"
                     />
                   )}
                   

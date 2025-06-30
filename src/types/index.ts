@@ -81,23 +81,6 @@ export interface OutputVariable {
   source: string; // Which node/operation produces this output
 }
 
-export interface VariableFlow {
-  fromNode: string;
-  toNode: string;
-  fromVariable: string;
-  toVariable: string;
-  type: 'direct' | 'transformed' | 'conditional';
-}
-
-export interface ChainHealthIssue {
-  type: 'undeclared_variable' | 'unused_input' | 'dangling_output' | 'disconnected_node' | 'unsupported_config';
-  severity: 'warning' | 'error';
-  message: string;
-  nodeId?: string;
-  variableName?: string;
-  details?: any;
-}
-
 // Enhanced types for Prompt Chaining Canvas
 export interface PromptNode {
   id: string;
@@ -120,7 +103,6 @@ export interface PromptNode {
     output: number;
     total: number;
   };
-  healthIssues?: ChainHealthIssue[]; // Health validation issues for this node
   autoTestResult?: AutoTestResult; // Auto-test results for this node
 }
 
@@ -157,8 +139,6 @@ export interface PromptChain {
   edges: ChainEdge[];
   createdAt: Date;
   updatedAt: Date;
-  variableFlows: VariableFlow[]; // Track variable flow between nodes
-  healthIssues: ChainHealthIssue[]; // Chain-level health issues
 }
 
 // Auto-Test related types

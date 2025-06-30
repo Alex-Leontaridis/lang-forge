@@ -123,7 +123,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
   });
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm" data-walkthrough="multi-model-testing">
       <div className="p-3 sm:p-4 border-b border-gray-200">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center justify-between w-full">
@@ -186,7 +186,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
 
       {isExpanded && (
         <div className="p-3 sm:p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-3" data-walkthrough="model-selection">
             {filteredModels.map((model) => {
               const isSelected = selectedModels.includes(model.id);
               const status = getRunStatus(model.id);

@@ -1,6 +1,40 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow, Menu, X, Search, ChevronRight, ChevronDown, Clock, MessageSquare, LogOut } from 'lucide-react';
+import { Link, useLocation, useParams, useNavigate } from 'react-router-dom';
+import { 
+  ArrowLeft, 
+  Plus, 
+  Play, 
+  Save, 
+  Settings, 
+  BarChart3, 
+  Clock, 
+  Zap, 
+  Target,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  X,
+  Check,
+  Edit3,
+  Trash2,
+  Bot,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Thermometer,
+  FileText,
+  Code,
+  Database,
+  GitBranch,
+  Workflow,
+  FileCode,
+  Activity,
+  Settings as SettingsIcon,
+  Copy,
+  Menu,
+  LogOut,
+  Search
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import PromptEditor from './PromptEditor';
 import ModelOutput from './ModelOutput';
@@ -12,11 +46,10 @@ import VersionComparison from './VersionComparison';
 import VersionControl from './VersionControl';
 import Analytics from './Analytics';
 import PromptChainCanvas from './PromptChainCanvas';
-import ChainHealthValidation from './ChainHealthValidation';
-import VariableFlowVisualization from './VariableFlowVisualization';
+import PromptAutoTest from './PromptAutoTest';
 import { usePromptVersions } from '../hooks/usePromptVersions';
 import { usePrompts } from '../hooks/usePrompts';
-import { Model, Variable, InputVariable, OutputVariable, VariableFlow, ChainHealthIssue, AutoTestResult } from '../types';
+import { Model, Variable, InputVariable, OutputVariable, AutoTestResult } from '../types';
 import apiService from '../services/apiService';
 
 // Custom debounce function
@@ -68,8 +101,6 @@ const PromptForge = () => {
     return saved ? JSON.parse(saved) : false;
   });
   const [showVariableManagement, setShowVariableManagement] = useState(true);
-  const [showChainHealth, setShowChainHealth] = useState(true);
-  const [showVariableFlow, setShowVariableFlow] = useState(true);
   const [selectedModelsForAutoTest, setSelectedModelsForAutoTest] = useState<string[]>(() => {
     const saved = localStorage.getItem(`promptForgeSelectedModelsForAutoTest_${projectId || 'global'}`);
     return saved ? JSON.parse(saved) : ['gpt-4'];
@@ -303,186 +334,6 @@ const PromptForge = () => {
     { id: 'minimax/minimax-m1', name: 'MiniMax M1', description: 'MiniMax M1 (OpenRouter)', provider: 'MiniMax', logo: '/src/logo/minimax.png', enabled: true },
   ];
 
-  // Chain health and variable flow analysis
-  const analyzeChainHealth = useCallback(() => {
-    const issues: ChainHealthIssue[] = [];
-    const flows: VariableFlow[] = [];
-    
-    if (!currentVersion?.content) {
-      return { issues, flows };
-    }
-
-    const prompt = currentVersion.content;
-    
-    // Extract variables used in the prompt
-    const variableRegex = /\{\{([^}]+)\}\}/g;
-    const usedVariables = new Set<string>();
-    let match;
-    while ((match = variableRegex.exec(prompt)) !== null) {
-      usedVariables.add(match[1]);
-    }
-
-    // Check for undeclared variables
-    const declaredVariables = new Set(variables.map(v => v.name));
-    usedVariables.forEach(varName => {
-      if (!declaredVariables.has(varName)) {
-        issues.push({
-          type: 'undeclared_variable',
-          severity: 'error',
-          message: `Variable "${varName}" is used in the prompt but not declared`,
-          variableName: varName
-        });
-      }
-    });
-
-    // Check for unused declared variables
-    variables.forEach(variable => {
-      if (!usedVariables.has(variable.name)) {
-        issues.push({
-          type: 'unused_input',
-          severity: 'warning',
-          message: `Variable "${variable.name}" is declared but not used in the prompt`,
-          variableName: variable.name
-        });
-      }
-    });
-
-    // Check for empty variable values
-    variables.forEach(variable => {
-      if (usedVariables.has(variable.name) && !variable.value.trim()) {
-        issues.push({
-          type: 'undeclared_variable',
-          severity: 'warning',
-          message: `Variable "${variable.name}" is used but has no value`,
-          variableName: variable.name
-        });
-      }
-    });
-
-    // Check input variables that are declared but not used
-    inputVariables.forEach(inputVar => {
-      if (!usedVariables.has(inputVar.name)) {
-        issues.push({
-          type: 'unused_input',
-          severity: 'warning',
-          message: `Input variable "${inputVar.name}" is declared but not used`,
-          variableName: inputVar.name
-        });
-      }
-    });
-
-    // Check for required input variables that are missing
-    inputVariables.forEach(inputVar => {
-      if (inputVar.required && !variables.some(v => v.name === inputVar.name)) {
-        issues.push({
-          type: 'undeclared_variable',
-          severity: 'error',
-          message: `Required input variable "${inputVar.name}" is missing`,
-          variableName: inputVar.name
-        });
-      }
-    });
-
-    // Create variable flows based on input/output relationships
-    // For now, we'll create flows from input variables to the prompt
-    inputVariables.forEach(inputVar => {
-      if (usedVariables.has(inputVar.name)) {
-        flows.push({
-          fromNode: 'input',
-          toNode: 'prompt',
-          fromVariable: inputVar.name,
-          toVariable: inputVar.name,
-          type: 'direct'
-        });
-      }
-    });
-
-    // Create flows from regular variables to the prompt
-    variables.forEach(variable => {
-      if (usedVariables.has(variable.name)) {
-        flows.push({
-          fromNode: 'variables',
-          toNode: 'prompt',
-          fromVariable: variable.name,
-          toVariable: variable.name,
-          type: 'direct'
-        });
-      }
-    });
-
-    return { issues, flows };
-  }, [currentVersion?.content, variables, inputVariables]);
-
-  const { issues: chainHealthIssues, flows: variableFlows } = analyzeChainHealth();
-
-  // Create virtual nodes for chain health and variable flow visualization
-  const virtualNodes = useMemo(() => {
-    if (!currentVersion?.content) return [];
-    
-    const prompt = currentVersion.content;
-    const usedVariables = new Set<string>();
-    const variableRegex = /\{\{([^}]+)\}\}/g;
-    let match;
-    while ((match = variableRegex.exec(prompt)) !== null) {
-      usedVariables.add(match[1]);
-    }
-
-    return [
-      {
-        id: 'prompt',
-        title: currentPrompt?.title || 'Current Prompt',
-        prompt: prompt,
-        model: currentModel,
-        temperature: 0.7,
-        output: currentOutput,
-        isRunning: isRunning,
-        position: { x: 0, y: 0 },
-        variables: Object.fromEntries(variables.map(v => [v.name, v.value])),
-        inputVariables: inputVariables.filter(iv => usedVariables.has(iv.name)),
-        outputVariables: [],
-        healthIssues: chainHealthIssues.filter(issue => !issue.nodeId || issue.nodeId === 'prompt')
-      },
-      {
-        id: 'input',
-        title: 'Input Variables',
-        prompt: '',
-        model: '',
-        temperature: 0,
-        output: '',
-        isRunning: false,
-        position: { x: -200, y: 0 },
-        variables: {},
-        inputVariables: [],
-        outputVariables: inputVariables.filter(iv => usedVariables.has(iv.name)).map(iv => ({
-          name: iv.name,
-          type: iv.type,
-          description: iv.description || `Input variable: ${iv.name}`,
-          source: 'input'
-        })),
-        healthIssues: chainHealthIssues.filter(issue => issue.nodeId === 'input')
-      },
-      {
-        id: 'variables',
-        title: 'Variables',
-        prompt: '',
-        model: '',
-        temperature: 0,
-        output: '',
-        isRunning: false,
-        position: { x: 200, y: 0 },
-        variables: Object.fromEntries(variables.map(v => [v.name, v.value])),
-        inputVariables: [],
-        outputVariables: variables.filter(v => usedVariables.has(v.name)).map(v => ({
-          name: v.name,
-          type: 'string' as const,
-          description: `Variable: ${v.name}`,
-          source: 'variables'
-        })),
-        healthIssues: chainHealthIssues.filter(issue => issue.nodeId === 'variables')
-      }
-    ];
-  }, [currentVersion?.content, currentPrompt?.title, currentModel, currentOutput, isRunning, variables, inputVariables, chainHealthIssues]);
-
   const handlePromptChange = (newPrompt: string) => {
     updateVersion(currentVersionId, { content: newPrompt });
   };
@@ -625,21 +476,6 @@ const PromptForge = () => {
     } finally {
       setIsRunning(false);
     }
-  };
-
-  const handleHealthIssueClick = (issue: ChainHealthIssue) => {
-    console.log('Health issue clicked:', issue);
-    // In a real app, this would navigate to the specific node or show details
-  };
-
-  const handleVariableFlowClick = (flow: VariableFlow) => {
-    console.log('Variable flow clicked:', flow);
-    // In a real app, this would highlight the flow in the canvas
-  };
-
-  const handleNodeClick = (nodeId: string) => {
-    console.log('Node clicked:', nodeId);
-    // In a real app, this would focus on the specific node
   };
 
   const handleCreateVersion = (title: string, message: string) => {
@@ -851,6 +687,7 @@ const PromptForge = () => {
                         ? 'bg-white text-black shadow-sm'
                         : 'text-gray-600 hover:text-black'
                     }`}
+                    data-walkthrough={tab.id === 'analytics' ? 'analytics-tab' : undefined}
                   >
                     <Icon className="w-4 h-4" />
                     <span className="hidden sm:inline">{tab.name}</span>
@@ -906,6 +743,7 @@ const PromptForge = () => {
                       ? 'bg-white text-black shadow-sm'
                       : 'text-gray-600 hover:text-black'
                   }`}
+                  data-walkthrough={tab.id === 'analytics' ? 'analytics-tab' : undefined}
                 >
                   <Icon className="w-4 h-4" />
                   <span className="text-sm">{tab.name}</span>
@@ -949,7 +787,7 @@ const PromptForge = () => {
       )}
 
       {/* Main Content */}
-      <div className={activeTab === 'canvas' ? '' : 'px-4 sm:px-6 py-4 sm:py-8'}>
+      <div className={activeTab === 'canvas' ? '' : 'px-4 sm:px-6 py-4 sm:py-8'} data-walkthrough="editor-main">
         {activeTab === 'editor' && (
           <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 sm:gap-6">
             {/* Mobile/Tablet Sidebar */}
@@ -992,17 +830,19 @@ const PromptForge = () => {
                     <span className="font-semibold">Prompts</span>
                   </button>
                   {!collapsePrompts && (
-                    <PromptManager
-                      projectId={projectId}
-                      prompts={prompts}
-                      currentPromptId={currentPromptId}
-                      onPromptSelect={handlePromptSelect}
-                      onCreatePrompt={handleCreatePrompt}
-                      onDeletePrompt={handleDeletePrompt}
-                      onDuplicatePrompt={handleDuplicatePrompt}
-                      onUpdatePrompt={handleUpdatePrompt}
-                      collapsible={false}
-                    />
+                    <div data-walkthrough="prompt-list">
+                      <PromptManager
+                        projectId={projectId}
+                        prompts={prompts}
+                        currentPromptId={currentPromptId}
+                        onPromptSelect={handlePromptSelect}
+                        onCreatePrompt={handleCreatePrompt}
+                        onDeletePrompt={handleDeletePrompt}
+                        onDuplicatePrompt={handleDuplicatePrompt}
+                        onUpdatePrompt={handleUpdatePrompt}
+                        collapsible={false}
+                      />
+                    </div>
                   )}
                 </div>
 
@@ -1013,38 +853,19 @@ const PromptForge = () => {
                     <span className="font-semibold">Variables</span>
                   </button>
                   {!collapseVariables && (
-                    <VariableManager
-                      variables={variables}
-                      inputVariables={inputVariables}
-                      prompt={currentVersion?.content || ''}
-                      onVariableChange={handleVariableChange}
-                      onAddVariable={handleAddVariable}
-                      onRemoveVariable={handleRemoveVariable}
-                      onInputVariableChange={handleInputVariableChange}
-                    />
+                    <div data-walkthrough="variables-panel">
+                      <VariableManager
+                        variables={variables}
+                        inputVariables={inputVariables}
+                        prompt={currentVersion?.content || ''}
+                        onVariableChange={handleVariableChange}
+                        onAddVariable={handleAddVariable}
+                        onRemoveVariable={handleRemoveVariable}
+                        onInputVariableChange={handleInputVariableChange}
+                      />
+                    </div>
                   )}
                 </div>
-
-                {/* Chain Health */}
-                {showChainHealth && (
-                  <ChainHealthValidation
-                    nodes={virtualNodes}
-                    variableFlows={variableFlows}
-                    healthIssues={chainHealthIssues}
-                    onIssueClick={handleHealthIssueClick}
-                  />
-                )}
-
-                {/* Variable Flow */}
-                {showVariableFlow && (
-                  <VariableFlowVisualization
-                    nodes={virtualNodes}
-                    variableFlows={variableFlows}
-                    healthIssues={chainHealthIssues}
-                    onFlowClick={handleVariableFlowClick}
-                    onNodeClick={handleNodeClick}
-                  />
-                )}
               </div>
             </div>
 
@@ -1075,17 +896,19 @@ const PromptForge = () => {
                   <span className="font-semibold">Prompts</span>
                 </button>
                 {!collapsePrompts && (
-                  <PromptManager
-                    projectId={projectId}
-                    prompts={prompts}
-                    currentPromptId={currentPromptId}
-                    onPromptSelect={handlePromptSelect}
-                    onCreatePrompt={handleCreatePrompt}
-                    onDeletePrompt={handleDeletePrompt}
-                    onDuplicatePrompt={handleDuplicatePrompt}
-                    onUpdatePrompt={handleUpdatePrompt}
-                    collapsible={false}
-                  />
+                  <div data-walkthrough="prompt-list">
+                    <PromptManager
+                      projectId={projectId}
+                      prompts={prompts}
+                      currentPromptId={currentPromptId}
+                      onPromptSelect={handlePromptSelect}
+                      onCreatePrompt={handleCreatePrompt}
+                      onDeletePrompt={handleDeletePrompt}
+                      onDuplicatePrompt={handleDuplicatePrompt}
+                      onUpdatePrompt={handleUpdatePrompt}
+                      collapsible={false}
+                    />
+                  </div>
                 )}
               </div>
 
@@ -1096,38 +919,60 @@ const PromptForge = () => {
                   <span className="font-semibold">Variables</span>
                 </button>
                 {!collapseVariables && (
-                  <VariableManager
-                    variables={variables}
-                    inputVariables={inputVariables}
-                    prompt={currentVersion?.content || ''}
-                    onVariableChange={handleVariableChange}
-                    onAddVariable={handleAddVariable}
-                    onRemoveVariable={handleRemoveVariable}
-                    onInputVariableChange={handleInputVariableChange}
-                  />
+                  <div data-walkthrough="variables-panel">
+                    <VariableManager
+                      variables={variables}
+                      inputVariables={inputVariables}
+                      prompt={currentVersion?.content || ''}
+                      onVariableChange={handleVariableChange}
+                      onAddVariable={handleAddVariable}
+                      onRemoveVariable={handleRemoveVariable}
+                      onInputVariableChange={handleInputVariableChange}
+                    />
+                  </div>
                 )}
               </div>
 
-              {/* Chain Health */}
-              {showChainHealth && (
-                <ChainHealthValidation
-                  nodes={virtualNodes}
-                  variableFlows={variableFlows}
-                  healthIssues={chainHealthIssues}
-                  onIssueClick={handleHealthIssueClick}
+              {/* Version Control */}
+              <div data-walkthrough="version-control">
+                <VersionControl
+                  versions={versions}
+                  currentVersionId={currentVersionId}
+                  onVersionSelect={handleVersionSelect}
+                  onCreateVersion={handleCreateVersion}
+                  onDeleteVersion={handleDeleteVersion}
+                  onDuplicateVersion={handleDuplicateVersion}
+                  onUpdateVersion={handleUpdateVersion}
                 />
-              )}
+              </div>
 
-              {/* Variable Flow */}
-              {showVariableFlow && (
-                <VariableFlowVisualization
-                  nodes={virtualNodes}
-                  variableFlows={variableFlows}
-                  healthIssues={chainHealthIssues}
-                  onFlowClick={handleVariableFlowClick}
-                  onNodeClick={handleNodeClick}
-                />
-              )}
+              {/* Prompt Actions */}
+              <div data-walkthrough="prompt-actions">
+                <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+                  <div className="p-3 sm:p-4 border-b border-gray-200">
+                    <div className="flex items-center space-x-2">
+                      <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-gray-700" />
+                      <span className="font-semibold text-gray-900 text-sm sm:text-base">Actions</span>
+                    </div>
+                  </div>
+                  <div className="p-3 sm:p-4 space-y-2">
+                    <button
+                      onClick={() => handleDuplicatePrompt(currentPromptId)}
+                      className="w-full flex items-center space-x-2 p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors text-sm"
+                    >
+                      <Copy className="w-4 h-4" />
+                      <span>Duplicate Prompt</span>
+                    </button>
+                    <button
+                      onClick={() => handleDeletePrompt(currentPromptId)}
+                      className="w-full flex items-center space-x-2 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete Prompt</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Main Content */}
@@ -1143,29 +988,33 @@ const PromptForge = () => {
                 </button>
               </div>
 
-              <PromptEditor 
-                prompt={currentVersion?.content || ''} 
-                setPrompt={handlePromptChange}
-                isRunning={isRunning}
-                variables={variables}
-                onVariablesChange={handleVariablesChange}
-                selectedModel={currentModel}
-                temperature={0.7}
-                models={models}
-                selectedModels={selectedModelsForAutoTest}
-                onAutoTestComplete={handleAutoTestComplete}
-              />
+              <div data-walkthrough="prompt-input">
+                <PromptEditor 
+                  prompt={currentVersion?.content || ''} 
+                  setPrompt={handlePromptChange}
+                  isRunning={isRunning}
+                  variables={variables}
+                  onVariablesChange={handleVariablesChange}
+                  selectedModel={currentModel}
+                  temperature={0.7}
+                  models={models}
+                  selectedModels={selectedModelsForAutoTest}
+                  onAutoTestComplete={handleAutoTestComplete}
+                />
+              </div>
 
-              <MultiModelRunner
-                models={models}
-                onRunModels={handleRunModels}
-                isRunning={isRunning}
-                runs={currentRuns}
-              />
+              <div data-walkthrough="run-button">
+                <MultiModelRunner
+                  models={models}
+                  onRunModels={handleRunModels}
+                  isRunning={isRunning}
+                  runs={currentRuns}
+                />
+              </div>
 
               {/* Search and Filter for Recent Runs */}
               {currentRuns.length > 0 && (
-                <div className="space-y-4">
+                <div className="space-y-4" data-walkthrough="output-panel">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <h3 className="text-lg font-semibold text-gray-900">Recent Runs</h3>
                     <div className="flex items-center space-x-2">

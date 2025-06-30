@@ -53,8 +53,6 @@ import LiveChainVisualization from './LiveChainVisualization';
 import ConditionEditor from './ConditionEditor';
 import { PromptNode as PromptNodeType, PromptScore, ConnectionCondition, ConditionalEdge } from '../types';
 import apiService from '../services/apiService';
-import ChainHealthValidation from './ChainHealthValidation';
-import VariableFlowVisualization from './VariableFlowVisualization';
 
 interface PromptChainCanvasProps {
   projectId?: string;
@@ -99,10 +97,33 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
   const [selectedEdge, setSelectedEdge] = useState<ConditionalEdge | null>(null);
   const [showConditionEditor, setShowConditionEditor] = useState(false);
   const [showSystemMessage, setShowSystemMessage] = useState(false);
-  const [showChainHealth, setShowChainHealth] = useState(false);
-  const [showVariableFlow, setShowVariableFlow] = useState(false);
 
   const reactFlowInstance = useReactFlow();
+
+  // Handle clicking outside export menu to close it
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showExportMenu && !target.closest('.export-menu-container')) {
+        setShowExportMenu(false);
+      }
+    };
+
+    if (showExportMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showExportMenu]);
+
+  // Extract variables from prompt text
+  const extractVariables = (prompt: string): string[] => {
+    const variableRegex = /\{\{([^}]+)\}\}/g;
+    const matches = [...prompt.matchAll(variableRegex)];
+    return [...new Set(matches.map(match => match[1].trim()))];
+  };
 
   // Define helper functions first (before loading from localStorage)
   const replaceVariables = (prompt: string, nodeId: string): string => {
@@ -786,12 +807,6 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
     reader.readAsText(file);
   };
 
-  const extractVariables = (prompt: string): string[] => {
-    const variableRegex = /\{\{([^}]+)\}\}/g;
-    const matches = [...prompt.matchAll(variableRegex)];
-    return [...new Set(matches.map(match => match[1].trim()))];
-  };
-
   const exportToLangChainPython = () => {
     if (nodes.length === 0) {
       alert('No nodes to export');
@@ -947,7 +962,7 @@ export { runChain };
   const promptNodes = nodes.map(n => ({ ...n.data, id: n.id, position: n.position }));
 
   return (
-    <div className="h-screen flex flex-col bg-white">
+    <div className="h-screen flex flex-col bg-white" data-walkthrough="canvas-main">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
         <div className="flex items-center space-x-4">
@@ -994,20 +1009,16 @@ export { runChain };
             <span>Live Viz</span>
           </button>
 
-          {/* Zoom to Fit Button */}
-          <button
-            onClick={() => reactFlowInstance.fitView()}
-            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <Target className="w-4 h-4" />
-            <span>Zoom to Fit</span>
-          </button>
-
-          {/* Export Menu */}
-          <div className="relative">
+          {/* Export Menu Container */}
+          <div className="relative export-menu-container">
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                showExportMenu 
+                  ? 'bg-black text-white' 
+                  : 'bg-gray-100 hover:bg-gray-200'
+              }`}
+              data-walkthrough="export-menu"
             >
               <FileCode className="w-4 h-4" />
               <span>Export</span>
@@ -1017,16 +1028,16 @@ export { runChain };
             {showExportMenu && (
               <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-48">
                 <div className="p-2">
-                    <button
-                      onClick={() => {
+                  <button
+                    onClick={() => {
                       exportToLangChainPython();
-                        setShowExportMenu(false);
-                      }}
+                      setShowExportMenu(false);
+                    }}
                     className="w-full flex items-center space-x-2 px-3 py-2 text-left hover:bg-gray-100 rounded transition-colors"
                   >
                     <Code className="w-4 h-4 text-blue-600" />
                     <span>Export to LangChain Python</span>
-                    </button>
+                  </button>
                   <button
                     onClick={() => {
                       exportToLangChainJS();
@@ -1068,6 +1079,7 @@ export { runChain };
           <button
             onClick={addPromptNode}
             className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+            data-walkthrough="add-node"
           >
             <Plus className="w-4 h-4" />
             <span>Add Node</span>
@@ -1077,6 +1089,7 @@ export { runChain };
             onClick={runFullChain}
             disabled={isRunningChain || nodes.length === 0}
             className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            data-walkthrough="run-chain"
           >
             <Play className={`w-4 h-4 ${isRunningChain ? 'animate-pulse' : ''}`} />
             <span>{isRunningChain ? 'Running...' : 'Run Chain'}</span>
@@ -1179,27 +1192,6 @@ export { runChain };
                   </div>
                 </div>
               </Panel>
-            )}
-
-            {/* Chain Health Panel */}
-            {showChainHealth && (
-              <ChainHealthValidation
-                nodes={promptNodes}
-                variableFlows={[]} // TODO: implement variable flow extraction from nodes/edges if needed
-                healthIssues={[]} // TODO: implement health issue extraction if needed
-                onIssueClick={() => {}}
-              />
-            )}
-
-            {/* Variable Flow Panel */}
-            {showVariableFlow && (
-              <VariableFlowVisualization
-                nodes={promptNodes}
-                variableFlows={[]} // TODO: implement variable flow extraction from nodes/edges if needed
-                healthIssues={[]} // TODO: implement health issue extraction if needed
-                onFlowClick={() => {}}
-                onNodeClick={() => {}}
-              />
             )}
           </ReactFlow>
         </div>

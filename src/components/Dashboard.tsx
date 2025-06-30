@@ -224,7 +224,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white">
+      <header className="border-b border-gray-200 bg-white dashboard-header">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -247,7 +247,7 @@ const Dashboard = () => {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Analytics Snapshot */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8" data-walkthrough="analytics">
           <div className="bg-white border border-gray-200 rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -319,6 +319,7 @@ const Dashboard = () => {
                 <button
                   onClick={() => setShowNewProjectModal(true)}
                   className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-all duration-200 flex items-center space-x-2"
+                  data-walkthrough="create-project"
                 >
                   <Plus className="w-4 h-4" />
                   <span>New Project</span>
@@ -326,7 +327,7 @@ const Dashboard = () => {
               </div>
 
               {/* Search and Filter */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              <div className="flex flex-col sm:flex-row gap-4 mb-6" data-walkthrough="search-filter">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <input
@@ -350,7 +351,7 @@ const Dashboard = () => {
               </div>
 
               {/* Projects List */}
-              <div className="space-y-4">
+              <div className="space-y-4" data-walkthrough="project-list">
                 {filteredProjects.map((project) => (
                   <div 
                     key={project.id} 
@@ -435,7 +436,7 @@ const Dashboard = () => {
 
           {/* Templates Section */}
           <div className="lg:col-span-1">
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <div className="bg-white border border-gray-200 rounded-xl p-6" data-walkthrough="templates">
               <h2 className="text-xl font-semibold text-black mb-6">Templates</h2>
               <div className="space-y-4">
                 {templates.map((template) => (

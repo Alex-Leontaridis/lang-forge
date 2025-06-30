@@ -188,6 +188,7 @@ const VariableManager: React.FC<VariableManagerProps> = ({
               onClick={handleAddVariable}
               disabled={!newVariableName.trim() || !!variables.find(v => v.name === newVariableName.trim())}
               className="px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              data-walkthrough="add-variable"
             >
               <Plus className="w-4 h-4" />
               <span className="ml-1 sm:hidden">Add</span>

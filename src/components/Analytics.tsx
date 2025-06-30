@@ -139,7 +139,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs, autoTestResults =
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-walkthrough="prompt-scoring">
       <div className="flex items-center space-x-2 mb-6">
         <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" />
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Analytics Dashboard</h2>
@@ -186,7 +186,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ versions, runs, autoTestResults =
 
       {/* Auto-Test Summary Cards */}
       {autoTestResults.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6" data-walkthrough="auto-testing">
           <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4">
             <div className="flex items-center space-x-2 mb-2">
               <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />

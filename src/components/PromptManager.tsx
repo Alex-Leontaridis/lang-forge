@@ -188,6 +188,7 @@ const PromptManager: React.FC<PromptManagerProps> = ({
           <button
             onClick={() => setShowCreateForm(true)}
             className="flex items-center space-x-2 w-full p-3 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors mb-4 text-sm sm:text-base"
+            data-walkthrough="create-prompt"
           >
             <Plus className="w-4 h-4 text-gray-600" />
             <span className="font-medium text-gray-700">Create New Prompt</span>

@@ -16,9 +16,14 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
-  Thermometer
+  Thermometer,
+  Variable,
+  Settings,
+  Type,
+  Hash,
+  Plus
 } from 'lucide-react';
-import { PromptNode, PromptScore } from '../types';
+import { PromptNode, PromptScore, InputVariable, OutputVariable, ChainHealthIssue } from '../types';
 
 interface PromptNodeData extends PromptNode {
   onUpdate: (id: string, updates: Partial<PromptNode>) => void;
@@ -32,32 +37,32 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
   const [isExpanded, setIsExpanded] = useState(true);
   const [isOutputExpanded, setIsOutputExpanded] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showVariableValues, setShowVariableValues] = useState(false);
+  const [newVariableName, setNewVariableName] = useState('');
 
   const models = [
-    { id: 'gpt-4', name: 'GPT-4', logo: '/src/components/logos/openai.png', color: 'bg-green-500' },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5', logo: '/src/components/logos/openai.png', color: 'bg-green-500' },
-    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', logo: '/src/components/logos/google.png', color: 'bg-blue-500' },
-    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp', logo: '/src/components/logos/google.png', color: 'bg-blue-500' },
-    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp', logo: '/src/components/logos/google.png', color: 'bg-blue-500' },
-    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT', logo: '/src/components/logos/google.png', color: 'bg-blue-500' },
-    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', logo: '/src/components/logos/meta.png', color: 'bg-purple-500' },
-    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', logo: '/src/components/logos/meta.png', color: 'bg-purple-500' },
-    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', logo: '/src/components/logos/meta.png', color: 'bg-purple-500' },
-    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', logo: '/src/components/logos/deepseek.png', color: 'bg-indigo-500' },
-    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528', logo: '/src/components/logos/deepseek.png', color: 'bg-indigo-500' },
-    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B', logo: '/src/components/logos/deepseek.png', color: 'bg-indigo-500' },
-    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base', logo: '/src/components/logos/deepseek.png', color: 'bg-indigo-500' },
-    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', logo: '/src/components/logos/alibaba.png', color: 'bg-red-500' },
-    { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B', logo: '/src/components/logos/alibaba.png', color: 'bg-red-500' },
-    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', logo: '/src/components/logos/huggingface.png', color: 'bg-yellow-500' },
-    { id: 'whisper-large-v3', name: 'Whisper Large v3', logo: '/src/components/logos/openai.png', color: 'bg-green-500' },
-    { id: 'whisper-large-v3-turbo', name: 'Whisper Large v3 Turbo', logo: '/src/components/logos/openai.png', color: 'bg-green-500' },
-    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B', logo: '/src/components/logos/nvidia.png', color: 'bg-green-600' },
-    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', logo: '/src/components/logos/mistral.png', color: 'bg-blue-600' },
-    { id: 'minimax/minimax-m1', name: 'MiniMax M1', logo: '/src/components/logos/minimax.png', color: 'bg-pink-500' },
+    { id: 'gpt-4', name: 'GPT-4' },
+    { id: 'gpt-3.5-turbo', name: 'GPT-3.5' },
+    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT' },
+    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp' },
+    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp' },
+    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT' },
+    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant' },
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile' },
+    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B' },
+    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B' },
+    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528' },
+    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B' },
+    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base' },
+    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B' },
+    { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B' },
+    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN' },
+    { id: 'whisper-large-v3', name: 'Whisper Large v3' },
+    { id: 'whisper-large-v3-turbo', name: 'Whisper Large v3 Turbo' },
+    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B' },
+    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct' },
+    { id: 'minimax/minimax-m1', name: 'MiniMax M1' },
   ];
-
-  const selectedModel = models.find(m => m.id === data.model) || models[0];
 
   const handleTitleSave = () => {
     data.onUpdate(id, { title: tempTitle });
@@ -85,6 +90,25 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
     data.onUpdate(id, { condition });
   };
 
+  const handleVariableChange = (name: string, value: string) => {
+    const updatedVariables = { ...data.variables, [name]: value };
+    data.onUpdate(id, { variables: updatedVariables });
+  };
+
+  const handleAddVariable = () => {
+    if (newVariableName.trim() && !data.variables[newVariableName.trim()]) {
+      const updatedVariables = { ...data.variables, [newVariableName.trim()]: '' };
+      data.onUpdate(id, { variables: updatedVariables });
+      setNewVariableName('');
+    }
+  };
+
+  const handleRemoveVariable = (name: string) => {
+    const updatedVariables = { ...data.variables };
+    delete updatedVariables[name];
+    data.onUpdate(id, { variables: updatedVariables });
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 8) return 'text-green-600 bg-green-50';
     if (score >= 6) return 'text-yellow-600 bg-yellow-50';
@@ -104,13 +128,51 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
     return <AlertTriangle className="w-4 h-4 text-gray-400" />;
   };
 
-  const extractVariables = (prompt: string) => {
+  const extractVariables = (prompt: string): string[] => {
     const variableRegex = /\{\{([^}]+)\}\}/g;
     const matches = [...prompt.matchAll(variableRegex)];
     return [...new Set(matches.map(match => match[1].trim()))];
   };
 
+  const getVariableTypeIcon = (type: string) => {
+    switch (type) {
+      case 'string': return <span className="text-blue-600">"</span>;
+      case 'int': return <Hash className="w-3 h-3 text-green-600" />;
+      case 'float': return <span className="text-green-600">#</span>;
+      case 'boolean': return <span className="text-purple-600">✓</span>;
+      case 'array': return <span className="text-orange-600">[]</span>;
+      case 'object': return <span className="text-red-600">{}</span>;
+      default: return <Type className="w-3 h-3 text-gray-600" />;
+    }
+  };
+
+  const getHealthStatus = () => {
+    if (!data.healthIssues || data.healthIssues.length === 0) {
+      return { status: 'healthy', count: 0 };
+    }
+    const errors = data.healthIssues.filter(issue => issue.severity === 'error');
+    const warnings = data.healthIssues.filter(issue => issue.severity === 'warning');
+    
+    if (errors.length > 0) return { status: 'error', count: errors.length };
+    if (warnings.length > 0) return { status: 'warning', count: warnings.length };
+    return { status: 'healthy', count: 0 };
+  };
+
+  const getHealthIcon = (status: string) => {
+    switch (status) {
+      case 'error':
+        return <XCircle className="w-3 h-3 text-red-500" />;
+      case 'warning':
+        return <AlertTriangle className="w-3 h-3 text-yellow-500" />;
+      case 'healthy':
+        return <CheckCircle className="w-3 h-3 text-green-500" />;
+      default:
+        return null;
+    }
+  };
+
   const variables = extractVariables(data.prompt);
+  const healthStatus = getHealthStatus();
 
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-gray-200 min-w-[320px] max-w-[400px] overflow-hidden">
@@ -153,65 +215,41 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
             </div>
           )}
           
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-2">
             {getExecutionStatusIcon()}
             <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
-            <button
               onClick={() => data.onDelete(id)}
-              className="text-gray-400 hover:text-red-600"
+              className="text-gray-400 hover:text-red-500 transition-colors"
             >
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Model Selector and Temperature */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 rounded-full ${selectedModel.color}`}></div>
-            <select
-              value={data.model}
-              onChange={(e) => handleModelChange(e.target.value)}
-              className="text-xs bg-transparent border-none outline-none text-gray-600 font-medium"
-            >
-              {models.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Model Selection */}
+        <div className="flex items-center space-x-2">
+          <select
+            value={data.model}
+            onChange={(e) => handleModelChange(e.target.value)}
+            className="px-2 py-1 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+          >
+            {models.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.name}
+              </option>
+            ))}
+          </select>
           
-          <div className="flex items-center space-x-1 text-xs text-gray-500">
-            <Thermometer className="w-3 h-3" />
-            <span>{data.temperature || 0.7}</span>
-          </div>
+          {healthStatus.count > 0 && (
+            <div className="flex items-center space-x-1 px-2 py-1 bg-white rounded border border-gray-200">
+              {getHealthIcon(healthStatus.status)}
+              <span className="text-xs text-gray-600">{healthStatus.count}</span>
+            </div>
+          )}
         </div>
-
-        {/* Execution Metrics */}
-        {(data.executionTime || data.tokenUsage) && (
-          <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-            {data.executionTime && (
-              <div className="flex items-center space-x-1">
-                <Clock className="w-3 h-3" />
-                <span>{(data.executionTime / 1000).toFixed(1)}s</span>
-              </div>
-            )}
-            {data.tokenUsage && (
-              <div className="flex items-center space-x-1">
-                <Zap className="w-3 h-3" />
-                <span>{data.tokenUsage.total} tokens</span>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
+      {/* Collapsible Content */}
       {isExpanded && (
         <>
           {/* Prompt Input */}
@@ -226,16 +264,95 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
             {/* Variables */}
             {variables.length > 0 && (
               <div className="mt-3">
-                <div className="text-xs font-medium text-gray-600 mb-2">Variables:</div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-medium text-gray-600">Variables:</div>
+                  <button
+                    onClick={() => setShowVariableValues(!showVariableValues)}
+                    className="flex items-center space-x-1 text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    <Variable className="w-3 h-3" />
+                    <span>Values</span>
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-1">
                   {variables.map((variable) => (
                     <span
                       key={variable}
-                      className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded border border-blue-200"
+                      className="inline-flex items-center space-x-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded border border-blue-200"
                     >
-                      {variable}
+                      <span>{variable}</span>
+                      {data.variables[variable] && (
+                        <span className="text-green-600">✓</span>
+                      )}
                     </span>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Variable Values */}
+            {showVariableValues && (
+              <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-medium text-gray-700">Variable Values</h4>
+                  <button
+                    onClick={() => {
+                      const newVariables = { ...data.variables };
+                      variables.forEach(varName => {
+                        if (!newVariables[varName]) {
+                          newVariables[varName] = '';
+                        }
+                      });
+                      data.onUpdate(id, { variables: newVariables });
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-700"
+                  >
+                    Auto-add
+                  </button>
+                </div>
+                
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {Object.entries(data.variables).map(([name, value]) => (
+                    <div key={name} className="flex items-center space-x-2 text-xs">
+                      <code className="px-2 py-1 bg-white border border-gray-300 rounded text-gray-700">
+                        {`{{${name}}}`}
+                      </code>
+                      <input
+                        type="text"
+                        value={value}
+                        onChange={(e) => handleVariableChange(name, e.target.value)}
+                        className="flex-1 px-2 py-1 bg-white border border-gray-300 rounded"
+                        placeholder={`Value for ${name}`}
+                      />
+                      <button
+                        onClick={() => handleRemoveVariable(name)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add new variable */}
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={newVariableName}
+                      onChange={(e) => setNewVariableName(e.target.value)}
+                      placeholder="Add new variable"
+                      className="flex-1 px-2 py-1 text-xs bg-white border border-gray-300 rounded"
+                      onKeyPress={(e) => e.key === 'Enter' && handleAddVariable()}
+                    />
+                    <button
+                      onClick={handleAddVariable}
+                      disabled={!newVariableName.trim() || !!data.variables[newVariableName.trim()]}
+                      className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

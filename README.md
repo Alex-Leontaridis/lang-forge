@@ -1,6 +1,6 @@
 # PromptForge
 
-A powerful prompt engineering and testing platform with advanced version control, analytics, and multi-model comparison capabilities.
+A powerful prompt engineering and testing platform with advanced version control, analytics, multi-model comparison, and comprehensive variable management capabilities.
 
 ## 🚀 Features
 
@@ -8,7 +8,16 @@ A powerful prompt engineering and testing platform with advanced version control
 - **Advanced Prompt Editor** with syntax highlighting and variable support
 - **Multi-Model Testing** across 20+ AI models (OpenAI, Groq, OpenRouter)
 - **Real-time Prompt Scoring** with relevance, clarity, and creativity metrics
-- **Variable Management** with dynamic prompt templating
+- **Comprehensive Variable Management** with explicit declarations and validation
+
+### 🔄 Variable Management System (NEW!)
+- **Explicit Input Variable Declaration** with types, validation, and defaults
+- **Variable Flow Visualization** between nodes with hover details
+- **Chain Health Validation** with automated issue detection
+- **Auto-validation** of prompt text against declared inputs
+- **Type Safety** with string, int, float, boolean, array, and object types
+- **Validation Rules** including patterns, ranges, and enums
+- **Health Monitoring** with error and warning severity levels
 
 ### 🔄 Version Control System (100% Functional)
 - **Complete Version History** with persistent storage
@@ -74,6 +83,34 @@ const OPENROUTER_API_KEY = 'your-openrouter-key';
 ```
 
 ## 📖 Usage Guide
+
+### Variable Management (NEW!)
+
+1. **Explicit Variable Declaration**
+   - Switch to "Declaration" tab in Variable Manager
+   - Define input variables with types (string, int, float, boolean, array, object)
+   - Set validation rules (patterns, ranges, enums)
+   - Mark required fields and set default values
+
+2. **Auto-declaration from Prompt**
+   - Write prompts using `{{variable}}` syntax
+   - Click "Auto-declare variables from prompt"
+   - System automatically creates input variable declarations
+
+3. **Variable Validation**
+   - Real-time validation against declared inputs
+   - Type checking and constraint validation
+   - Visual indicators for validation issues
+
+4. **Chain Health Monitoring**
+   - View health issues in the Chain Health panel
+   - Identify undeclared variables, unused inputs, and dangling outputs
+   - Get severity-based warnings and errors
+
+5. **Variable Flow Tracking**
+   - Visualize how variables flow between nodes
+   - Hover to see detailed flow information
+   - Filter by flow types (direct, transformed, conditional)
 
 ### Creating and Managing Versions
 
@@ -147,6 +184,9 @@ src/
 │   ├── Analytics.tsx   # Analytics dashboard
 │   ├── VersionControl.tsx # Version management
 │   ├── VersionComparison.tsx # Version comparison
+│   ├── VariableManager.tsx # Variable management (NEW!)
+│   ├── ChainHealthValidation.tsx # Health monitoring (NEW!)
+│   ├── VariableFlowVisualization.tsx # Flow tracking (NEW!)
 │   └── ...
 ├── hooks/              # Custom React hooks
 │   └── usePromptVersions.ts # Version management logic
@@ -162,6 +202,9 @@ src/
 - **`VersionControl`**: Complete version management interface
 - **`VersionComparison`**: Side-by-side version analysis
 - **`Analytics`**: Comprehensive analytics dashboard
+- **`VariableManager`**: Advanced variable management with validation
+- **`ChainHealthValidation`**: Automated health monitoring
+- **`VariableFlowVisualization`**: Visual variable flow tracking
 - **`apiService`**: Multi-provider API integration
 
 ### Adding New Features
@@ -174,11 +217,19 @@ src/
    - Extend the `Analytics.tsx` component
    - Add new chart types as needed
 
-3. **Enhanced Version Features**
-   - Extend the `PromptVersion` type in `types/index.ts`
-   - Update version management logic in `usePromptVersions.ts`
+3. **Enhanced Variable Features**
+   - Extend variable types in `types/index.ts`
+   - Add new validation rules to `VariableManager.tsx`
+   - Update health monitoring in `ChainHealthValidation.tsx`
 
 ## 🎯 Best Practices
+
+### Variable Management
+- Use explicit variable declarations for better validation
+- Choose appropriate data types for your variables
+- Set reasonable validation rules (min/max values, enums)
+- Use descriptive variable names and descriptions
+- Regularly check chain health for issues
 
 ### Version Management
 - Use descriptive version titles and commit messages
@@ -197,6 +248,30 @@ src/
 - Use variables for dynamic content
 - Test across multiple models
 - Leverage system messages for context
+- Validate variable usage with the health monitoring system
+
+## 🧪 Testing
+
+Run the variable management tests to verify functionality:
+
+```bash
+npx tsx src/test-variable-management.ts
+```
+
+This comprehensive test suite validates:
+- Input variable declaration and validation
+- Output variable tracking
+- Variable flow between nodes
+- Chain health monitoring
+- Auto-declaration from prompts
+- Type safety and validation rules
+
+## 📚 Documentation
+
+For detailed information about the Variable Management system, see:
+- [Variable Management Documentation](VARIABLE_MANAGEMENT.md)
+- [API Integration Guide](API_INTEGRATION.md)
+- [Fixes Summary](FIXES_SUMMARY.md)
 
 ## 🤝 Contributing
 

@@ -9,13 +9,16 @@ import MultiModelRunner from './MultiModelRunner';
 import VersionComparison from './VersionComparison';
 import Analytics from './Analytics';
 import PromptChainCanvas from './PromptChainCanvas';
+import ChainHealthValidation from './ChainHealthValidation';
+import VariableFlowVisualization from './VariableFlowVisualization';
 import { usePromptVersions } from '../hooks/usePromptVersions';
-import { Model, Variable } from '../types';
+import { Model, Variable, InputVariable, OutputVariable, VariableFlow, ChainHealthIssue } from '../types';
 import apiService from '../services/apiService';
 
 const PromptForge = () => {
   const [activeTab, setActiveTab] = useState<'editor' | 'analytics' | 'compare' | 'canvas'>('editor');
   const [variables, setVariables] = useState<Variable[]>([]);
+  const [inputVariables, setInputVariables] = useState<InputVariable[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [selectedVersionsForComparison, setSelectedVersionsForComparison] = useState<string[]>([]);
   const [currentOutput, setCurrentOutput] = useState<string>('');
@@ -25,6 +28,9 @@ const PromptForge = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [collapseVariables, setCollapseVariables] = useState(false);
+  const [showVariableManagement, setShowVariableManagement] = useState(true);
+  const [showChainHealth, setShowChainHealth] = useState(true);
+  const [showVariableFlow, setShowVariableFlow] = useState(true);
 
   const {
     versions,
@@ -67,6 +73,27 @@ const PromptForge = () => {
     { id: 'minimax/minimax-m1', name: 'MiniMax M1', description: 'MiniMax M1 (OpenRouter)', provider: 'MiniMax', logo: '/src/logo/minimax.png', enabled: true },
   ];
 
+  // Mock data for chain health and variable flow (in a real app, this would come from the chain canvas)
+  const [variableFlows] = useState<VariableFlow[]>([
+    {
+      fromNode: 'node1',
+      toNode: 'node2',
+      fromVariable: 'output',
+      toVariable: 'input',
+      type: 'direct'
+    }
+  ]);
+
+  const [chainHealthIssues] = useState<ChainHealthIssue[]>([
+    {
+      type: 'undeclared_variable',
+      severity: 'warning',
+      message: 'Variable "name" is used but not declared',
+      nodeId: 'node1',
+      variableName: 'name'
+    }
+  ]);
+
   const handlePromptChange = (newPrompt: string) => {
     updateVersion(currentVersionId, { content: newPrompt });
   };
@@ -81,6 +108,10 @@ const PromptForge = () => {
 
   const handleRemoveVariable = (name: string) => {
     setVariables(prev => prev.filter(v => v.name !== name));
+  };
+
+  const handleInputVariableChange = (newInputVariables: InputVariable[]) => {
+    setInputVariables(newInputVariables);
   };
 
   const handleVariablesChange = useCallback((newVariables: Variable[]) => {
@@ -167,6 +198,58 @@ const PromptForge = () => {
       }
     }));
     setIsRunning(false);
+  };
+
+  const handleRunPrompt = async () => {
+    if (!currentVersion?.content.trim()) return;
+
+    setIsRunning(true);
+    try {
+      const processedPrompt = replaceVariables(currentVersion.content);
+      const result = await apiService.generateCompletion(
+        currentModel,
+        processedPrompt,
+        systemMessage,
+        0.7,
+        1000
+      );
+
+      setCurrentOutput(result.content);
+      
+      // Add run to version history
+      addRun({
+        versionId: currentVersionId,
+        modelId: currentModel,
+        output: result.content,
+        executionTime: 0, // Will be calculated by the hook
+        tokenUsage: result.usage ? {
+          input: result.usage.prompt_tokens,
+          output: result.usage.completion_tokens,
+          total: result.usage.total_tokens
+        } : { input: 0, output: 0, total: 0 }
+      });
+
+    } catch (error) {
+      console.error('Error running prompt:', error);
+      setCurrentOutput('Error: Failed to generate response');
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const handleHealthIssueClick = (issue: ChainHealthIssue) => {
+    console.log('Health issue clicked:', issue);
+    // In a real app, this would navigate to the specific node or show details
+  };
+
+  const handleVariableFlowClick = (flow: VariableFlow) => {
+    console.log('Variable flow clicked:', flow);
+    // In a real app, this would highlight the flow in the canvas
+  };
+
+  const handleNodeClick = (nodeId: string) => {
+    console.log('Node clicked:', nodeId);
+    // In a real app, this would focus on the specific node
   };
 
   const handleCreateVersion = (title: string, message: string) => {
@@ -323,9 +406,12 @@ const PromptForge = () => {
                 
                 <VariableManager
                   variables={variables}
+                  inputVariables={inputVariables}
+                  prompt={currentVersion?.content || ''}
                   onVariableChange={handleVariableChange}
                   onAddVariable={handleAddVariable}
                   onRemoveVariable={handleRemoveVariable}
+                  onInputVariableChange={handleInputVariableChange}
                 />
 
                 {/* System Message */}
@@ -376,9 +462,12 @@ const PromptForge = () => {
                 {!collapseVariables && (
                   <VariableManager
                     variables={variables}
+                    inputVariables={inputVariables}
+                    prompt={currentVersion?.content || ''}
                     onVariableChange={handleVariableChange}
                     onAddVariable={handleAddVariable}
                     onRemoveVariable={handleRemoveVariable}
+                    onInputVariableChange={handleInputVariableChange}
                   />
                 )}
               </div>
@@ -398,7 +487,7 @@ const PromptForge = () => {
               </div>
 
               <PromptEditor 
-                prompt={currentVersion.content} 
+                prompt={currentVersion?.content || ''} 
                 setPrompt={handlePromptChange}
                 isRunning={isRunning}
                 variables={variables}
@@ -458,6 +547,8 @@ const PromptForge = () => {
                   output={currentOutput} 
                   isRunning={isRunning}
                   selectedModel={currentModel}
+                  modelLogo={models.find(m => m.id === currentModel)?.logo}
+                  modelName={models.find(m => m.id === currentModel)?.name || currentModel}
                 />
               )}
             </div>

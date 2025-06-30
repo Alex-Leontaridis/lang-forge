@@ -2,6 +2,7 @@ import { Edge } from 'reactflow';
 
 export interface PromptVersion {
   id: string;
+  projectId: string;
   title: string;
   content: string;
   variables: Record<string, string>;

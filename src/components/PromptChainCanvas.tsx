@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import ReactFlow, {
   Node,
   Edge,
@@ -54,24 +54,227 @@ import ConditionEditor from './ConditionEditor';
 import { PromptNode as PromptNodeType, PromptScore, ConnectionCondition, ConditionalEdge } from '../types';
 import apiService from '../services/apiService';
 
+interface PromptChainCanvasProps {
+  projectId?: string;
+  projectName?: string;
+}
+
 const nodeTypes = {
   promptNode: PromptNodeComponent,
 };
 
-const PromptChainCanvasInner = () => {
+const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasProps) => {
+  const location = useLocation();
+  const canvasProjectId = projectId || location.state?.projectId;
+  const canvasProjectName = projectName || location.state?.projectName || 'Untitled Project';
+  
+  console.log('Canvas initialized with:', { projectId, canvasProjectId, canvasProjectName });
+  
+  // Get localStorage key for this project
+  const getStorageKey = (key: string) => {
+    const storageKey = `canvas_${canvasProjectId || 'default'}_${key}`;
+    return storageKey;
+  };
+  
+  // Initialize state from localStorage (without function references initially)
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  
+  const [chainName, setChainName] = useState(() => {
+    const savedChainName = localStorage.getItem(getStorageKey('chainName'));
+    return savedChainName || 'Untitled Chain';
+  });
+  
+  const [systemMessage, setSystemMessage] = useState(() => {
+    const savedSystemMessage = localStorage.getItem(getStorageKey('systemMessage'));
+    return savedSystemMessage || '';
+  });
+  
   const [isRunningChain, setIsRunningChain] = useState(false);
-  const [chainName, setChainName] = useState('Untitled Chain');
   const [showVisualization, setShowVisualization] = useState(false);
   const [executionHistory, setExecutionHistory] = useState<any[]>([]);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [selectedEdge, setSelectedEdge] = useState<ConditionalEdge | null>(null);
   const [showConditionEditor, setShowConditionEditor] = useState(false);
-  const [systemMessage, setSystemMessage] = useState('');
   const [showSystemMessage, setShowSystemMessage] = useState(false);
 
   const reactFlowInstance = useReactFlow();
+
+  // Define helper functions first (before loading from localStorage)
+  const replaceVariables = (prompt: string, nodeId: string): string => {
+    let result = prompt;
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return result;
+    
+    const variables = node.data.variables || {};
+    Object.entries(variables).forEach(([key, value]) => {
+      if (value) {
+        result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value as string);
+      }
+    });
+    return result;
+  };
+
+  const runSingleNode = async (nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) {
+      console.error(`Node ${nodeId} not found`);
+      return;
+    }
+
+    console.log(`Starting execution of node ${nodeId}:`, node.data.title);
+
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === nodeId
+          ? { ...n, data: { ...n.data, isRunning: true, error: undefined } }
+          : n
+      )
+    );
+
+    try {
+      const processedPrompt = replaceVariables(node.data.prompt, nodeId);
+      console.log(`Processed prompt for node ${nodeId}:`, processedPrompt);
+
+      const result = await apiService.generateCompletion(
+        node.data.model,
+        processedPrompt,
+        systemMessage || undefined,
+        node.data.temperature || 0.7,
+        node.data.maxTokens || 1000
+      );
+
+      console.log(`API response for node ${nodeId}:`, result);
+
+      let score;
+      try {
+        score = await apiService.evaluatePromptResponse(
+        processedPrompt,
+          result.content,
+          node.data.temperature || 0.3
+        );
+        console.log(`Evaluation score for node ${nodeId}:`, score);
+      } catch (evalError) {
+        console.warn(`Failed to evaluate node ${nodeId}:`, evalError);
+        score = {
+          relevance: 50,
+          clarity: 50,
+          creativity: 50,
+          overall: 50,
+          critique: 'Evaluation failed. Using default scores.'
+        };
+      }
+
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId
+            ? { 
+                ...n, 
+                data: { 
+                  ...n.data, 
+                  output: result.content,
+                  score,
+                  tokenUsage: result.usage ? {
+                    input: result.usage.prompt_tokens,
+                    output: result.usage.completion_tokens,
+                    total: result.usage.total_tokens
+                  } : undefined,
+                  isRunning: false,
+                  error: undefined
+                } 
+              }
+            : n
+        )
+      );
+
+      console.log(`Node ${nodeId} completed successfully`);
+    } catch (error) {
+      console.error(`Error running node ${nodeId}:`, error);
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId
+            ? { 
+                ...n, 
+                data: { 
+                  ...n.data, 
+                  output: '',
+                  error: error instanceof Error ? error.message : 'Failed to generate response',
+                  isRunning: false
+                } 
+              }
+            : n
+        )
+      );
+    }
+  };
+
+  const deleteNode = useCallback((nodeId: string) => {
+    setNodes((nds) => nds.filter((node) => node.id !== nodeId));
+    setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
+  }, [setNodes, setEdges]);
+
+  // Load nodes and edges from localStorage on mount
+  React.useEffect(() => {
+    const savedNodes = localStorage.getItem(getStorageKey('nodes'));
+    if (savedNodes) {
+      try {
+        const parsedNodes = JSON.parse(savedNodes);
+        // Add function references directly when loading
+        const nodesWithFunctions = parsedNodes.map((node: any) => ({
+          ...node,
+          data: {
+            ...node.data,
+            onUpdate: (id: string, updates: Partial<PromptNodeType>) => {
+              setNodes((nds) =>
+                nds.map((n) =>
+                  n.id === id
+                    ? { ...n, data: { ...n.data, ...updates } }
+                    : n
+                )
+              );
+            },
+            onRun: (id: string) => runSingleNode(id),
+            onDelete: (id: string) => deleteNode(id),
+          }
+        }));
+        setNodes(nodesWithFunctions);
+      } catch (error) {
+        console.error('Error loading nodes from localStorage:', error);
+      }
+    }
+
+    const savedEdges = localStorage.getItem(getStorageKey('edges'));
+    if (savedEdges) {
+      try {
+        const parsedEdges = JSON.parse(savedEdges);
+        setEdges(parsedEdges);
+      } catch (error) {
+        console.error('Error loading edges from localStorage:', error);
+      }
+    }
+  }, [canvasProjectId]); // Only run when projectId changes
+
+  // Save nodes to localStorage whenever they change
+  React.useEffect(() => {
+    if (nodes.length > 0) {
+      localStorage.setItem(getStorageKey('nodes'), JSON.stringify(nodes));
+    }
+  }, [nodes, canvasProjectId]);
+
+  // Save edges to localStorage whenever they change
+  React.useEffect(() => {
+    localStorage.setItem(getStorageKey('edges'), JSON.stringify(edges));
+  }, [edges, canvasProjectId]);
+
+  // Save chain name to localStorage whenever it changes
+  React.useEffect(() => {
+    localStorage.setItem(getStorageKey('chainName'), chainName);
+  }, [chainName, canvasProjectId]);
+
+  // Save system message to localStorage whenever it changes
+  React.useEffect(() => {
+    localStorage.setItem(getStorageKey('systemMessage'), systemMessage);
+  }, [systemMessage, canvasProjectId]);
 
   // Check for updated data from editor
   React.useEffect(() => {
@@ -293,119 +496,7 @@ const PromptChainCanvasInner = () => {
       }
     };
     setNodes((nds) => [...nds, newNode]);
-  }, [setNodes]);
-
-  const deleteNode = useCallback((nodeId: string) => {
-    setNodes((nds) => nds.filter((node) => node.id !== nodeId));
-    setEdges((eds) => eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId));
-  }, [setNodes, setEdges]);
-
-  const replaceVariables = (prompt: string, nodeId: string): string => {
-    let result = prompt;
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node) return result;
-    
-    const variables = node.data.variables || {};
-    Object.entries(variables).forEach(([key, value]) => {
-      if (value) {
-        result = result.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value as string);
-      }
-    });
-    return result;
-  };
-
-  const runSingleNode = async (nodeId: string) => {
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node) {
-      console.error(`Node ${nodeId} not found`);
-      return;
-    }
-
-    console.log(`Starting execution of node ${nodeId}:`, node.data.title);
-
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.id === nodeId
-          ? { ...n, data: { ...n.data, isRunning: true, error: undefined } }
-          : n
-      )
-    );
-
-    try {
-      const processedPrompt = replaceVariables(node.data.prompt, nodeId);
-      console.log(`Processed prompt for node ${nodeId}:`, processedPrompt);
-
-      const result = await apiService.generateCompletion(
-        node.data.model,
-        processedPrompt,
-        systemMessage || undefined,
-        node.data.temperature || 0.7,
-        node.data.maxTokens || 1000
-      );
-
-      console.log(`API response for node ${nodeId}:`, result);
-
-      let score;
-      try {
-        score = await apiService.evaluatePromptResponse(
-        processedPrompt,
-          result.content,
-          node.data.temperature || 0.3
-        );
-        console.log(`Evaluation score for node ${nodeId}:`, score);
-      } catch (evalError) {
-        console.warn(`Failed to evaluate node ${nodeId}:`, evalError);
-        score = {
-          relevance: 50,
-          clarity: 50,
-          creativity: 50,
-          overall: 50,
-          critique: 'Evaluation failed. Using default scores.'
-        };
-      }
-
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === nodeId
-            ? { 
-                ...n, 
-                data: { 
-                  ...n.data, 
-                  output: result.content,
-                  score,
-                  tokenUsage: result.usage ? {
-                    input: result.usage.prompt_tokens,
-                    output: result.usage.completion_tokens,
-                    total: result.usage.total_tokens
-                  } : undefined,
-                  isRunning: false,
-                  error: undefined
-                } 
-              }
-            : n
-        )
-      );
-
-      console.log(`Node ${nodeId} completed successfully`);
-    } catch (error) {
-      console.error(`Error running node ${nodeId}:`, error);
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === nodeId
-            ? { 
-                ...n, 
-                data: { 
-                  ...n.data, 
-                  output: '',
-                  error: error instanceof Error ? error.message : 'Failed to generate response',
-                  isRunning: false
-                } 
-              }
-            : n
-        )
-      );
-    }
-  };
+  }, [setNodes, runSingleNode, deleteNode]);
 
   const getNextNodes = (nodeId: string): string[] => {
     const outgoingEdges = edges.filter(edge => edge.source === nodeId);
@@ -725,6 +816,8 @@ export { runChain };
 
   const proOptions = { hideAttribution: true };
 
+  console.log('RENDER: nodes passed to ReactFlow:', nodes);
+
   return (
     <div className="h-screen flex flex-col bg-white">
       {/* Header */}
@@ -881,12 +974,16 @@ export { runChain };
             
             {/* Welcome Panel - Centered */}
             {nodes.length === 0 && (
-              <Panel position="top-center" style={{ 
-                left: '50%', 
-                top: '50%', 
-                transform: 'translate(-50%, -50%)',
-                position: 'absolute'
-              }}>
+              <div 
+                style={{
+                  position: 'absolute',
+                  top: '45%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 10,
+                  pointerEvents: 'auto'
+                }}
+              >
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 max-w-md text-center">
                   <div className="text-4xl mb-4">🦜</div>
                   <h2 className="text-2xl font-bold text-black mb-2">Welcome to LangForge Canvas</h2>
@@ -901,7 +998,7 @@ export { runChain };
                     <span>Add Your First Node</span>
                   </button>
                 </div>
-              </Panel>
+              </div>
             )}
 
             {/* Condition Editor Panel */}
@@ -966,9 +1063,9 @@ export { runChain };
   );
 };
 
-const PromptChainCanvas = () => (
+const PromptChainCanvas = ({ projectId, projectName }: PromptChainCanvasProps) => (
   <ReactFlowProvider>
-    <PromptChainCanvasInner />
+    <PromptChainCanvasInner projectId={projectId} projectName={projectName} />
   </ReactFlowProvider>
 );
 

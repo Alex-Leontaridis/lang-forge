@@ -9,6 +9,7 @@ interface VersionComparisonProps {
   onVersionSelect: (versionId: string) => void;
   onDeleteVersion?: (versionId: string) => void;
   onDuplicateVersion?: (versionId: string) => void;
+  onUpdateVersion?: (versionId: string, updates: Partial<PromptVersion>) => void;
   collapsible?: boolean;
 }
 
@@ -19,6 +20,7 @@ const VersionComparison: React.FC<VersionComparisonProps> = ({
   onVersionSelect,
   onDeleteVersion,
   onDuplicateVersion,
+  onUpdateVersion,
   collapsible = false
 }) => {
   const [showMenuFor, setShowMenuFor] = useState<string | null>(null);

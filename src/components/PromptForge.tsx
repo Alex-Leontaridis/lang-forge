@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useCallback, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow, Menu, X, Search, ChevronRight, ChevronDown, Clock, MessageSquare, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import PromptEditor from './PromptEditor';
@@ -8,6 +8,7 @@ import PromptScore from './PromptScore';
 import VariableManager from './VariableManager';
 import MultiModelRunner from './MultiModelRunner';
 import VersionComparison from './VersionComparison';
+import VersionControl from './VersionControl';
 import Analytics from './Analytics';
 import PromptChainCanvas from './PromptChainCanvas';
 import ChainHealthValidation from './ChainHealthValidation';
@@ -18,23 +19,50 @@ import apiService from '../services/apiService';
 
 const PromptForge = () => {
   const { signOut } = useAuth();
+  const location = useLocation();
+  const projectId = location.state?.projectId;
+  
   const [activeTab, setActiveTab] = useState<'editor' | 'analytics' | 'compare' | 'canvas'>('editor');
-  const [variables, setVariables] = useState<Variable[]>([]);
-  const [inputVariables, setInputVariables] = useState<InputVariable[]>([]);
+  const [variables, setVariables] = useState<Variable[]>(() => {
+    const saved = localStorage.getItem(`promptForgeVariables_${projectId || 'global'}`);
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [inputVariables, setInputVariables] = useState<InputVariable[]>(() => {
+    const saved = localStorage.getItem(`promptForgeInputVariables_${projectId || 'global'}`);
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isRunning, setIsRunning] = useState(false);
-  const [selectedVersionsForComparison, setSelectedVersionsForComparison] = useState<string[]>([]);
+  const [selectedVersionsForComparison, setSelectedVersionsForComparison] = useState<string[]>(() => {
+    const saved = localStorage.getItem(`promptForgeSelectedVersionsForComparison_${projectId || 'global'}`);
+    return saved ? JSON.parse(saved) : [];
+  });
   const [currentOutput, setCurrentOutput] = useState<string>('');
-  const [currentModel, setCurrentModel] = useState<string>('gpt-3.5-turbo');
-  const [systemMessage, setSystemMessage] = useState<string>('');
+  const [currentModel, setCurrentModel] = useState<string>(() => {
+    const saved = localStorage.getItem(`promptForgeCurrentModel_${projectId || 'global'}`);
+    return saved || 'gpt-3.5-turbo';
+  });
+  const [systemMessage, setSystemMessage] = useState<string>(() => {
+    const saved = localStorage.getItem(`promptForgeSystemMessage_${projectId || 'global'}`);
+    return saved || '';
+  });
   const [showFullScoreReport, setShowFullScoreReport] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [collapseVariables, setCollapseVariables] = useState(false);
+  const [collapseVariables, setCollapseVariables] = useState(() => {
+    const saved = localStorage.getItem(`promptForgeCollapseVariables_${projectId || 'global'}`);
+    return saved ? JSON.parse(saved) : false;
+  });
   const [showVariableManagement, setShowVariableManagement] = useState(true);
   const [showChainHealth, setShowChainHealth] = useState(true);
   const [showVariableFlow, setShowVariableFlow] = useState(true);
-  const [selectedModelsForAutoTest, setSelectedModelsForAutoTest] = useState<string[]>(['gpt-4']);
-  const [autoTestResults, setAutoTestResults] = useState<AutoTestResult[]>([]);
+  const [selectedModelsForAutoTest, setSelectedModelsForAutoTest] = useState<string[]>(() => {
+    const saved = localStorage.getItem(`promptForgeSelectedModelsForAutoTest_${projectId || 'global'}`);
+    return saved ? JSON.parse(saved) : ['gpt-4'];
+  });
+  const [autoTestResults, setAutoTestResults] = useState<AutoTestResult[]>(() => {
+    const saved = localStorage.getItem(`promptForgeAutoTestResults_${projectId || 'global'}`);
+    return saved ? JSON.parse(saved) : [];
+  });
   const [fromCanvas, setFromCanvas] = useState(false);
   const [canvasNodeId, setCanvasNodeId] = useState<string | null>(null);
 
@@ -50,13 +78,13 @@ const PromptForge = () => {
     updateVersion,
     deleteVersion,
     duplicateVersion
-  } = usePromptVersions();
+  } = usePromptVersions(projectId);
 
   const currentVersion = getCurrentVersion();
   const currentRuns = getRunsForVersion(currentVersionId);
 
   // Check for data from canvas on component mount
-  React.useEffect(() => {
+  useEffect(() => {
     const canvasData = localStorage.getItem('canvasToEditorData');
     if (canvasData) {
       try {
@@ -73,7 +101,9 @@ const PromptForge = () => {
             `Canvas Node: ${data.title}`,
             'Imported from canvas'
           );
-          setCurrentVersionId(newVersion.id);
+          if (newVersion) {
+            setCurrentVersionId(newVersion.id);
+          }
           
           // Convert variables to the expected format
           const canvasVariables = Object.entries(data.variables).map(([name, value]) => ({
@@ -91,6 +121,39 @@ const PromptForge = () => {
       }
     }
   }, [createVersion, setCurrentVersionId]);
+
+  // Persist state to localStorage with project-specific keys
+  useEffect(() => {
+    localStorage.setItem(`promptForgeVariables_${projectId || 'global'}`, JSON.stringify(variables));
+  }, [variables, projectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`promptForgeInputVariables_${projectId || 'global'}`, JSON.stringify(inputVariables));
+  }, [inputVariables, projectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`promptForgeSelectedVersionsForComparison_${projectId || 'global'}`, JSON.stringify(selectedVersionsForComparison));
+  }, [selectedVersionsForComparison, projectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`promptForgeCurrentModel_${projectId || 'global'}`, currentModel);
+  }, [currentModel, projectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`promptForgeSystemMessage_${projectId || 'global'}`, systemMessage);
+  }, [systemMessage, projectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`promptForgeCollapseVariables_${projectId || 'global'}`, JSON.stringify(collapseVariables));
+  }, [collapseVariables, projectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`promptForgeSelectedModelsForAutoTest_${projectId || 'global'}`, JSON.stringify(selectedModelsForAutoTest));
+  }, [selectedModelsForAutoTest, projectId]);
+
+  useEffect(() => {
+    localStorage.setItem(`promptForgeAutoTestResults_${projectId || 'global'}`, JSON.stringify(autoTestResults));
+  }, [autoTestResults, projectId]);
 
   const models: Model[] = [
     { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', logo: '/src/logo/openai.png', enabled: true },
@@ -180,10 +243,10 @@ const PromptForge = () => {
   };
 
   const handleRunModels = async (selectedModels: string[]) => {
-    if (!currentVersion.content.trim()) return;
+    if (!currentVersion?.content.trim()) return;
     setIsRunning(true);
     setSelectedModelsForAutoTest(selectedModels);
-    const processedPrompt = replaceVariables(currentVersion.content);
+    const processedPrompt = replaceVariables(currentVersion?.content || '');
     const TIMEOUT_MS = 20000;
     const withTimeout = (promise: Promise<any>, ms: number) => {
       return Promise.race([
@@ -249,7 +312,7 @@ const PromptForge = () => {
 
     setIsRunning(true);
     try {
-      const processedPrompt = replaceVariables(currentVersion.content);
+      const processedPrompt = replaceVariables(currentVersion?.content || '');
       const result = await apiService.generateCompletion(
         currentModel,
         processedPrompt,
@@ -297,7 +360,7 @@ const PromptForge = () => {
   };
 
   const handleCreateVersion = (title: string, message: string) => {
-    createVersion(currentVersion.content, Object.fromEntries(variables.map(v => [v.name, v.value])), title, message);
+    createVersion(currentVersion?.content || '', Object.fromEntries(variables.map(v => [v.name, v.value])), title, message);
   };
 
   const handleVersionSelect = (versionId: string) => {
@@ -325,6 +388,10 @@ const PromptForge = () => {
 
   const handleDuplicateVersion = (versionId: string) => {
     duplicateVersion(versionId);
+  };
+
+  const handleUpdateVersion = (versionId: string, updates: any) => {
+    updateVersion(versionId, updates);
   };
 
   const handleAutoTestComplete = (result: AutoTestResult) => {
@@ -526,15 +593,6 @@ const PromptForge = () => {
                     />
                   </div>
                 </div>
-
-                {/* Logout Button */}
-                <button
-                  onClick={signOut}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg font-medium transition-colors border border-red-200"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Logout</span>
-                </button>
               </div>
             </div>
 
@@ -559,7 +617,7 @@ const PromptForge = () => {
               </div>
               {/* Variables Collapsible */}
               <div>
-                <button onClick={() => setCollapseVariables(v => !v)} className="flex items-center w-full mb-2 text-left space-x-2">
+                <button onClick={() => setCollapseVariables((v: boolean) => !v)} className="flex items-center w-full mb-2 text-left space-x-2">
                   {collapseVariables ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   <span className="font-semibold">Variables</span>
                 </button>
@@ -575,15 +633,6 @@ const PromptForge = () => {
                   />
                 )}
               </div>
-
-              {/* Logout Button */}
-              <button
-                onClick={signOut}
-                className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg font-medium transition-colors border border-red-200"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
-              </button>
             </div>
 
             {/* Main Content */}
@@ -611,6 +660,23 @@ const PromptForge = () => {
                 selectedModels={selectedModelsForAutoTest}
                 onAutoTestComplete={handleAutoTestComplete}
               />
+
+              {/* Welcome State - No Versions */}
+              {!currentVersion && (
+                <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
+                  <div className="text-4xl mb-4">🦜</div>
+                  <h2 className="text-2xl font-bold text-black mb-2">Welcome to LangForge</h2>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    Start by creating your first prompt version. You can write prompts, test them with multiple AI models, and track your progress over time.
+                  </p>
+                  <button
+                    onClick={() => handleCreateVersion('Initial Version', 'First prompt version')}
+                    className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors font-medium"
+                  >
+                    Create Your First Version
+                  </button>
+                </div>
+              )}
 
               <MultiModelRunner
                 models={models}
@@ -674,69 +740,17 @@ const PromptForge = () => {
             {/* Right Sidebar */}
             <div className="hidden xl:block space-y-6">
               {/* Version History */}
-              <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-                <div className="p-4 border-b border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <GitBranch className="w-5 h-5 text-gray-700" />
-                      <span className="font-semibold text-gray-900">Version History</span>
-                    </div>
-                    <button
-                      onClick={() => handleCreateVersion(`Version ${versions.length + 1}`, 'Auto-created version')}
-                      className="px-3 py-1 bg-black text-white rounded text-sm hover:bg-gray-800 transition-colors"
-                    >
-                      Create
-                    </button>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {versions.slice().reverse().map((version) => (
-                      <div
-                        key={version.id}
-                        className={`relative rounded-lg border transition-colors ${
-                          version.id === currentVersionId
-                            ? 'bg-black text-white border-black'
-                            : 'bg-white hover:bg-gray-50 border-gray-200'
-                        }`}
-                      >
-                          <div className="flex items-center pl-2">
-                            {/* Comparison Checkbox */}
-                            <input
-                              type="checkbox"
-                              checked={selectedVersionsForComparison.includes(version.id)}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                handleVersionSelectForComparison(version.id);
-                              }}
-                              className="rounded border-gray-300 text-black focus:ring-black flex-shrink-0 mr-2"
-                            />
-                          
-                          {/* Version Content */}
-                          <button
-                            onClick={() => handleVersionSelect(version.id)}
-                            className="flex-1 text-left p-2 pr-8"
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="font-medium text-sm">{version.title}</span>
-                              <div className="flex items-center space-x-1 text-xs opacity-75">
-                                <Clock className="w-3 h-3" />
-                                <span>{new Date(version.createdAt).toLocaleDateString()}</span>
-                              </div>
-                            </div>
-                            {version.message && (
-                              <div className="flex items-start space-x-1 text-xs opacity-75">
-                                <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                                <span className="line-clamp-1">{version.message}</span>
-                              </div>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <VersionControl
+                versions={versions}
+                currentVersionId={currentVersionId}
+                onVersionSelect={handleVersionSelect}
+                onCreateVersion={handleCreateVersion}
+                onDeleteVersion={handleDeleteVersion}
+                onDuplicateVersion={handleDuplicateVersion}
+                onUpdateVersion={handleUpdateVersion}
+                selectedVersionsForComparison={selectedVersionsForComparison}
+                onVersionSelectForComparison={handleVersionSelectForComparison}
+              />
               
               <VersionComparison
                 versions={versions}
@@ -745,6 +759,7 @@ const PromptForge = () => {
                 onVersionSelect={handleVersionSelectForComparison}
                 onDeleteVersion={handleDeleteVersion}
                 onDuplicateVersion={handleDuplicateVersion}
+                onUpdateVersion={handleUpdateVersion}
                 collapsible={true}
               />
             </div>
@@ -753,7 +768,7 @@ const PromptForge = () => {
 
         {activeTab === 'canvas' && (
           <div className="h-[calc(100vh-140px)] overflow-hidden">
-            <PromptChainCanvas />
+            <PromptChainCanvas projectId={projectId} projectName={location.state?.projectName || 'Untitled Project'} />
           </div>
         )}
 
@@ -772,6 +787,7 @@ const PromptForge = () => {
               onVersionSelect={handleVersionSelectForComparison}
               onDeleteVersion={handleDeleteVersion}
               onDuplicateVersion={handleDuplicateVersion}
+              onUpdateVersion={handleUpdateVersion}
               collapsible={true}
             />
           </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GitBranch, Plus, Clock, MessageSquare, ChevronDown, ChevronRight, Search, Trash2, Copy, MoreVertical } from 'lucide-react';
+import { GitBranch, Plus, Clock, MessageSquare, ChevronDown, ChevronRight, Search, Trash2, Copy, MoreVertical, Edit3, Check, X } from 'lucide-react';
 import { PromptVersion } from '../types';
 
 interface VersionControlProps {
@@ -9,6 +9,7 @@ interface VersionControlProps {
   onCreateVersion: (title: string, message: string) => void;
   onDeleteVersion?: (versionId: string) => void;
   onDuplicateVersion?: (versionId: string) => void;
+  onUpdateVersion?: (versionId: string, updates: Partial<PromptVersion>) => void;
   selectedVersionsForComparison?: string[];
   onVersionSelectForComparison?: (versionId: string) => void;
 }
@@ -20,6 +21,7 @@ const VersionControl: React.FC<VersionControlProps> = ({
   onCreateVersion,
   onDeleteVersion,
   onDuplicateVersion,
+  onUpdateVersion,
   selectedVersionsForComparison = [],
   onVersionSelectForComparison
 }) => {
@@ -29,6 +31,9 @@ const VersionControl: React.FC<VersionControlProps> = ({
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showMenuFor, setShowMenuFor] = useState<string | null>(null);
+  const [editingVersion, setEditingVersion] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editMessage, setEditMessage] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -70,35 +75,67 @@ const VersionControl: React.FC<VersionControlProps> = ({
     setShowMenuFor(null);
   };
 
+  const handleStartEdit = (version: PromptVersion, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingVersion(version.id);
+    setEditTitle(version.title);
+    setEditMessage(version.message || '');
+    setShowMenuFor(null);
+  };
+
+  const handleSaveEdit = (versionId: string) => {
+    if (editTitle.trim() && onUpdateVersion) {
+      onUpdateVersion(versionId, {
+        title: editTitle.trim(),
+        message: editMessage.trim()
+      });
+      setEditingVersion(null);
+      setEditTitle('');
+      setEditMessage('');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingVersion(null);
+    setEditTitle('');
+    setEditMessage('');
+  };
+
   const formatDate = (date: Date) => {
-    // Check if Intl.RelativeTimeFormat is available
-    if (typeof Intl !== 'undefined' && Intl.RelativeTimeFormat) {
-      try {
-        return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
-          Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
-          'day'
-        );
-      } catch (error) {
-        // Fall through to fallback implementation
-      }
-    }
-    
-    // Fallback implementation
     const now = new Date();
-    const diffInMs = date.getTime() - now.getTime();
-    const diffInDays = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
     
-    if (diffInDays === 0) {
-      return 'today';
-    } else if (diffInDays === -1) {
-      return 'yesterday';
-    } else if (diffInDays === 1) {
-      return 'tomorrow';
-    } else if (diffInDays < 0) {
-      return `${Math.abs(diffInDays)} days ago`;
-    } else {
-      return `in ${diffInDays} days`;
+    // For very recent versions (less than 1 hour), show exact time
+    if (diffInMinutes < 60) {
+      if (diffInMinutes < 1) {
+        return 'just now';
+      }
+      return `${diffInMinutes} minute${diffInMinutes !== 1 ? 's' : ''} ago`;
     }
+    
+    // For recent versions (less than 24 hours), show hours and time
+    if (diffInHours < 24) {
+      const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago at ${timeString}`;
+    }
+    
+    // For older versions, show date and time
+    if (diffInDays < 7) {
+      const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return `${diffInDays} day${diffInDays !== 1 ? 's' : ''} ago at ${timeString}`;
+    }
+    
+    // For very old versions, show just the date
+    return date.toLocaleDateString([], { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const filteredVersions = versions.filter(version =>
@@ -208,6 +245,14 @@ const VersionControl: React.FC<VersionControlProps> = ({
           )}
 
           <div className="space-y-2 max-h-64 overflow-y-auto">
+            {filteredVersions.length === 0 && !searchTerm && (
+              <div className="text-center py-8 text-gray-500">
+                <GitBranch className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                <p className="text-sm font-medium">No versions yet</p>
+                <p className="text-xs">Create your first version to get started</p>
+              </div>
+            )}
+            
             {filteredVersions.slice().reverse().map((version) => (
               <div
                 key={version.id}
@@ -227,29 +272,73 @@ const VersionControl: React.FC<VersionControlProps> = ({
                         e.stopPropagation();
                         onVersionSelectForComparison(version.id);
                       }}
-                      className="rounded border-gray-300 text-black focus:ring-black flex-shrink-0 mr-2"
+                      className="rounded border-gray-300 text-black focus:ring-black flex-shrink- mr-2"
                     />
                   )}
                   
                   {/* Version Content */}
-                  <button
-                    onClick={() => onVersionSelect(version.id)}
-                    className="flex-1 text-left p-3 pr-10"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium text-sm">{version.title}</span>
-                      <div className="flex items-center space-x-1 text-xs opacity-75">
-                        <Clock className="w-3 h-3" />
-                        <span>{formatDate(version.createdAt)}</span>
+                  <div className="flex-1 p-3 pr-10">
+                    {editingVersion === version.id ? (
+                      // Edit Mode
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          className={`w-full p-1 border border-gray-300 rounded text-sm ${
+                            version.id === currentVersionId 
+                              ? 'bg-white text-black' 
+                              : 'bg-white text-gray-900'
+                          }`}
+                          placeholder="Version title"
+                        />
+                        <textarea
+                          value={editMessage}
+                          onChange={(e) => setEditMessage(e.target.value)}
+                          className={`w-full p-1 border border-gray-300 rounded text-sm h-12 resize-none ${
+                            version.id === currentVersionId 
+                              ? 'bg-white text-black' 
+                              : 'bg-white text-gray-900'
+                          }`}
+                          placeholder="Commit message (optional)"
+                        />
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleSaveEdit(version.id)}
+                            className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                          >
+                            <Check className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    {version.message && (
-                      <div className="flex items-start space-x-1 text-xs opacity-75">
-                        <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                        <span className="line-clamp-2">{version.message}</span>
-                      </div>
+                    ) : (
+                      // View Mode
+                      <button
+                        onClick={() => onVersionSelect(version.id)}
+                        className="w-full text-left"
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-sm">{version.title}</span>
+                          <div className="flex items-center space-x-1 text-xs opacity-75">
+                            <Clock className="w-3 h-3" />
+                            <span>{formatDate(version.createdAt)}</span>
+                          </div>
+                        </div>
+                        {version.message && (
+                          <div className="flex items-start space-x-1 text-xs opacity-75">
+                            <MessageSquare className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <span className="line-clamp-2">{version.message}</span>
+                          </div>
+                        )}
+                      </button>
                     )}
-                  </button>
+                  </div>
                   
                   {/* Version Actions Menu */}
                   <div className="absolute right-2 top-1/2 transform -translate-y-1/2" ref={menuRef}>
@@ -269,6 +358,15 @@ const VersionControl: React.FC<VersionControlProps> = ({
                     
                     {showMenuFor === version.id && (
                       <div className="absolute right-0 top-6 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+                        {onUpdateVersion && (
+                          <button
+                            onClick={(e) => handleStartEdit(version, e)}
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            <span>Edit</span>
+                          </button>
+                        )}
                         {onDuplicateVersion && (
                           <button
                             onClick={(e) => handleDuplicateVersion(version.id, e)}

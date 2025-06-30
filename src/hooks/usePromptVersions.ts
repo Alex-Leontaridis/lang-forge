@@ -1,31 +1,33 @@
 import { useState, useCallback, useEffect } from 'react';
 import { PromptVersion, ModelRun } from '../types';
 
-export const usePromptVersions = () => {
+export const usePromptVersions = (projectId?: string) => {
   const [versions, setVersions] = useState<PromptVersion[]>(() => {
     const saved = localStorage.getItem('promptVersions');
     if (saved) {
       const parsed = JSON.parse(saved);
-      return parsed.map((v: any) => ({
+      const projectVersions = projectId 
+        ? parsed.filter((v: any) => v.projectId === projectId)
+        : parsed;
+      return projectVersions.map((v: any) => ({
         ...v,
         createdAt: new Date(v.createdAt)
       }));
     }
-    return [{
-      id: 'v1',
-      title: 'Initial Version',
-      content: 'Write a {{style}} email to {{recipient}} about {{topic}}.',
-      variables: { style: 'professional', recipient: 'team', topic: 'project update' },
-      createdAt: new Date(Date.now() - 86400000),
-      message: 'Initial prompt creation'
-    }];
+    return [];
   });
   
   const [runs, setRuns] = useState<ModelRun[]>(() => {
     const saved = localStorage.getItem('modelRuns');
     if (saved) {
       const parsed = JSON.parse(saved);
-      return parsed.map((r: any) => ({
+      const projectRuns = projectId 
+        ? parsed.filter((r: any) => {
+            const version = versions.find(v => v.id === r.versionId);
+            return version && version.projectId === projectId;
+          })
+        : parsed;
+      return projectRuns.map((r: any) => ({
         ...r,
         createdAt: new Date(r.createdAt)
       }));
@@ -34,28 +36,64 @@ export const usePromptVersions = () => {
   });
   
   const [currentVersionId, setCurrentVersionId] = useState<string>(() => {
-    const saved = localStorage.getItem('currentVersionId');
-    return saved || 'v1';
+    const saved = localStorage.getItem(`currentVersionId_${projectId || 'global'}`);
+    if (saved) {
+      return saved;
+    }
+    // If no saved version ID and no versions exist, return empty string
+    const savedVersions = localStorage.getItem('promptVersions');
+    if (!savedVersions) {
+      return '';
+    }
+    // If there are saved versions for this project, use the first one
+    const parsed = JSON.parse(savedVersions);
+    const projectVersions = projectId 
+      ? parsed.filter((v: any) => v.projectId === projectId)
+      : parsed;
+    return projectVersions.length > 0 ? projectVersions[0].id : '';
   });
 
   // Persist versions to localStorage
   useEffect(() => {
-    localStorage.setItem('promptVersions', JSON.stringify(versions));
-  }, [versions]);
+    const saved = localStorage.getItem('promptVersions');
+    const allVersions = saved ? JSON.parse(saved) : [];
+    
+    // Update versions for this project
+    const otherVersions = allVersions.filter((v: any) => v.projectId !== projectId);
+    const updatedVersions = [...otherVersions, ...versions];
+    
+    localStorage.setItem('promptVersions', JSON.stringify(updatedVersions));
+  }, [versions, projectId]);
 
   // Persist runs to localStorage
   useEffect(() => {
-    localStorage.setItem('modelRuns', JSON.stringify(runs));
-  }, [runs]);
+    const saved = localStorage.getItem('modelRuns');
+    const allRuns = saved ? JSON.parse(saved) : [];
+    
+    // Update runs for this project's versions
+    const otherRuns = allRuns.filter((r: any) => {
+      const version = versions.find(v => v.id === r.versionId);
+      return !version || version.projectId !== projectId;
+    });
+    const updatedRuns = [...otherRuns, ...runs];
+    
+    localStorage.setItem('modelRuns', JSON.stringify(updatedRuns));
+  }, [runs, versions, projectId]);
 
   // Persist current version ID to localStorage
   useEffect(() => {
-    localStorage.setItem('currentVersionId', currentVersionId);
-  }, [currentVersionId]);
+    localStorage.setItem(`currentVersionId_${projectId || 'global'}`, currentVersionId);
+  }, [currentVersionId, projectId]);
 
   const createVersion = useCallback((content: string, variables: Record<string, string>, title?: string, message?: string) => {
+    if (!projectId) {
+      console.warn('Cannot create version without projectId');
+      return null;
+    }
+    
     const newVersion: PromptVersion = {
       id: `v${Date.now()}`,
+      projectId,
       title: title || `Version ${versions.length + 1}`,
       content,
       variables,
@@ -67,9 +105,12 @@ export const usePromptVersions = () => {
     setVersions(prev => [...prev, newVersion]);
     setCurrentVersionId(newVersion.id);
     return newVersion;
-  }, [versions.length, currentVersionId]);
+  }, [versions.length, currentVersionId, projectId]);
 
   const getCurrentVersion = useCallback(() => {
+    if (versions.length === 0) {
+      return null;
+    }
     return versions.find(v => v.id === currentVersionId) || versions[0];
   }, [versions, currentVersionId]);
 

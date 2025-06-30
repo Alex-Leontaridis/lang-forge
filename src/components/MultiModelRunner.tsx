@@ -15,7 +15,10 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
   isRunning,
   runs
 }) => {
-  const [selectedModels, setSelectedModels] = useState<string[]>(['gpt-4']);
+  const [selectedModels, setSelectedModels] = useState<string[]>(() => {
+    const saved = localStorage.getItem('multiModelRunnerSelectedModels');
+    return saved ? JSON.parse(saved) : ['gpt-4'];
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [filterProvider, setFilterProvider] = useState<string>('all');
   const [isExpanded, setIsExpanded] = useState(true);

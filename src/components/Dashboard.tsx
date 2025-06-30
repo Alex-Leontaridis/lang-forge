@@ -87,8 +87,25 @@ const Dashboard = () => {
 
   // Mock data - in real app this would come from API
   useEffect(() => {
+    // Load projects from localStorage
+    const savedProjects = localStorage.getItem('dashboardProjects');
+    if (savedProjects) {
+      try {
+        const parsedProjects = JSON.parse(savedProjects);
+        const projectsWithDates = parsedProjects.map((project: any) => ({
+          ...project,
+          lastUpdated: new Date(project.lastUpdated)
+        }));
+        setProjects(projectsWithDates);
+      } catch (error) {
+        console.error('Error loading projects from localStorage:', error);
+        setProjects([]);
+      }
+    } else {
+      setProjects([]);
+    }
+
     // Initialize with empty data - in real app this would come from API
-    setProjects([]);
     setTemplates([]);
     setAnalytics({
       totalProjects: 0,
@@ -98,6 +115,14 @@ const Dashboard = () => {
       mostUsedModel: { name: '', usage: 0 }
     });
   }, []);
+
+  // Update analytics when projects change
+  useEffect(() => {
+    setAnalytics(prev => ({
+      ...prev,
+      totalProjects: projects.length
+    }));
+  }, [projects]);
 
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -119,7 +144,12 @@ const Dashboard = () => {
         versionCount: 0,
         totalTokens: 0
       };
-      setProjects(prev => [newProject, ...prev]);
+      const updatedProjects = [newProject, ...projects];
+      setProjects(updatedProjects);
+      
+      // Save to localStorage
+      localStorage.setItem('dashboardProjects', JSON.stringify(updatedProjects));
+      
       setShowNewProjectModal(false);
       setNewProjectData({ name: '', type: 'blank' });
       
@@ -146,11 +176,31 @@ const Dashboard = () => {
       lastUpdated: new Date(),
       status: 'Draft'
     };
-    setProjects(prev => [duplicatedProject, ...prev]);
+    const updatedProjects = [duplicatedProject, ...projects];
+    setProjects(updatedProjects);
+    
+    // Save to localStorage
+    localStorage.setItem('dashboardProjects', JSON.stringify(updatedProjects));
   };
 
   const handleDeleteProject = (projectId: string) => {
-    setProjects(prev => prev.filter(p => p.id !== projectId));
+    const updatedProjects = projects.filter(p => p.id !== projectId);
+    setProjects(updatedProjects);
+    
+    // Save to localStorage
+    localStorage.setItem('dashboardProjects', JSON.stringify(updatedProjects));
+  };
+
+  const updateProjectStatus = (projectId: string, status: 'Draft' | 'Testing' | 'Exported') => {
+    const updatedProjects = projects.map(project => 
+      project.id === projectId 
+        ? { ...project, status, lastUpdated: new Date() }
+        : project
+    );
+    setProjects(updatedProjects);
+    
+    // Save to localStorage
+    localStorage.setItem('dashboardProjects', JSON.stringify(updatedProjects));
   };
 
   const getStatusColor = (status: string) => {
@@ -185,12 +235,6 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => navigate('/app')}
-                className="text-gray-600 hover:text-black transition-colors"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-              <button
                 onClick={signOut}
                 className="text-gray-600 hover:text-black transition-colors"
               >
@@ -205,62 +249,62 @@ const Dashboard = () => {
         {/* Analytics Snapshot */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FolderOpen className="w-5 h-5 text-blue-600" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <FolderOpen className="w-5 h-5 text-blue-600" />
+                </div>
+                <span className="text-sm text-gray-600">Total Projects</span>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Total Projects</p>
-                <p className="text-2xl font-bold text-black">{analytics.totalProjects}</p>
-              </div>
+              <span className="text-2xl font-bold text-black">{analytics.totalProjects}</span>
             </div>
           </div>
           
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-green-600" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-green-600" />
+                </div>
+                <span className="text-sm text-gray-600">Prompt Versions</span>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Prompt Versions</p>
-                <p className="text-2xl font-bold text-black">{analytics.totalPromptVersions}</p>
-              </div>
+              <span className="text-2xl font-bold text-black">{analytics.totalPromptVersions}</span>
             </div>
           </div>
           
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Zap className="w-5 h-5 text-purple-600" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-purple-600" />
+                </div>
+                <span className="text-sm text-gray-600">Tokens This Month</span>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Tokens This Month</p>
-                <p className="text-2xl font-bold text-black">{analytics.totalTokensThisMonth.toLocaleString()}</p>
-              </div>
+              <span className="text-2xl font-bold text-black">{analytics.totalTokensThisMonth.toLocaleString()}</span>
             </div>
           </div>
           
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-yellow-600" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-yellow-600" />
+                </div>
+                <span className="text-sm text-gray-600">Top Prompt Score</span>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Top Prompt Score</p>
-                <p className="text-2xl font-bold text-black">{analytics.topPerformingPrompt.score}</p>
-              </div>
+              <span className="text-2xl font-bold text-black">{analytics.topPerformingPrompt.score}</span>
             </div>
           </div>
           
           <div className="bg-white border border-gray-200 rounded-xl p-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                <Bot className="w-5 h-5 text-red-600" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-red-600" />
+                </div>
+                <span className="text-sm text-gray-600">Most Used Model</span>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Most Used Model</p>
-                <p className="text-lg font-bold text-black">{analytics.mostUsedModel.name}</p>
-              </div>
+              <span className="text-lg font-bold text-black">{analytics.mostUsedModel.name}</span>
             </div>
           </div>
         </div>
@@ -308,14 +352,25 @@ const Dashboard = () => {
               {/* Projects List */}
               <div className="space-y-4">
                 {filteredProjects.map((project) => (
-                  <div key={project.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+                  <div 
+                    key={project.id} 
+                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer"
+                    onClick={() => handleOpenProject(project.id)}
+                  >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
                           <h3 className="text-lg font-semibold text-black">{project.title}</h3>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
-                            {project.status}
-                          </span>
+                          <select
+                            value={project.status}
+                            onChange={(e) => updateProjectStatus(project.id, e.target.value as 'Draft' | 'Testing' | 'Exported')}
+                            className={`px-2 py-1 rounded-full text-xs font-medium border-0 ${getStatusColor(project.status)}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <option value="Draft">Draft</option>
+                            <option value="Testing">Testing</option>
+                            <option value="Exported">Exported</option>
+                          </select>
                           {project.exportType !== 'None' && (
                             <div className="flex items-center space-x-1 text-gray-500">
                               {getExportTypeIcon(project.exportType)}
@@ -336,14 +391,7 @@ const Dashboard = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleOpenProject(project.id)}
-                          className="p-2 text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors"
-                          title="Open"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
+                      <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => handleDuplicateProject(project)}
                           className="p-2 text-gray-600 hover:text-black hover:bg-gray-100 rounded-lg transition-colors"

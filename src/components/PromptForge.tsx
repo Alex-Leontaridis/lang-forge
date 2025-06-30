@@ -390,11 +390,11 @@ const PromptForge = () => {
   }, [systemMessage, projectId]);
 
   const models = [
-    // OpenAI models (direct API)
+    // OpenAI models (routed through OpenRouter)
     {
       id: 'gpt-4',
       name: 'GPT-4',
-      provider: 'OpenAI',
+      provider: 'OpenAI (OpenRouter)',
       description: 'Advanced reasoning and analysis',
       contextSize: '128K',
       logo: '/src/logo/openai.png',
@@ -404,7 +404,7 @@ const PromptForge = () => {
     {
       id: 'gpt-3.5-turbo',
       name: 'GPT-3.5 Turbo',
-      provider: 'OpenAI',
+      provider: 'OpenAI (OpenRouter)',
       description: 'Fast and efficient generation',
       contextSize: '16K',
       logo: '/src/logo/openai.png',

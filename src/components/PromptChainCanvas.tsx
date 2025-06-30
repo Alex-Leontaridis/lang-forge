@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import ReactFlow, {
   Node,
@@ -16,6 +16,23 @@ import ReactFlow, {
   ReactFlowProvider
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+
+// Custom styles to ensure edges are visible
+const customStyles = `
+  .react-flow__edge {
+    z-index: 10 !important;
+    pointer-events: all !important;
+  }
+  .react-flow__edge-path {
+    stroke-width: 2px !important;
+    stroke: #6b7280 !important;
+  }
+  .react-flow__edge.conditional {
+    stroke: #3b82f6 !important;
+    stroke-width: 3px !important;
+    stroke-dasharray: 5,5 !important;
+  }
+`;
 import langchainLogo from '../logo/langchain.png';
 import { 
   ArrowLeft, 
@@ -230,6 +247,8 @@ const nodeTypes = {
   promptNode: PromptNodeComponent,
 };
 
+// Edge types are handled by ReactFlow's default edge renderer
+
 const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasProps) => {
   const location = useLocation();
   const canvasProjectId = projectId || location.state?.projectId;
@@ -246,6 +265,11 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
   // Initialize state from localStorage (without function references initially)
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  
+  // Debug logging for edges
+  useEffect(() => {
+    console.log('Edges state changed:', edges);
+  }, [edges]);
   
   const [chainName, setChainName] = useState(() => {
     const savedChainName = localStorage.getItem(getStorageKey('chainName'));
@@ -264,6 +288,10 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
   const [selectedEdge, setSelectedEdge] = useState<ConditionalEdge | null>(null);
   const [showConditionEditor, setShowConditionEditor] = useState(false);
   const [showSystemMessage, setShowSystemMessage] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [canvasKey, setCanvasKey] = useState(0);
+  const [forceRender, setForceRender] = useState(0);
+  const edgesRef = useRef<Edge[]>([]);
 
   const reactFlowInstance = useReactFlow();
 
@@ -493,11 +521,72 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
     if (savedEdges) {
       try {
         const parsedEdges = JSON.parse(savedEdges);
-        setEdges(parsedEdges);
+        console.log('Loading edges from localStorage:', parsedEdges);
+        
+        // Use ReactFlow's addEdge function to properly initialize edges
+        let currentEdges: Edge[] = [];
+        parsedEdges.forEach((edgeData: any) => {
+          const conditionalEdge = edgeData as ConditionalEdge;
+          
+          // Create a proper edge object with ReactFlow structure
+          const edge: ConditionalEdge = {
+            id: conditionalEdge.id,
+            source: conditionalEdge.source,
+            target: conditionalEdge.target,
+            sourceHandle: conditionalEdge.sourceHandle,
+            targetHandle: conditionalEdge.targetHandle,
+            condition: conditionalEdge.condition,
+            type: conditionalEdge.type || 'default',
+            data: conditionalEdge.data || {}
+          };
+          
+                      // Apply styling based on condition
+            if (conditionalEdge.condition && conditionalEdge.condition.enabled) {
+              edge.label = `${conditionalEdge.condition.type.replace('_', ' ')} ${conditionalEdge.condition.operator} ${conditionalEdge.condition.value}`;
+              edge.style = { 
+                stroke: '#3b82f6', 
+                strokeWidth: 3,
+                strokeDasharray: '5,5'
+              };
+              edge.labelStyle = { 
+                fontSize: 10, 
+                fontWeight: 600,
+                fill: '#3b82f6',
+                backgroundColor: 'white',
+                padding: '2px 4px',
+                borderRadius: '4px'
+              };
+              edge.className = 'conditional';
+            } else {
+              edge.label = conditionalEdge.label || '';
+              edge.style = conditionalEdge.style || { stroke: '#6b7280', strokeWidth: 2 };
+              edge.labelStyle = conditionalEdge.labelStyle || { fontSize: 12, fontWeight: 600, fill: '#6b7280' };
+            }
+          
+          // Use addEdge to properly add the edge
+          currentEdges = addEdge(edge, currentEdges);
+          
+          // Ensure the edge is properly initialized
+          console.log('Added edge to currentEdges:', edge);
+        });
+        
+        console.log('Setting edges with addEdge:', currentEdges);
+        setEdges(currentEdges);
       } catch (error) {
         console.error('Error loading edges from localStorage:', error);
       }
     }
+    
+    // Mark as loaded after initial data is processed
+    setIsLoaded(true);
+    
+    // Force a fresh render by incrementing canvas key
+    setCanvasKey(prev => prev + 1);
+    
+    // Force a complete re-render after a short delay
+    setTimeout(() => {
+      setForceRender(prev => prev + 1);
+    }, 100);
   }, [canvasProjectId]); // Only run when projectId changes
 
   // Save nodes to localStorage whenever they change
@@ -511,8 +600,57 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
 
   // Save edges to localStorage whenever they change
   React.useEffect(() => {
+    console.log('Saving edges to localStorage:', edges);
     localStorage.setItem(getStorageKey('edges'), JSON.stringify(edges));
+    edgesRef.current = edges;
   }, [edges, canvasProjectId]);
+
+  // Ensure edges are properly styled after loading
+  React.useEffect(() => {
+    if (edges.length > 0) {
+      const updatedEdges = edges.map((edge) => {
+        const conditionalEdge = edge as ConditionalEdge;
+        if (conditionalEdge.condition && conditionalEdge.condition.enabled) {
+          // Ensure conditional styling is applied
+          return {
+            ...conditionalEdge,
+            label: `${conditionalEdge.condition.type.replace('_', ' ')} ${conditionalEdge.condition.operator} ${conditionalEdge.condition.value}`,
+            style: { 
+              stroke: '#3b82f6', 
+              strokeWidth: 3,
+              strokeDasharray: '5,5'
+            },
+            labelStyle: { 
+              fontSize: 10, 
+              fontWeight: 600,
+              fill: '#3b82f6',
+              backgroundColor: 'white',
+              padding: '2px 4px',
+              borderRadius: '4px'
+            }
+          };
+        } else {
+          // Ensure default styling is applied
+          return {
+            ...conditionalEdge,
+            label: conditionalEdge.label || '',
+            style: conditionalEdge.style || { stroke: '#6b7280', strokeWidth: 2 },
+            labelStyle: conditionalEdge.labelStyle || { fontSize: 12, fontWeight: 600, fill: '#6b7280' }
+          };
+        }
+      });
+      
+      // Only update if there are actual changes to avoid infinite loops
+      const hasChanges = updatedEdges.some((updatedEdge, index) => {
+        const originalEdge = edges[index];
+        return JSON.stringify(updatedEdge) !== JSON.stringify(originalEdge);
+      });
+      
+      if (hasChanges) {
+        setEdges(updatedEdges);
+      }
+    }
+  }, [edges.length]); // Only run when edges array length changes (after initial load)
 
   // Save chain name to localStorage whenever it changes
   React.useEffect(() => {
@@ -808,17 +946,28 @@ console.log(formattedPrompt);`;
     (params: Connection) => {
       if (!params.source || !params.target) return;
       
+      console.log('Creating new connection:', params);
+      
       const newEdge: ConditionalEdge = {
-          ...params,
         id: `edge_${Date.now()}`,
         source: params.source,
         target: params.target,
+        sourceHandle: params.sourceHandle,
+        targetHandle: params.targetHandle,
         condition: getDefaultCondition(),
         label: '',
         style: { stroke: '#6b7280', strokeWidth: 2 },
-        labelStyle: { fontSize: 12, fontWeight: 600, fill: '#6b7280' }
+        labelStyle: { fontSize: 12, fontWeight: 600, fill: '#6b7280' },
+        type: 'default',
+        data: {}
       };
-      setEdges((eds) => addEdge(newEdge, eds));
+      
+      console.log('New edge created:', newEdge);
+      setEdges((eds) => {
+        const updatedEdges = addEdge(newEdge, eds);
+        console.log('Updated edges after adding new edge:', updatedEdges);
+        return updatedEdges;
+      });
     },
     [setEdges]
   );
@@ -954,6 +1103,66 @@ console.log(formattedPrompt);`;
       }, 0);
     }
   }, [canvasProjectId]);
+
+  // Ensure edges are properly rendered after ReactFlow is initialized
+  React.useEffect(() => {
+    if (isLoaded && edges.length > 0) {
+      console.log('Ensuring edges are properly rendered, count:', edges.length);
+      
+      // Force a complete re-render of edges
+      const timer = setTimeout(() => {
+        setEdges(currentEdges => {
+          console.log('Current edges before re-render:', currentEdges);
+          
+          // Create fresh edge objects to ensure proper rendering
+          const freshEdges = currentEdges.map(edge => {
+            const conditionalEdge = edge as ConditionalEdge;
+            const freshEdge: ConditionalEdge = {
+              id: conditionalEdge.id,
+              source: conditionalEdge.source,
+              target: conditionalEdge.target,
+              sourceHandle: conditionalEdge.sourceHandle,
+              targetHandle: conditionalEdge.targetHandle,
+              condition: conditionalEdge.condition,
+              type: conditionalEdge.type || 'default',
+              data: conditionalEdge.data || {}
+            };
+            
+            // Apply styling
+            if (conditionalEdge.condition && conditionalEdge.condition.enabled) {
+              freshEdge.label = `${conditionalEdge.condition.type.replace('_', ' ')} ${conditionalEdge.condition.operator} ${conditionalEdge.condition.value}`;
+              freshEdge.style = { 
+                stroke: '#3b82f6', 
+                strokeWidth: 3,
+                strokeDasharray: '5,5'
+              };
+              freshEdge.labelStyle = { 
+                fontSize: 10, 
+                fontWeight: 600,
+                fill: '#3b82f6',
+                backgroundColor: 'white',
+                padding: '2px 4px',
+                borderRadius: '4px'
+              };
+              // Add CSS class for conditional styling
+              freshEdge.className = 'conditional';
+            } else {
+              freshEdge.label = conditionalEdge.label || '';
+              freshEdge.style = conditionalEdge.style || { stroke: '#6b7280', strokeWidth: 2 };
+              freshEdge.labelStyle = conditionalEdge.labelStyle || { fontSize: 12, fontWeight: 600, fill: '#6b7280' };
+            }
+            
+            return freshEdge;
+          });
+          
+          console.log('Fresh edges after re-render:', freshEdges);
+          return freshEdges;
+        });
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isLoaded, edges.length]);
 
   const addPromptNode = useCallback(() => {
     const nodeId = `node_${Date.now()}`;
@@ -1238,18 +1447,66 @@ console.log(formattedPrompt);`;
     reader.readAsText(file);
   };
 
+  // Helper function to get the appropriate LangChain chat model class
+  const getLangChainChatModel = (modelName: string): { import: string; class: string; config: string } => {
+    // OpenAI models (gpt-*)
+    if (modelName.startsWith('gpt-')) {
+      return {
+        import: 'from langchain.chat_models import ChatOpenAI',
+        class: 'ChatOpenAI',
+        config: `model_name="${modelName}"`
+      };
+    }
+    
+    // Groq models
+    if (['gemma2-9b-it', 'llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'deepseek-r1-distill-llama-70b', 
+         'llama-4-maverick-17b-128e-instruct', 'llama-4-scout-17b-16e-instruct', 'mistral-saba-24b', 
+         'qwen-qwq-32b', 'qwen3-32b'].includes(modelName)) {
+      return {
+        import: 'from langchain_groq import ChatGroq',
+        class: 'ChatGroq',
+        config: `model_name="${modelName}"`
+      };
+    }
+    
+    // OpenRouter models (models with / in the name)
+    if (modelName.includes('/')) {
+      return {
+        import: 'from langchain_openrouter import ChatOpenRouter',
+        class: 'ChatOpenRouter',
+        config: `model="${modelName}"`
+      };
+    }
+    
+    // Default to ChatOpenAI for unknown models
+    return {
+      import: 'from langchain.chat_models import ChatOpenAI',
+      class: 'ChatOpenAI',
+      config: `model_name="${modelName}"`
+    };
+  };
+
   const exportToLangChainPython = () => {
     if (nodes.length === 0) {
       alert('No nodes to export');
       return;
     }
 
-    let pythonCode = `from langchain.prompts import PromptTemplate
-from langchain.chat_models import ChatOpenAI
-from langchain.chains import LLMChain
-from langchain.schema import BaseOutputParser
-from typing import Dict, Any, List
-import json
+    // Collect unique imports
+    const imports = new Set<string>();
+    imports.add('from langchain.prompts import PromptTemplate');
+    imports.add('from langchain.chains import LLMChain');
+    imports.add('from langchain.schema import BaseOutputParser');
+    imports.add('from typing import Dict, Any, List');
+    imports.add('import json');
+
+    // Add imports for each node's chat model
+    nodes.forEach((node) => {
+      const chatModel = getLangChainChatModel(node.data.model);
+      imports.add(chatModel.import);
+    });
+
+    let pythonCode = `${Array.from(imports).join('\n')}
 
 # Chain: ${chainName}
 `;
@@ -1258,6 +1515,7 @@ import json
     nodes.forEach((node, index) => {
       const variables = extractVariables(node.data.prompt);
       const varList = variables.length > 0 ? `[${variables.map(v => `"${v}"`).join(', ')}]` : '[]';
+      const chatModel = getLangChainChatModel(node.data.model);
       
       pythonCode += `
 # Node ${index + 1}: ${node.data.prompt.substring(0, 50)}...
@@ -1266,8 +1524,8 @@ prompt_template_${index + 1} = PromptTemplate(
     template="""${node.data.prompt.replace(/"/g, '\\"')}"""
 )
 
-llm_${index + 1} = ChatOpenAI(
-    model_name="${node.data.model}",
+llm_${index + 1} = ${chatModel.class}(
+    ${chatModel.config},
     temperature=${node.data.temperature},
     max_tokens=${node.data.maxTokens}
 )
@@ -1313,15 +1571,63 @@ def run_chain(inputs: Dict[str, Any]) -> Dict[str, Any]:
     URL.revokeObjectURL(url);
   };
 
+  // Helper function to get the appropriate LangChain chat model class for JavaScript
+  const getLangChainChatModelJS = (modelName: string): { import: string; class: string; config: string } => {
+    // OpenAI models (gpt-*)
+    if (modelName.startsWith('gpt-')) {
+      return {
+        import: 'import { ChatOpenAI } from "langchain/chat_models/openai"',
+        class: 'ChatOpenAI',
+        config: `modelName: "${modelName}"`
+      };
+    }
+    
+    // Groq models
+    if (['gemma2-9b-it', 'llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'deepseek-r1-distill-llama-70b', 
+         'llama-4-maverick-17b-128e-instruct', 'llama-4-scout-17b-16e-instruct', 'mistral-saba-24b', 
+         'qwen-qwq-32b', 'qwen3-32b'].includes(modelName)) {
+      return {
+        import: 'import { ChatGroq } from "@langchain/groq"',
+        class: 'ChatGroq',
+        config: `modelName: "${modelName}"`
+      };
+    }
+    
+    // OpenRouter models (models with / in the name)
+    if (modelName.includes('/')) {
+      return {
+        import: 'import { ChatOpenRouter } from "@langchain/openrouter"',
+        class: 'ChatOpenRouter',
+        config: `model: "${modelName}"`
+      };
+    }
+    
+    // Default to ChatOpenAI for unknown models
+    return {
+      import: 'import { ChatOpenAI } from "langchain/chat_models/openai"',
+      class: 'ChatOpenAI',
+      config: `modelName: "${modelName}"`
+    };
+  };
+
   const exportToLangChainJS = () => {
     if (nodes.length === 0) {
       alert('No nodes to export');
       return;
     }
 
-    let jsCode = `import { PromptTemplate } from "langchain/prompts";
-import { ChatOpenAI } from "langchain/chat_models/openai";
-import { LLMChain } from "langchain/chains";
+    // Collect unique imports
+    const imports = new Set<string>();
+    imports.add('import { PromptTemplate } from "langchain/prompts"');
+    imports.add('import { LLMChain } from "langchain/chains"');
+
+    // Add imports for each node's chat model
+    nodes.forEach((node) => {
+      const chatModel = getLangChainChatModelJS(node.data.model);
+      imports.add(chatModel.import);
+    });
+
+    let jsCode = `${Array.from(imports).join('\n')}
 
 // Chain: ${chainName}
 `;
@@ -1330,13 +1636,14 @@ import { LLMChain } from "langchain/chains";
     nodes.forEach((node, index) => {
       const variables = extractVariables(node.data.prompt);
       const varList = variables.length > 0 ? `[${variables.map(v => `"${v}"`).join(', ')}]` : '[]';
+      const chatModel = getLangChainChatModelJS(node.data.model);
       
       jsCode += `
 // Node ${index + 1}: ${node.data.prompt.substring(0, 50)}...
 const promptTemplate${index + 1} = PromptTemplate.fromTemplate(\`${node.data.prompt.replace(/`/g, '\\`')}\`);
 
-const llm${index + 1} = new ChatOpenAI({
-  modelName: "${node.data.model}",
+const llm${index + 1} = new ${chatModel.class}({
+  ${chatModel.config},
   temperature: ${node.data.temperature},
   maxTokens: ${node.data.maxTokens}
 });
@@ -1537,6 +1844,7 @@ export { runChain };
       <div className="flex-1 flex">
         <div className={`transition-all duration-300 ${showVisualization ? 'w-2/3' : 'w-full'}`}>
           <ReactFlow
+            key={`canvas-${canvasProjectId}-${edges.length}-${isLoaded}-${canvasKey}-${forceRender}`}
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
@@ -1548,6 +1856,13 @@ export { runChain };
             connectionMode={ConnectionMode.Loose}
             proOptions={proOptions}
             className="bg-gray-50"
+            fitView
+            fitViewOptions={{ padding: 0.1 }}
+            style={{ zIndex: 1 }}
+            defaultEdgeOptions={{
+              style: { stroke: '#6b7280', strokeWidth: 2 },
+              labelStyle: { fontSize: 12, fontWeight: 600, fill: '#6b7280' }
+            }}
           >
             <Background 
               variant={BackgroundVariant.Dots} 
@@ -1651,9 +1966,12 @@ export { runChain };
 };
 
 const PromptChainCanvas = ({ projectId, projectName }: PromptChainCanvasProps) => (
-  <ReactFlowProvider>
-    <PromptChainCanvasInner projectId={projectId} projectName={projectName} />
-  </ReactFlowProvider>
+  <>
+    <style>{customStyles}</style>
+    <ReactFlowProvider>
+      <PromptChainCanvasInner projectId={projectId} projectName={projectName} />
+    </ReactFlowProvider>
+  </>
 );
 
 export default PromptChainCanvas;

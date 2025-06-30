@@ -148,9 +148,91 @@ OPTIMIZED PROMPT:`;
 
   // Extract variables from prompt text
   const extractVariables = (prompt: string): string[] => {
-    const variableRegex = /\{\{([^}]+)\}\}/g;
-    const matches = [...prompt.matchAll(variableRegex)];
-    return [...new Set(matches.map(match => match[1].trim()))];
+    const variableRegex = /\{([^}]+)\}/g;
+    const variables = new Set<string>();
+    let match;
+    while ((match = variableRegex.exec(prompt)) !== null) {
+      variables.add(match[1]);
+    }
+    return Array.from(variables);
+  };
+
+  // Helper function to get the appropriate LangChain chat model class for Python
+  const getLangChainChatModelPython = (modelName: string): { import: string; class: string; config: string } => {
+    // OpenAI models (gpt-*)
+    if (modelName.startsWith('gpt-')) {
+      return {
+        import: 'from langchain.chat_models import ChatOpenAI',
+        class: 'ChatOpenAI',
+        config: `model_name="${modelName}"`
+      };
+    }
+    
+    // Groq models
+    if (['gemma2-9b-it', 'llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'deepseek-r1-distill-llama-70b', 
+         'llama-4-maverick-17b-128e-instruct', 'llama-4-scout-17b-16e-instruct', 'mistral-saba-24b', 
+         'qwen-qwq-32b', 'qwen3-32b'].includes(modelName)) {
+      return {
+        import: 'from langchain_groq import ChatGroq',
+        class: 'ChatGroq',
+        config: `model_name="${modelName}"`
+      };
+    }
+    
+    // OpenRouter models (models with / in the name)
+    if (modelName.includes('/')) {
+      return {
+        import: 'from langchain_openrouter import ChatOpenRouter',
+        class: 'ChatOpenRouter',
+        config: `model="${modelName}"`
+      };
+    }
+    
+    // Default to ChatOpenAI for unknown models
+    return {
+      import: 'from langchain.chat_models import ChatOpenAI',
+      class: 'ChatOpenAI',
+      config: `model_name="${modelName}"`
+    };
+  };
+
+  // Helper function to get the appropriate LangChain chat model class for JavaScript
+  const getLangChainChatModelJS = (modelName: string): { import: string; class: string; config: string } => {
+    // OpenAI models (gpt-*)
+    if (modelName.startsWith('gpt-')) {
+      return {
+        import: 'import { ChatOpenAI } from "langchain/chat_models/openai"',
+        class: 'ChatOpenAI',
+        config: `modelName: "${modelName}"`
+      };
+    }
+    
+    // Groq models
+    if (['gemma2-9b-it', 'llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'deepseek-r1-distill-llama-70b', 
+         'llama-4-maverick-17b-128e-instruct', 'llama-4-scout-17b-16e-instruct', 'mistral-saba-24b', 
+         'qwen-qwq-32b', 'qwen3-32b'].includes(modelName)) {
+      return {
+        import: 'import { ChatGroq } from "@langchain/groq"',
+        class: 'ChatGroq',
+        config: `modelName: "${modelName}"`
+      };
+    }
+    
+    // OpenRouter models (models with / in the name)
+    if (modelName.includes('/')) {
+      return {
+        import: 'import { ChatOpenRouter } from "@langchain/openrouter"',
+        class: 'ChatOpenRouter',
+        config: `model: "${modelName}"`
+      };
+    }
+    
+    // Default to ChatOpenAI for unknown models
+    return {
+      import: 'import { ChatOpenAI } from "langchain/chat_models/openai"',
+      class: 'ChatOpenAI',
+      config: `modelName: "${modelName}"`
+    };
   };
 
   const exportToLangChainPython = () => {
@@ -161,9 +243,10 @@ OPTIMIZED PROMPT:`;
 
     const variables = extractVariables(prompt);
     const varList = variables.length > 0 ? `[${variables.map(v => `"${v}"`).join(', ')}]` : '[]';
+    const chatModel = getLangChainChatModelPython(selectedModel);
     
     const pythonCode = `from langchain.prompts import PromptTemplate
-from langchain.chat_models import ChatOpenAI
+${chatModel.import}
 from langchain.chains import LLMChain
 
 # Prompt Template
@@ -173,8 +256,8 @@ prompt_template = PromptTemplate(
 )
 
 # Initialize the language model
-llm = ChatOpenAI(
-    model_name="${selectedModel}",
+llm = ${chatModel.class}(
+    ${chatModel.config},
     temperature=${temperature}
 )
 
@@ -215,17 +298,18 @@ def run_prompt(inputs):
     }
 
     const variables = extractVariables(prompt);
+    const chatModel = getLangChainChatModelJS(selectedModel);
     
     const jsCode = `import { PromptTemplate } from "langchain/prompts";
-import { ChatOpenAI } from "langchain/chat_models/openai";
+${chatModel.import}
 import { LLMChain } from "langchain/chains";
 
 // Prompt Template
 const promptTemplate = PromptTemplate.fromTemplate(\`${prompt.replace(/`/g, '\\`')}\`);
 
 // Initialize the language model
-const llm = new ChatOpenAI({
-  modelName: "${selectedModel}",
+const llm = new ${chatModel.class}({
+  ${chatModel.config},
   temperature: ${temperature}
 });
 
@@ -262,8 +346,6 @@ export { runPrompt };
     URL.revokeObjectURL(url);
     setShowExportMenu(false);
   };
-
-
 
   return (
     <div className="space-y-4">

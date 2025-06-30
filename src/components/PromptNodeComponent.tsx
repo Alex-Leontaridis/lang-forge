@@ -53,9 +53,9 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const models: Model[] = [
-    // OpenAI models (direct API)
-    { id: 'gpt-4', name: 'GPT-4', description: 'Advanced reasoning and analysis', provider: 'OpenAI', enabled: true },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient generation', provider: 'OpenAI', enabled: true },
+    // OpenAI models (routed through OpenRouter)
+    { id: 'gpt-4', name: 'GPT-4', description: 'Advanced reasoning and analysis', provider: 'OpenAI (OpenRouter)', enabled: true },
+    { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', description: 'Fast and efficient generation', provider: 'OpenAI (OpenRouter)', enabled: true },
     
     // Groq models (direct API)
     { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', description: '8K context, 8K output - Instruction-tuned LLM', provider: 'Groq', enabled: true },

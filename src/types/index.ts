@@ -120,7 +120,7 @@ export interface ChainEdge {
 
 export interface ConnectionCondition {
   enabled: boolean;
-  type: 'output_contains' | 'variable_equals' | 'token_count' | 'score_threshold' | 'custom';
+  type: 'output_contains' | 'variable_equals' | 'token_count' | 'score_threshold';
   operator: 'contains' | 'equals' | 'greater_than' | 'less_than' | 'greater_equal' | 'less_equal' | 'not_equals';
   value: string;
   variable?: string; // For variable-based conditions

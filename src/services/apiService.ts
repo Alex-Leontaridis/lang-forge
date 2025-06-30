@@ -1,11 +1,10 @@
 // API Service for PromptForge
-// Handles calls to OpenAI, Groq and OpenRouter APIs
+// Handles calls to Groq and OpenRouter APIs (OpenAI models now go through OpenRouter)
 
 interface APIConfig {
-  openaiApiKey: string;
   groqApiKey: string;
   openRouterApiKey: string;
-  openRouterOpenAIKey: string; // New key for OpenAI models through OpenRouter
+  openRouterOpenAIKey: string; // Key for OpenAI models through OpenRouter
 }
 
 interface ChatMessage {
@@ -36,9 +35,11 @@ interface ChatCompletionResponse {
 
 // Model configuration mapping
 const MODEL_CONFIG = {
-  // OpenAI models (now routed through OpenRouter with new key)
+  // OpenAI models (routed through OpenRouter with openRouterOpenAIKey)
   'gpt-4': { provider: 'openrouter_openai', modelId: 'openai/gpt-4' },
   'gpt-3.5-turbo': { provider: 'openrouter_openai', modelId: 'openai/gpt-3.5-turbo' },
+  'gpt-4o': { provider: 'openrouter_openai', modelId: 'openai/gpt-4o' },
+  'gpt-4o-mini': { provider: 'openrouter_openai', modelId: 'openai/gpt-4o-mini' },
   
   // Groq models (using direct Groq API)
   'gemma2-9b-it': { provider: 'groq', modelId: 'gemma2-9b-it' },
@@ -66,15 +67,13 @@ const MODEL_CONFIG = {
   'default': { provider: 'openrouter', modelId: 'openai/gpt-4o' }
 };
 
-// API Keys - Using environment variables
-const OPENAI_API_KEY = import.meta.env?.VITE_OPENAI_API_KEY;
+// API Keys - Using environment variables (removed VITE_OPENAI_API_KEY)
 const GROQ_API_KEY = import.meta.env?.VITE_GROQ_API_KEY;
 const OPENROUTER_API_KEY = import.meta.env?.VITE_OPENROUTER_API_KEY;
 const OPENROUTER_OPENAI_KEY = import.meta.env?.VITE_OPENROUTER_OPENAI_KEY;
 
 // Debug logging for API keys
 console.log('API Keys Debug:', {
-  openai: OPENAI_API_KEY ? `${OPENAI_API_KEY.substring(0, 10)}...` : 'NOT SET',
   groq: GROQ_API_KEY ? `${GROQ_API_KEY.substring(0, 10)}...` : 'NOT SET',
   openrouter: OPENROUTER_API_KEY ? `${OPENROUTER_API_KEY.substring(0, 10)}...` : 'NOT SET',
   openrouterOpenAI: OPENROUTER_OPENAI_KEY ? `${OPENROUTER_OPENAI_KEY.substring(0, 10)}...` : 'NOT SET',
@@ -88,9 +87,6 @@ class APIService {
     this.config = config;
     
     // Validate API keys on initialization
-    if (!this.config.openaiApiKey) {
-      console.warn('OpenAI API key is not set. OpenAI models will not work.');
-    }
     if (!this.config.groqApiKey) {
       console.warn('Groq API key is not set. Groq models will not work.');
     }
@@ -104,29 +100,6 @@ class APIService {
 
   private getModelConfig(modelId: string) {
     return MODEL_CONFIG[modelId as keyof typeof MODEL_CONFIG] || MODEL_CONFIG.default;
-  }
-
-  private async callOpenAIAPI(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
-    if (!this.config.openaiApiKey) {
-      throw new Error('OpenAI API key is not configured. Please set VITE_OPENAI_API_KEY in your environment variables.');
-    }
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.config.openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error details:', errorText);
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-
-    return response.json();
   }
 
   private async callGroqAPI(request: ChatCompletionRequest): Promise<ChatCompletionResponse> {
@@ -253,9 +226,7 @@ class APIService {
     try {
       let response: ChatCompletionResponse;
 
-      if (modelConfig.provider === 'openai') {
-        response = await this.callOpenAIAPI(request);
-      } else if (modelConfig.provider === 'groq') {
+      if (modelConfig.provider === 'groq') {
         response = await this.callGroqAPI(request);
       } else if (modelConfig.provider === 'openrouter_openai') {
         response = await this.callOpenRouterOpenAIAPI(request);
@@ -416,7 +387,6 @@ Please evaluate this response according to the criteria above. Provide specific 
 
 // Create and export a singleton instance
 const apiService = new APIService({
-  openaiApiKey: OPENAI_API_KEY,
   groqApiKey: GROQ_API_KEY,
   openRouterApiKey: OPENROUTER_API_KEY,
   openRouterOpenAIKey: OPENROUTER_OPENAI_KEY,

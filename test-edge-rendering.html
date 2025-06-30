@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edge Rendering Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .test-container {
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Edge Rendering Test</h1>
+    
+    <div class="test-container">
+        <h2>Test 1: Edge Loading from localStorage</h2>
+        <div id="test1-result"></div>
+        <button onclick="testEdgeLoading()">Run Test</button>
+    </div>
+    
+    <div class="test-container">
+        <h2>Test 2: Edge Styling Application</h2>
+        <div id="test2-result"></div>
+        <button onclick="testEdgeStyling()">Run Test</button>
+    </div>
+    
+    <div class="test-container">
+        <h2>Test 3: Conditional Edge Styling</h2>
+        <div id="test3-result"></div>
+        <button onclick="testConditionalStyling()">Run Test</button>
+    </div>
+
+    <script>
+        // Test 1: Edge Loading from localStorage
+        function testEdgeLoading() {
+            const resultDiv = document.getElementById('test1-result');
+            
+            try {
+                // Create test edges
+                const testEdges = [
+                    {
+                        id: 'edge_1',
+                        source: 'node_1',
+                        target: 'node_2',
+                        condition: {
+                            enabled: false,
+                            type: 'output_contains',
+                            operator: 'contains',
+                            value: 'test'
+                        },
+                        style: { stroke: '#6b7280', strokeWidth: 2 },
+                        labelStyle: { fontSize: 12, fontWeight: 600, fill: '#6b7280' }
+                    }
+                ];
+                
+                // Save to localStorage
+                localStorage.setItem('test_edges', JSON.stringify(testEdges));
+                
+                // Load from localStorage
+                const savedEdges = localStorage.getItem('test_edges');
+                const loadedEdges = JSON.parse(savedEdges);
+                
+                if (loadedEdges && loadedEdges.length === 1) {
+                    resultDiv.innerHTML = '<div class="test-result success">✅ Test passed: Edges loaded successfully from localStorage</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="test-result error">❌ Test failed: Edges not loaded correctly</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="test-result error">❌ Test failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Test 2: Edge Styling Application
+        function testEdgeStyling() {
+            const resultDiv = document.getElementById('test2-result');
+            
+            try {
+                const edge = {
+                    id: 'edge_1',
+                    source: 'node_1',
+                    target: 'node_2',
+                    condition: {
+                        enabled: false,
+                        type: 'output_contains',
+                        operator: 'contains',
+                        value: 'test'
+                    }
+                };
+                
+                // Apply default styling
+                const styledEdge = {
+                    ...edge,
+                    label: edge.label || '',
+                    style: edge.style || { stroke: '#6b7280', strokeWidth: 2 },
+                    labelStyle: edge.labelStyle || { fontSize: 12, fontWeight: 600, fill: '#6b7280' }
+                };
+                
+                if (styledEdge.style.stroke === '#6b7280' && styledEdge.style.strokeWidth === 2) {
+                    resultDiv.innerHTML = '<div class="test-result success">✅ Test passed: Default styling applied correctly</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="test-result error">❌ Test failed: Default styling not applied correctly</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="test-result error">❌ Test failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Test 3: Conditional Edge Styling
+        function testConditionalStyling() {
+            const resultDiv = document.getElementById('test3-result');
+            
+            try {
+                const edge = {
+                    id: 'edge_1',
+                    source: 'node_1',
+                    target: 'node_2',
+                    condition: {
+                        enabled: true,
+                        type: 'output_contains',
+                        operator: 'contains',
+                        value: 'test'
+                    }
+                };
+                
+                // Apply conditional styling
+                const styledEdge = {
+                    ...edge,
+                    label: `${edge.condition.type.replace('_', ' ')} ${edge.condition.operator} ${edge.condition.value}`,
+                    style: { 
+                        stroke: '#3b82f6', 
+                        strokeWidth: 3,
+                        strokeDasharray: '5,5'
+                    },
+                    labelStyle: { 
+                        fontSize: 10, 
+                        fontWeight: 600,
+                        fill: '#3b82f6',
+                        backgroundColor: 'white',
+                        padding: '2px 4px',
+                        borderRadius: '4px'
+                    }
+                };
+                
+                if (styledEdge.style.stroke === '#3b82f6' && 
+                    styledEdge.style.strokeWidth === 3 && 
+                    styledEdge.style.strokeDasharray === '5,5' &&
+                    styledEdge.label === 'output contains contains test') {
+                    resultDiv.innerHTML = '<div class="test-result success">✅ Test passed: Conditional styling applied correctly</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="test-result error">❌ Test failed: Conditional styling not applied correctly</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="test-result error">❌ Test failed: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html> 

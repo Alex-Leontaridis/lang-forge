@@ -133,12 +133,12 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
 
   // Mock data for testing
   const mockModels: Model[] = [
-    // OpenAI models (direct API)
+    // OpenAI models (routed through OpenRouter)
     {
       id: 'gpt-4',
       name: 'GPT-4',
       description: 'Advanced reasoning and analysis',
-      provider: 'OpenAI',
+      provider: 'OpenAI (OpenRouter)',
       logo: openaiLogo,
       enabled: true
     },
@@ -146,7 +146,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       id: 'gpt-3.5-turbo',
       name: 'GPT-3.5 Turbo',
       description: 'Fast and efficient generation',
-      provider: 'OpenAI',
+      provider: 'OpenAI (OpenRouter)',
       logo: openaiLogo,
       enabled: true
     },

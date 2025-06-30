@@ -21,8 +21,7 @@ const ConditionEditor: React.FC<ConditionEditorProps> = ({
     { value: 'output_contains', label: 'Output contains', description: 'Check if output contains text' },
     { value: 'variable_equals', label: 'Variable equals', description: 'Check if variable equals value' },
     { value: 'token_count', label: 'Token count', description: 'Check token count' },
-    { value: 'score_threshold', label: 'Score threshold', description: 'Check score values' },
-    { value: 'custom', label: 'Custom condition', description: 'Write custom condition' }
+    { value: 'score_threshold', label: 'Score threshold', description: 'Check score values' }
   ];
 
   const operators = [
@@ -170,20 +169,7 @@ const ConditionEditor: React.FC<ConditionEditorProps> = ({
           </div>
         );
 
-      case 'custom':
-        return (
-          <div className="space-y-2">
-            <textarea
-              value={localCondition.value}
-              onChange={(e) => setLocalCondition(prev => ({ ...prev, value: e.target.value }))}
-              placeholder="Enter custom condition (e.g., output.length > 100 && score.overall > 7)"
-              className="w-full text-sm border border-gray-300 rounded px-2 py-1 h-20 resize-none"
-            />
-            <div className="text-xs text-gray-500">
-              Available variables: output, score, tokenUsage, variables
-            </div>
-          </div>
-        );
+
 
       default:
         return null;
@@ -260,7 +246,6 @@ const ConditionEditor: React.FC<ConditionEditorProps> = ({
                 {localCondition.type === 'variable_equals' && `${localCondition.variable} ${localCondition.operator} "${localCondition.value}"`}
                 {localCondition.type === 'token_count' && `tokenCount ${localCondition.operator} ${localCondition.value}`}
                 {localCondition.type === 'score_threshold' && `score.${localCondition.field} ${localCondition.operator} ${localCondition.value}`}
-                {localCondition.type === 'custom' && localCondition.value}
               </div>
             </div>
           </>

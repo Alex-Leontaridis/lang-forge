@@ -462,6 +462,17 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
     return false;
   }, []);
 
+  // Center and fit view on nodes when nodes are loaded (on mount)
+  React.useEffect(() => {
+    if (nodes.length > 0) {
+      setTimeout(() => {
+        try {
+          reactFlowInstance.fitView();
+        } catch {}
+      }, 0);
+    }
+  }, [canvasProjectId]);
+
   const addPromptNode = useCallback(() => {
     const newNode: Node = {
       id: `node_${Date.now()}`,
@@ -495,8 +506,17 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
         onDelete: (id: string) => deleteNode(id),
       }
     };
-    setNodes((nds) => [...nds, newNode]);
-  }, [setNodes, runSingleNode, deleteNode]);
+    setNodes((nds) => {
+      const updated = [...nds, newNode];
+      // Center and fit after node is added
+      setTimeout(() => {
+        try {
+          reactFlowInstance.fitView();
+        } catch {}
+      }, 0);
+      return updated;
+    });
+  }, [setNodes, runSingleNode, deleteNode, reactFlowInstance]);
 
   const getNextNodes = (nodeId: string): string[] => {
     const outgoingEdges = edges.filter(edge => edge.source === nodeId);
@@ -866,6 +886,15 @@ export { runChain };
             <span>Live Viz</span>
           </button>
 
+          {/* Zoom to Fit Button */}
+          <button
+            onClick={() => reactFlowInstance.fitView()}
+            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            <Target className="w-4 h-4" />
+            <span>Zoom to Fit</span>
+          </button>
+
           {/* Export Menu */}
           <div className="relative">
             <button
@@ -960,7 +989,6 @@ export { runChain };
             onEdgeUpdate={onEdgeUpdate}
             nodeTypes={nodeTypes}
             connectionMode={ConnectionMode.Loose}
-            fitView
             proOptions={proOptions}
             className="bg-gray-50"
           >

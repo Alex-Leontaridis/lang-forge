@@ -351,11 +351,11 @@ const PromptForge = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 sm:space-x-4">
               <Link 
-                to="/" 
+                to="/dashboard" 
                 className="flex items-center space-x-2 text-gray-600 hover:text-black transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="font-medium hidden sm:inline">Back to Home</span>
+                <span className="font-medium hidden sm:inline">Back to Dashboard</span>
               </Link>
               <div className="flex items-center space-x-2">
                 <span className="text-base sm:text-lg font-semibold text-black">🦜 LangForge</span>

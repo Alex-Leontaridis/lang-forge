@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Homepage from './components/Homepage';
+import Dashboard from './components/Dashboard';
 import PromptForge from './components/PromptForge';
 import PromptChainCanvas from './components/PromptChainCanvas';
 import Auth from './components/Auth';
@@ -15,6 +16,14 @@ function App() {
           <Routes>
             <Route path="/" element={<Homepage />} />
             <Route path="/auth" element={<Auth />} />
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/app" 
               element={

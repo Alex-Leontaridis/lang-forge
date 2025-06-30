@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = 'https://dkwzawdkqvycdoykhtvw.supabase.co'
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRrd3phd2RrcXZ5Y2RveWtodHZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyODczODcsImV4cCI6MjA2Njg2MzM4N30.nKDVVHIFxNnf27WmuNT650Mf6imYzMmKczojXp0-O98'
 
+console.log('Initializing Supabase client with:', { supabaseUrl, supabaseAnonKey: supabaseAnonKey.substring(0, 20) + '...' });
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
@@ -14,6 +16,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Function to log authentication attempts
 export const logAuthAttempt = async (email: string, status: 'success' | 'failure', errorMessage?: string) => {
   try {
+    console.log('Logging auth attempt:', { email, status, errorMessage });
+    
     const { error } = await supabase
       .from('email_auth_logs')
       .insert({
@@ -24,6 +28,8 @@ export const logAuthAttempt = async (email: string, status: 'success' | 'failure
     
     if (error) {
       console.error('Error logging auth attempt:', error)
+    } else {
+      console.log('Auth attempt logged successfully');
     }
   } catch (err) {
     console.error('Error logging auth attempt:', err)

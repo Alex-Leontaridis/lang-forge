@@ -9,6 +9,15 @@ The visual IDE for crafting prompts and building LangChain logic — all in one 
 - **Multi-Model Testing** across 20+ AI models (OpenAI, Groq, OpenRouter)
 - **Real-time Prompt Scoring** with relevance, clarity, and creativity metrics
 - **Comprehensive Variable Management** with explicit declarations and validation
+- **Project Dashboard** for managing multiple projects and templates
+
+### 🏠 Project Dashboard (NEW!)
+- **Project Management** with status tracking (Draft, Testing, Exported)
+- **Analytics Snapshot** showing total projects, versions, tokens, and performance
+- **Template Library** with pre-built starter kits (QA Bot, Multi-Prompt Chain, etc.)
+- **Project Actions** including open, duplicate, export, and delete
+- **Search & Filter** capabilities for large project collections
+- **LangChain Export Types** tracking (SequentialChain, LangGraph, Custom)
 
 ### 🔄 Variable Management System (NEW!)
 - **Explicit Input Variable Declaration** with types, validation, and defaults
@@ -174,6 +183,43 @@ const OPENROUTER_API_KEY = 'your-openrouter-key';
    - Compare scores and performance metrics
    - Identify the best model for your use case
 
+### Using the Project Dashboard
+
+1. **Accessing the Dashboard**
+   - After login/signup, you'll be redirected to the dashboard
+   - View analytics snapshot with key metrics
+   - Manage all your projects from one central location
+
+2. **Analytics Overview**
+   - **Total Projects**: Number of projects you've created
+   - **Prompt Versions**: Total versions across all projects
+   - **Tokens This Month**: Current month's token usage
+   - **Top Prompt Score**: Best performing prompt score
+   - **Most Used Model**: Your preferred AI model
+
+3. **Project Management**
+   - **Create New Project**: Click "+ New Project" button
+   - **Search Projects**: Use the search bar to find specific projects
+   - **Filter by Status**: Filter by Draft, Testing, or Exported status
+   - **Project Actions**: Open, duplicate, export, or delete projects
+
+4. **Using Templates**
+   - Browse pre-built templates in the right sidebar
+   - Filter by category (LangChain, LangGraph, Chat, Tools, QA, Summarizer)
+   - Choose complexity level (Beginner, Intermediate, Advanced)
+   - Click "Load Template" to create a new project from template
+
+5. **Project Status Tracking**
+   - **Draft**: Work in progress projects
+   - **Testing**: Projects being tested with multiple models
+   - **Exported**: Completed projects ready for production
+
+6. **Export Types**
+   - **SequentialChain**: Linear prompt chains
+   - **LangGraph**: Complex workflows with conditional logic
+   - **Custom**: Custom implementations
+   - **None**: Projects not yet exported
+
 ## 🔧 Development
 
 ### Project Structure
@@ -181,6 +227,7 @@ const OPENROUTER_API_KEY = 'your-openrouter-key';
 ```
 src/
 ├── components/          # React components
+│   ├── Dashboard.tsx   # Project dashboard (NEW!)
 │   ├── Analytics.tsx   # Analytics dashboard
 │   ├── VersionControl.tsx # Version management
 │   ├── VersionComparison.tsx # Version comparison
@@ -198,6 +245,7 @@ src/
 
 ### Key Components
 
+- **`Dashboard`**: Project management and analytics overview (NEW!)
 - **`usePromptVersions`**: Manages version state with localStorage persistence
 - **`VersionControl`**: Complete version management interface
 - **`VersionComparison`**: Side-by-side version analysis
@@ -222,7 +270,18 @@ src/
    - Add new validation rules to `VariableManager.tsx`
    - Update health monitoring in `ChainHealthValidation.tsx`
 
+4. **Dashboard Enhancements**
+   - Add new project templates in `Dashboard.tsx`
+   - Extend analytics metrics for project overview
+   - Add new project status types and export formats
+
 ## 🎯 Best Practices
+
+### Project Management
+- Use descriptive project names and descriptions
+- Update project status as you progress (Draft → Testing → Exported)
+- Use templates for common use cases to save time
+- Regularly review and clean up old projects
 
 ### Variable Management
 - Use explicit variable declarations for better validation

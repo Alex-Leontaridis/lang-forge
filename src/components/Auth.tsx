@@ -8,10 +8,91 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  // Test Supabase connection
+  const testConnection = async () => {
+    try {
+      const { data, error } = await supabase.from('email_auth_logs').select('count').limit(1);
+      console.log('Supabase connection test:', { data, error });
+      return !error;
+    } catch (err) {
+      console.error('Supabase connection test failed:', err);
+      return false;
+    }
+  };
+
+  // Check if user exists in auth
+  const checkUserExists = async (email: string) => {
+    try {
+      // Try to get user by email (this will only work if you have admin privileges)
+      // For now, we'll just log the attempt
+      console.log('Checking if user exists for email:', email);
+      
+      // Alternative: try to reset password to see if user exists
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin
+      });
+      
+      if (error) {
+        console.log('User check result:', error.message);
+        return false;
+      } else {
+        console.log('Password reset email sent - user exists');
+        return true;
+      }
+    } catch (err) {
+      console.error('Error checking user existence:', err);
+      return false;
+    }
+  };
+
+  // Handle forgot password
+  const handleForgotPassword = async () => {
+    if (!email || !email.includes('@')) {
+      setMessage('Please enter your email address first');
+      return;
+    }
+
+    setLoading(true);
+    setMessage('');
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin
+      });
+
+      if (error) {
+        setMessage(error.message);
+      } else {
+        setMessage('Password reset email sent! Check your inbox.');
+      }
+    } catch (error) {
+      setMessage('An error occurred while sending reset email.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
+
+    // Test connection first
+    const isConnected = await testConnection();
+    console.log('Supabase connection status:', isConnected);
+
+    // Basic validation
+    if (!email || !email.includes('@')) {
+      setMessage('Please enter a valid email address');
+      setLoading(false);
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      setMessage('Password must be at least 6 characters long');
+      setLoading(false);
+      return;
+    }
 
     try {
       if (isLogin) {
@@ -27,13 +108,25 @@ const Auth = () => {
         if (error) {
           console.error('Login error:', error);
           await logAuthAttempt(email, 'failure', error.message);
-          setMessage(error.message);
+          
+          // Provide more helpful error messages
+          if (error.message === 'Invalid login credentials') {
+            setMessage('Invalid credentials. Please check your email and password. If you recently signed up, try signing up again or use the "Forgot Password" option.');
+            
+            // Check if user exists
+            const userExists = await checkUserExists(email);
+            if (!userExists) {
+              setMessage('Account not found. Please sign up first or check your email address.');
+            }
+          } else {
+            setMessage(error.message);
+          }
         } else {
           console.log('Login successful:', data);
           await logAuthAttempt(email, 'success');
           setMessage('Login successful!');
-          // Redirect to app after successful login
-          window.location.href = '/app';
+          // Redirect to dashboard after successful login
+          window.location.href = '/dashboard';
         }
       } else {
         console.log('Attempting signup with:', { email, password: password ? '[HIDDEN]' : 'empty' });
@@ -48,14 +141,22 @@ const Auth = () => {
         if (error) {
           console.error('Signup error:', error);
           await logAuthAttempt(email, 'failure', error.message);
-          setMessage(error.message);
+          
+          // Provide more helpful error messages for signup
+          if (error.message.includes('already registered')) {
+            setMessage('This email is already registered. Please try logging in instead.');
+          } else if (error.message.includes('password')) {
+            setMessage('Password should be at least 6 characters long.');
+          } else {
+            setMessage(error.message);
+          }
         } else {
           console.log('Signup successful:', data);
           await logAuthAttempt(email, 'success');
           setMessage('Sign up successful! Redirecting...');
-          // Redirect to app immediately after successful signup
+          // Redirect to dashboard immediately after successful signup
           setTimeout(() => {
-            window.location.href = '/app';
+            window.location.href = '/dashboard';
           }, 1000);
         }
       }
@@ -131,6 +232,15 @@ const Auth = () => {
                 placeholder="Enter your password"
                 required
               />
+              {isLogin && (
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="mt-2 text-sm text-gray-600 hover:text-black transition-colors"
+                >
+                  Forgot Password?
+                </button>
+              )}
             </div>
 
             {/* Message */}
@@ -153,6 +263,28 @@ const Auth = () => {
               {loading ? 'Loading...' : (isLogin ? 'Login' : 'Sign Up')}
             </button>
           </form>
+
+          {/* Helpful message */}
+          {isLogin && (
+            <div className="mt-4 text-center text-sm text-gray-600">
+              Don't have an account? <button 
+                onClick={() => setIsLogin(false)} 
+                className="text-black font-medium hover:underline"
+              >
+                Sign up here
+              </button>
+            </div>
+          )}
+          {!isLogin && (
+            <div className="mt-4 text-center text-sm text-gray-600">
+              Already have an account? <button 
+                onClick={() => setIsLogin(true)} 
+                className="text-black font-medium hover:underline"
+              >
+                Login here
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

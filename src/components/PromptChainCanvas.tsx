@@ -730,6 +730,13 @@ export { runChain };
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
         <div className="flex items-center space-x-4">
+          <Link 
+            to="/dashboard" 
+            className="flex items-center space-x-2 text-gray-600 hover:text-black transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="font-medium">Back to Dashboard</span>
+          </Link>
           <div className="flex items-center space-x-2">
             <span className="text-lg font-semibold text-black">🦜 LangForge</span>
             <input

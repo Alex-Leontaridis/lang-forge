@@ -128,7 +128,7 @@ const Auth = () => {
           await logAuthAttempt(email, 'success');
           setMessage('Login successful!');
           // Redirect to dashboard after successful login
-          window.location.href = '/dashboard';
+          navigate('/dashboard');
         }
       } else {
         console.log('Attempting signup with:', { email, password: password ? '[HIDDEN]' : 'empty' });
@@ -158,7 +158,7 @@ const Auth = () => {
           setMessage('Sign up successful! Redirecting...');
           // Redirect to dashboard immediately after successful signup
           setTimeout(() => {
-            window.location.href = '/dashboard';
+            navigate('/dashboard');
           }, 1000);
         }
       }

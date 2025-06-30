@@ -35,7 +35,7 @@ const Homepage = () => {
       <nav className="relative z-10 px-6 py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <span className="text-xl font-semibold text-black">brd LangForge</span>
+            <span className="text-xl font-semibold text-black">LangForge</span>
           </div>
           <div className="hidden md:flex items-center space-x-8">
             <a href="#features" className="text-gray-600 hover:text-black transition-colors">Features</a>
@@ -402,7 +402,7 @@ const Homepage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between mb-8">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <span className="text-lg font-semibold text-black">brd LangForge</span>
+              <span className="text-lg font-semibold text-black">LangForge</span>
             </div>
             <p className="text-gray-600">&copy; 2025 LangForge. Built with AI in mind.</p>
           </div>

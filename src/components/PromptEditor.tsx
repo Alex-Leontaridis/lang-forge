@@ -5,6 +5,7 @@ import apiService from '../services/apiService';
 import PromptAutoTest, { AutoTestResult } from './PromptAutoTest';
 import MemoryConfigComponent from './MemoryConfig';
 import ConversationHistory from './ConversationHistory';
+import langchainLogo from '../logo/langchain.png';
 
 interface PromptEditorProps {
   prompt: string;
@@ -477,14 +478,22 @@ export { runPrompt };
                         onClick={exportToLangChainPython}
                         className="w-full flex items-center space-x-2 px-3 py-2 text-left hover:bg-gray-100 rounded transition-colors"
                       >
-                        <Code className="w-4 h-4 text-blue-600" />
+                        <img
+                          src={langchainLogo}
+                          alt="LangChain Logo"
+                          style={{ height: '18px', width: 'auto', filter: 'invert(88%) sepia(99%) saturate(7499%) hue-rotate(1deg) brightness(104%) contrast(104%)' }}
+                        />
                         <span>Export to LangChain Python</span>
                       </button>
                       <button
                         onClick={exportToLangChainJS}
                         className="w-full flex items-center space-x-2 px-3 py-2 text-left hover:bg-gray-100 rounded transition-colors"
                       >
-                        <Code className="w-4 h-4 text-yellow-600" />
+                        <img
+                          src={langchainLogo}
+                          alt="LangChain Logo"
+                          style={{ height: '18px', width: 'auto', filter: 'invert(67%) sepia(99%) saturate(7499%) hue-rotate(359deg) brightness(104%) contrast(104%)' }}
+                        />
                         <span>Export to LangChain JS</span>
                       </button>
                     </div>

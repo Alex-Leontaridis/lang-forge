@@ -16,6 +16,7 @@ import ReactFlow, {
   ReactFlowProvider
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import langchainLogo from '../logo/langchain.png';
 import { 
   ArrowLeft, 
   Plus, 
@@ -1450,7 +1451,11 @@ export { runChain };
                     }}
                     className="w-full flex items-center space-x-2 px-3 py-2 text-left hover:bg-gray-100 rounded transition-colors"
                   >
-                    <Code className="w-4 h-4 text-blue-600" />
+                    <img
+                      src={langchainLogo}
+                      alt="LangChain Logo"
+                      style={{ height: '18px', width: 'auto' }}
+                    />
                     <span>Export to LangChain Python</span>
                   </button>
                   <button
@@ -1460,7 +1465,11 @@ export { runChain };
                     }}
                     className="w-full flex items-center space-x-2 px-3 py-2 text-left hover:bg-gray-100 rounded transition-colors"
                   >
-                    <Code className="w-4 h-4 text-yellow-600" />
+                    <img
+                      src={langchainLogo}
+                      alt="LangChain Logo"
+                      style={{ height: '18px', width: 'auto' }}
+                    />
                     <span>Export to LangChain JS</span>
                   </button>
                 </div>

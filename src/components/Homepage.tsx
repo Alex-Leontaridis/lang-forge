@@ -35,7 +35,7 @@ const Homepage = () => {
       <nav className="relative z-10 px-6 py-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <span className="text-xl font-semibold text-black">LangForge</span>
+            <span className="text-xl font-semibold text-black">🦜 LangForge</span>
           </div>
           <div className="hidden md:flex items-center space-x-8">
             <a href="#features" className="text-gray-600 hover:text-black transition-colors">Features</a>
@@ -89,11 +89,11 @@ const Homepage = () => {
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
               <Beaker className="inline w-8 h-8 mr-3" />
-              Build Smarter with LangForge
+              Build Smarter with 🦜 LangForge
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              LangForge is your unified workspace for creating, testing, and refining prompt-powered applications.
-              Whether you're building with LangChain, LangGraph, or custom agents, LangForge gives you the precision of code with the clarity of visual design.
+              🦜 LangForge is your unified workspace for creating, testing, and refining prompt-powered applications.
+              Whether you're building with LangChain, LangGraph, or custom agents, 🦜 LangForge gives you the precision of code with the clarity of visual design.
             </p>
           </div>
         </div>
@@ -229,7 +229,7 @@ const Homepage = () => {
               Built for LangChain & LangGraph
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              LangForge natively supports LangChain and LangGraph structures:
+              🦜 LangForge natively supports LangChain and LangGraph structures:
             </p>
           </div>
           
@@ -384,7 +384,7 @@ const Homepage = () => {
               Ready to forge better LangChain applications?
             </h2>
             <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              Join thousands of developers who are already building amazing things with LangForge.
+              Join thousands of developers who are already building amazing things with 🦜 LangForge.
             </p>
             <Link 
               to="/auth" 
@@ -402,16 +402,16 @@ const Homepage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between mb-8">
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <span className="text-lg font-semibold text-black">LangForge</span>
+              <span className="text-lg font-semibold text-black">🦜 LangForge</span>
             </div>
-            <p className="text-gray-600">&copy; 2025 LangForge. Built with AI in mind.</p>
+                          <p className="text-gray-600">&copy; 2025 🦜 LangForge. Built with AI in mind.</p>
           </div>
           
           {/* Disclaimer */}
           <div className="border-t border-gray-200 pt-8">
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-4xl mx-auto">
               <p className="text-sm text-yellow-800 text-center">
-                <strong>Disclaimer:</strong> LangForge is not affiliated with, endorsed by, or connected to LangChain, LangGraph, or any of their associated companies or products. LangForge is an independent tool designed to work with LangChain and LangGraph frameworks.
+                <strong>Disclaimer:</strong> 🦜 LangForge is not affiliated with, endorsed by, or connected to LangChain, LangGraph, or any of their associated companies or products. 🦜 LangForge is an independent tool designed to work with LangChain and LangGraph frameworks.
               </p>
             </div>
           </div>

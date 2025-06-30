@@ -1,5 +1,11 @@
 // Test file to verify MultiModelRunner functionality
 import { Model } from './types';
+// Import logo images
+import openaiLogo from './logo/openai.png';
+import googleLogo from './logo/google.png';
+import metaLogo from './logo/meta.png';
+import deepseekLogo from './logo/deepseek.png';
+import minimaxLogo from './logo/minimax.png';
 
 // Mock data for testing
 const mockModels: Model[] = [
@@ -8,7 +14,7 @@ const mockModels: Model[] = [
     name: 'GPT-4',
     description: 'Most capable model',
     provider: 'OpenAI',
-    logo: '/src/logo/openai.png',
+    logo: openaiLogo,
     enabled: true
   },
   {
@@ -16,7 +22,7 @@ const mockModels: Model[] = [
     name: 'GPT-3.5 Turbo',
     description: 'Fast and efficient',
     provider: 'OpenAI',
-    logo: '/src/logo/openai.png',
+    logo: openaiLogo,
     enabled: true
   },
   {
@@ -24,7 +30,7 @@ const mockModels: Model[] = [
     name: 'Gemma 2 9B IT',
     description: 'Google Gemma 2 9B IT (Groq)',
     provider: 'Groq',
-    logo: '/src/logo/google.png',
+    logo: googleLogo,
     enabled: true
   },
   {
@@ -32,7 +38,7 @@ const mockModels: Model[] = [
     name: 'Llama 3.1 8B Instant',
     description: 'Meta Llama 3.1 8B Instant (Groq)',
     provider: 'Groq',
-    logo: '/src/logo/meta.png',
+    logo: metaLogo,
     enabled: true
   },
   {
@@ -40,7 +46,7 @@ const mockModels: Model[] = [
     name: 'DeepSeek R1 Distill Llama 70B',
     description: 'DeepSeek R1 Distill Llama 70B (OpenRouter)',
     provider: 'OpenRouter',
-    logo: '/src/logo/deepseek.png',
+    logo: deepseekLogo,
     enabled: true
   },
   {
@@ -48,7 +54,7 @@ const mockModels: Model[] = [
     name: 'MiniMax M1',
     description: 'MiniMax M1 (OpenRouter)',
     provider: 'OpenRouter',
-    logo: '/src/logo/minimax.png',
+    logo: minimaxLogo,
     enabled: true
   }
 ];
@@ -86,8 +92,8 @@ export function testMultiModelRunner() {
   
   // Test 5: Search and filter simulation
   console.log('\n✓ Search and filter functionality');
-  const searchTerm = 'gpt';
-  const filterProvider = 'OpenAI';
+  const searchTerm: string = 'gpt';
+  const filterProvider: string = 'OpenAI';
   const filteredModels = mockModels.filter(model => {
     const matchesSearch = searchTerm === '' || 
       model.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -105,7 +111,7 @@ export function testMultiModelRunner() {
   // Test 6: Logo display validation
   console.log('\n✓ Logo display validation');
   mockModels.forEach(model => {
-    const logoExists = model.logo && model.logo.includes('/src/logo/');
+    const logoExists = model.logo && typeof model.logo === 'string';
     console.log(`  - ${model.name}: ${logoExists ? '✓' : '✗'} logo path valid`);
   });
   

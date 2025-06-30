@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
 import { Play, Bot, Clock, Zap, CheckCircle, AlertCircle, Search, Filter, ChevronDown, ChevronRight } from 'lucide-react';
 import { Model, ModelRun } from '../types';
+// Import logo images
+import openaiLogo from '../logo/openai.png';
+import googleLogo from '../logo/google.png';
+import metaLogo from '../logo/meta.png';
+import deepseekLogo from '../logo/deepseek.png';
+import mistralLogo from '../logo/mistral.png';
+import qwenLogo from '../logo/qwen.png';
+import minimaxLogo from '../logo/minimax.png';
 
 interface MultiModelRunnerProps {
   models: Model[];
@@ -131,7 +139,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'GPT-4',
       description: 'Advanced reasoning and analysis',
       provider: 'OpenAI',
-      logo: '/src/logo/openai.png',
+      logo: openaiLogo,
       enabled: true
     },
     {
@@ -139,7 +147,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'GPT-3.5 Turbo',
       description: 'Fast and efficient generation',
       provider: 'OpenAI',
-      logo: '/src/logo/openai.png',
+      logo: openaiLogo,
       enabled: true
     },
     
@@ -149,7 +157,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Gemma 2 9B IT',
       description: '8K context, 8K output - Instruction-tuned LLM',
       provider: 'Groq',
-      logo: '/src/logo/google.png',
+      logo: googleLogo,
       enabled: true
     },
     {
@@ -157,7 +165,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Llama 3.1 8B Instant',
       description: '131K context, 131K output - Fast, general-purpose LLM',
       provider: 'Groq',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       enabled: true
     },
     {
@@ -165,7 +173,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Llama 3.3 70B Versatile',
       description: '131K context, 32K output - High-quality generation LLM',
       provider: 'Groq',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       enabled: true
     },
     {
@@ -173,7 +181,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'DeepSeek R1 Distill Llama 70B',
       description: '131K context, 131K output - Distilled LLaMA LLM',
       provider: 'Groq',
-      logo: '/src/logo/deepseek.png',
+      logo: deepseekLogo,
       enabled: true
     },
     {
@@ -181,7 +189,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Llama 4 Maverick 17B',
       description: '131K context, 8K output - LLaMA 4 instruct LLM',
       provider: 'Groq',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       enabled: true
     },
     {
@@ -189,7 +197,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Llama 4 Scout 17B',
       description: '131K context, 8K output - Smaller LLaMA 4 instruct LLM',
       provider: 'Groq',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       enabled: true
     },
     {
@@ -197,7 +205,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Mistral Saba 24B',
       description: '32K context, 32K output - General-purpose LLM',
       provider: 'Groq',
-      logo: '/src/logo/mistral.png',
+      logo: mistralLogo,
       enabled: true
     },
     {
@@ -205,7 +213,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Qwen QWQ 32B',
       description: '131K context, 131K output - Multilingual LLM',
       provider: 'Groq',
-      logo: '/src/logo/qwen.png',
+      logo: qwenLogo,
       enabled: true
     },
     {
@@ -213,7 +221,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Qwen3 32B',
       description: '131K context, 40K output - Advanced multilingual LLM',
       provider: 'Groq',
-      logo: '/src/logo/qwen.png',
+      logo: qwenLogo,
       enabled: true
     },
     
@@ -223,7 +231,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Llama 3.3 70B Instruct',
       description: '131K context - Multilingual, strong benchmark performance',
       provider: 'Meta (OpenRouter)',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       enabled: true
     },
     {
@@ -231,7 +239,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Qwen2.5 Coder 32B Instruct',
       description: '33K context - Advanced code generation and reasoning',
       provider: 'Qwen (OpenRouter)',
-      logo: '/src/logo/qwen.png',
+      logo: qwenLogo,
       enabled: true
     },
     {
@@ -239,7 +247,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Llama 3.2 11B Vision Instruct',
       description: '131K context - Multimodal model (image + text)',
       provider: 'Meta (OpenRouter)',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       enabled: true
     },
     {
@@ -247,7 +255,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Llama 3.2 1B Instruct',
       description: '131K context - Lightweight multilingual LLM',
       provider: 'Meta (OpenRouter)',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       enabled: true
     },
     {
@@ -255,7 +263,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Qwen2.5 72B Instruct',
       description: '33K context - Long-text, multilingual, structured output',
       provider: 'Qwen (OpenRouter)',
-      logo: '/src/logo/qwen.png',
+      logo: qwenLogo,
       enabled: true
     },
     {
@@ -263,7 +271,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Llama 3.1 8B Instruct',
       description: '131K context - Fast and efficient generation',
       provider: 'Meta (OpenRouter)',
-      logo: '/src/logo/meta.png',
+      logo: metaLogo,
       enabled: true
     },
     {
@@ -271,7 +279,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Mistral Nemo',
       description: '131K context - Multilingual with function calling',
       provider: 'Mistral (OpenRouter)',
-      logo: '/src/logo/mistral.png',
+      logo: mistralLogo,
       enabled: true
     },
     {
@@ -279,7 +287,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Gemma 2 9B IT',
       description: '8K context - Versatile and efficient open-source LLM',
       provider: 'Google (OpenRouter)',
-      logo: '/src/logo/google.png',
+      logo: googleLogo,
       enabled: true
     },
     {
@@ -287,7 +295,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
       name: 'Mistral 7B Instruct',
       description: '33K context - High-performing 7B model',
       provider: 'Mistral (OpenRouter)',
-      logo: '/src/logo/mistral.png',
+      logo: mistralLogo,
       enabled: true
     }
   ];
@@ -389,7 +397,7 @@ const MultiModelRunner: React.FC<MultiModelRunnerProps> = ({
                           className="w-5 h-5 object-contain"
                           onError={(e) => {
                             // Fallback to a default logo if image fails to load
-                            (e.target as HTMLImageElement).src = '/src/logo/openai.png';
+                            (e.target as HTMLImageElement).src = openaiLogo;
                           }}
                         />
                       </div>

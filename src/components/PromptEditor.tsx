@@ -1,10 +1,8 @@
 import React, { useEffect } from 'react';
-import { FileText, Zap, Eye, EyeOff, Sparkles, FileCode, ChevronDown, Code, Brain } from 'lucide-react';
-import { Variable, Model, MemoryConfig, ConversationMessage } from '../types';
+import { FileText, Zap, Eye, EyeOff, Sparkles, FileCode, ChevronDown, Code } from 'lucide-react';
+import { Variable, Model } from '../types';
 import apiService from '../services/apiService';
 import PromptAutoTest, { AutoTestResult } from './PromptAutoTest';
-import MemoryConfigComponent from './MemoryConfig';
-import ConversationHistory from './ConversationHistory';
 import langchainLogo from '../logo/langchain.png';
 
 interface PromptEditorProps {
@@ -19,11 +17,6 @@ interface PromptEditorProps {
   selectedModels?: string[];
   onAutoTestComplete?: (result: AutoTestResult) => void;
   onAutoTestRunningChange?: (isRunning: boolean) => void;
-  memory?: MemoryConfig;
-  onMemoryChange?: (memory: MemoryConfig) => void;
-  conversationHistory?: ConversationMessage[];
-  onClearHistory?: () => void;
-  onDeleteMessage?: (index: number) => void;
 }
 
 const PromptEditor: React.FC<PromptEditorProps> = ({ 
@@ -37,33 +30,12 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
   models = [],
   selectedModels = ['gpt-4'],
   onAutoTestComplete,
-  onAutoTestRunningChange,
-  memory,
-  onMemoryChange,
-  conversationHistory = [],
-  onClearHistory,
-  onDeleteMessage
+  onAutoTestRunningChange
 }) => {
   const [showPreview, setShowPreview] = React.useState(false);
   const [isOptimizing, setIsOptimizing] = React.useState(false);
   const [showAutoTest, setShowAutoTest] = React.useState(false);
   const [showExportMenu, setShowExportMenu] = React.useState(false);
-  const [showMemory, setShowMemory] = React.useState(false);
-
-  // Default memory configuration
-  const defaultMemory: MemoryConfig = {
-    enabled: false,
-    type: 'conversation_buffer',
-    maxMessages: 10,
-    returnMessages: true,
-    inputKey: 'input',
-    outputKey: 'output',
-    memoryKey: 'history',
-    humanPrefix: 'Human',
-    aiPrefix: 'Assistant'
-  };
-
-  const currentMemory = memory || defaultMemory;
 
   // Handle clicking outside export menu to close it
   React.useEffect(() => {
@@ -85,24 +57,6 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setPrompt(e.target.value);
-  };
-
-  const handleMemoryChange = (newMemory: MemoryConfig) => {
-    if (onMemoryChange) {
-      onMemoryChange(newMemory);
-    }
-  };
-
-  const handleClearHistory = () => {
-    if (onClearHistory) {
-      onClearHistory();
-    }
-  };
-
-  const handleDeleteMessage = (index: number) => {
-    if (onDeleteMessage) {
-      onDeleteMessage(index);
-    }
   };
 
   const optimizePrompt = async () => {
@@ -208,32 +162,9 @@ OPTIMIZED PROMPT:`;
     const variables = extractVariables(prompt);
     const varList = variables.length > 0 ? `[${variables.map(v => `"${v}"`).join(', ')}]` : '[]';
     
-    let memoryCode = '';
-    if (currentMemory.enabled) {
-      memoryCode = `
-# Memory Configuration
-from langchain.memory import ${getMemoryImport(currentMemory.type)}
-
-memory = ${getMemoryInitialization(currentMemory.type, currentMemory)}
-
-# Create the chain with memory
-chain = LLMChain(
-    llm=llm,
-    prompt=prompt_template,
-    memory=memory
-)`;
-    } else {
-      memoryCode = `
-# Create the chain
-chain = LLMChain(
-    llm=llm,
-    prompt=prompt_template
-)`;
-    }
-    
     const pythonCode = `from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
-from langchain.chains import LLMChain${currentMemory.enabled ? '\nfrom langchain.memory import ' + getMemoryImport(currentMemory.type) : ''}
+from langchain.chains import LLMChain
 
 # Prompt Template
 prompt_template = PromptTemplate(
@@ -245,7 +176,13 @@ prompt_template = PromptTemplate(
 llm = ChatOpenAI(
     model_name="${selectedModel}",
     temperature=${temperature}
-)${memoryCode}
+)
+
+# Create the chain
+chain = LLMChain(
+    llm=llm,
+    prompt=prompt_template
+)
 
 # Example usage:
 # inputs = {${variables.map(v => `"${v}": "value"`).join(', ')}}
@@ -279,32 +216,9 @@ def run_prompt(inputs):
 
     const variables = extractVariables(prompt);
     
-    let memoryCode = '';
-    if (currentMemory.enabled) {
-      memoryCode = `
-// Memory Configuration
-import { ${getMemoryImportJS(currentMemory.type)} } from "langchain/memory";
-
-const memory = new ${getMemoryImportJS(currentMemory.type)}(${getMemoryInitializationJS(currentMemory.type, currentMemory)});
-
-// Create the chain with memory
-const chain = new LLMChain({
-  llm: llm,
-  prompt: promptTemplate,
-  memory: memory
-});`;
-    } else {
-      memoryCode = `
-// Create the chain
-const chain = new LLMChain({
-  llm: llm,
-  prompt: promptTemplate
-});`;
-    }
-    
     const jsCode = `import { PromptTemplate } from "langchain/prompts";
 import { ChatOpenAI } from "langchain/chat_models/openai";
-import { LLMChain } from "langchain/chains";${currentMemory.enabled ? '\nimport { ' + getMemoryImportJS(currentMemory.type) + ' } from "langchain/memory";' : ''}
+import { LLMChain } from "langchain/chains";
 
 // Prompt Template
 const promptTemplate = PromptTemplate.fromTemplate(\`${prompt.replace(/`/g, '\\`')}\`);
@@ -313,7 +227,13 @@ const promptTemplate = PromptTemplate.fromTemplate(\`${prompt.replace(/`/g, '\\`
 const llm = new ChatOpenAI({
   modelName: "${selectedModel}",
   temperature: ${temperature}
-});${memoryCode}
+});
+
+// Create the chain
+const chain = new LLMChain({
+  llm: llm,
+  prompt: promptTemplate
+});
 
 // Example usage:
 // const inputs = {${variables.map(v => `${v}: "value"`).join(', ')}};
@@ -343,86 +263,7 @@ export { runPrompt };
     setShowExportMenu(false);
   };
 
-  // Helper functions for memory export
-  const getMemoryImport = (type: string) => {
-    switch (type) {
-      case 'conversation_buffer':
-        return 'ConversationBufferMemory';
-      case 'conversation_summary':
-        return 'ConversationSummaryMemory';
-      case 'conversation_token_window':
-        return 'ConversationTokenWindowMemory';
-      case 'entity_memory':
-        return 'ConversationEntityMemory';
-      case 'knowledge_graph':
-        return 'ConversationKGMemory';
-      case 'vector_store':
-        return 'VectorStoreRetrieverMemory';
-      default:
-        return 'ConversationBufferMemory';
-    }
-  };
 
-  const getMemoryImportJS = (type: string) => {
-    switch (type) {
-      case 'conversation_buffer':
-        return 'ConversationBufferMemory';
-      case 'conversation_summary':
-        return 'ConversationSummaryMemory';
-      case 'conversation_token_window':
-        return 'ConversationTokenWindowMemory';
-      case 'entity_memory':
-        return 'ConversationEntityMemory';
-      case 'knowledge_graph':
-        return 'ConversationKGMemory';
-      case 'vector_store':
-        return 'VectorStoreRetrieverMemory';
-      default:
-        return 'ConversationBufferMemory';
-    }
-  };
-
-  const getMemoryInitialization = (type: string, memory: MemoryConfig) => {
-    const baseConfig = `return_messages=${memory.returnMessages || true}`;
-    
-    switch (type) {
-      case 'conversation_buffer':
-        return `(${baseConfig})`;
-      case 'conversation_summary':
-        return `(llm=llm, ${baseConfig})`;
-      case 'conversation_token_window':
-        return `(max_token_limit=${memory.maxTokens || 2000}, ${baseConfig})`;
-      case 'entity_memory':
-        return `(llm=llm, ${baseConfig})`;
-      case 'knowledge_graph':
-        return `(llm=llm, ${baseConfig})`;
-      case 'vector_store':
-        return `(retriever=vectorstore.as_retriever(), ${baseConfig})`;
-      default:
-        return `(${baseConfig})`;
-    }
-  };
-
-  const getMemoryInitializationJS = (type: string, memory: MemoryConfig) => {
-    const baseConfig = `returnMessages: ${memory.returnMessages || true}`;
-    
-    switch (type) {
-      case 'conversation_buffer':
-        return `{ ${baseConfig} }`;
-      case 'conversation_summary':
-        return `{ llm, ${baseConfig} }`;
-      case 'conversation_token_window':
-        return `{ maxTokenLimit: ${memory.maxTokens || 2000}, ${baseConfig} }`;
-      case 'entity_memory':
-        return `{ llm, ${baseConfig} }`;
-      case 'knowledge_graph':
-        return `{ llm, ${baseConfig} }`;
-      case 'vector_store':
-        return `{ retriever: vectorstore.asRetriever(), ${baseConfig} }`;
-      default:
-        return `{ ${baseConfig} }`;
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -435,18 +276,6 @@ export { runPrompt };
             </div>
             
             <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowMemory(!showMemory)}
-                className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg transition-colors text-sm ${
-                  currentMemory.enabled 
-                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
-                    : 'bg-gray-100 hover:bg-gray-200'
-                }`}
-              >
-                <Brain className="w-4 h-4" />
-                <span className="hidden sm:inline">Memory</span>
-              </button>
-              
               {hasVariablesWithValues && (
                 <button
                   onClick={() => setShowPreview(!showPreview)}
@@ -561,24 +390,6 @@ export { runPrompt };
           )}
         </div>
       </div>
-
-      {/* Memory Configuration */}
-      {showMemory && (
-        <MemoryConfigComponent
-          memory={currentMemory}
-          onMemoryChange={handleMemoryChange}
-        />
-      )}
-
-      {/* Conversation History */}
-      {currentMemory.enabled && (
-        <ConversationHistory
-          messages={conversationHistory}
-          onClearHistory={handleClearHistory}
-          onDeleteMessage={handleDeleteMessage}
-          memoryEnabled={currentMemory.enabled}
-        />
-      )}
     </div>
   );
 };

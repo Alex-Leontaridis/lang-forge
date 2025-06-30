@@ -104,8 +104,6 @@ export interface PromptNode {
     total: number;
   };
   autoTestResult?: AutoTestResult; // Auto-test results for this node
-  memory?: MemoryConfig; // Memory configuration for this node
-  conversationHistory?: ConversationMessage[]; // Current conversation history
 }
 
 export interface ChainEdge {
@@ -194,41 +192,3 @@ export interface Prompt {
   description?: string;
 }
 
-// Memory-related types for LangChain integration
-export interface MemoryConfig {
-  enabled: boolean;
-  type: 'conversation_buffer' | 'conversation_summary' | 'conversation_token_window' | 'entity_memory' | 'knowledge_graph' | 'vector_store';
-  maxTokens?: number;
-  maxMessages?: number;
-  returnMessages?: boolean;
-  inputKey?: string;
-  outputKey?: string;
-  memoryKey?: string;
-  humanPrefix?: string;
-  aiPrefix?: string;
-  customPrefix?: string;
-  customSuffix?: string;
-  customSeparator?: string;
-  customMemoryPrompt?: string;
-  k?: number; // For vector store memory
-  returnDocs?: boolean; // For vector store memory
-  searchType?: 'similarity' | 'mmr'; // For vector store memory
-  embeddingModel?: string; // For vector store memory
-}
-
-export interface ConversationMemory {
-  id: string;
-  promptId: string;
-  messages: ConversationMessage[];
-  summary?: string;
-  entities?: Record<string, any>;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface ConversationMessage {
-  role: 'human' | 'ai' | 'system';
-  content: string;
-  timestamp: Date;
-  metadata?: Record<string, any>;
-}

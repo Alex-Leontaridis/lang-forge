@@ -522,6 +522,20 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
   // Save system message to localStorage whenever it changes
   React.useEffect(() => {
     localStorage.setItem(getStorageKey('systemMessage'), systemMessage);
+    // Sync with editor system message
+    localStorage.setItem(`promptForgeSystemMessage_${canvasProjectId || 'global'}`, systemMessage);
+  }, [systemMessage, canvasProjectId]);
+
+  // Poll for system message changes from editor
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      const editorSystemMessage = localStorage.getItem(`promptForgeSystemMessage_${canvasProjectId || 'global'}`);
+      if (editorSystemMessage !== null && editorSystemMessage !== systemMessage) {
+        setSystemMessage(editorSystemMessage);
+      }
+    }, 1000); // Check every second
+
+    return () => clearInterval(interval);
   }, [systemMessage, canvasProjectId]);
 
   // Poll for updated data from editor (editor → canvas sync)
@@ -1557,7 +1571,7 @@ export { runChain };
               >
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8 max-w-md text-center">
                   <div className="text-4xl mb-4">🦜</div>
-                  <h2 className="text-2xl font-bold text-black mb-2">Welcome to LangForge Canvas</h2>
+                  <h2 className="text-2xl font-bold text-black mb-2">Welcome to 🦜 LangForge Canvas</h2>
                   <p className="text-gray-600 mb-6">
                     Create visual LangChain workflows with conditional logic. Build complex multi-step reasoning chains with branching paths.
                   </p>

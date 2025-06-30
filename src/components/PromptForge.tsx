@@ -49,7 +49,7 @@ import PromptChainCanvas from './PromptChainCanvas';
 import PromptAutoTest from './PromptAutoTest';
 import { usePromptVersions } from '../hooks/usePromptVersions';
 import { usePrompts } from '../hooks/usePrompts';
-import { Model, Variable, InputVariable, OutputVariable, AutoTestResult, MemoryConfig, ConversationMessage } from '../types';
+import { Model, Variable, InputVariable, OutputVariable, AutoTestResult } from '../types';
 import apiService from '../services/apiService';
 
 // Custom debounce function
@@ -113,64 +113,7 @@ const PromptForge = () => {
   const [fromCanvas, setFromCanvas] = useState(false);
   const [canvasNodeId, setCanvasNodeId] = useState<string | null>(null);
 
-  // Memory state
-  const [memory, setMemory] = useState<MemoryConfig>(() => {
-    const saved = localStorage.getItem(`promptForgeMemory_${projectId || 'global'}`);
-    return saved ? JSON.parse(saved) : {
-      enabled: false,
-      type: 'conversation_buffer',
-      maxMessages: 10,
-      returnMessages: true,
-      inputKey: 'input',
-      outputKey: 'output',
-      memoryKey: 'history',
-      humanPrefix: 'Human',
-      aiPrefix: 'Assistant'
-    };
-  });
 
-  const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>(() => {
-    const saved = localStorage.getItem(`promptForgeConversationHistory_${projectId || 'global'}`);
-    return saved ? JSON.parse(saved).map((msg: any) => ({
-      ...msg,
-      timestamp: new Date(msg.timestamp)
-    })) : [];
-  });
-
-  // Save memory configuration to localStorage
-  useEffect(() => {
-    localStorage.setItem(`promptForgeMemory_${projectId || 'global'}`, JSON.stringify(memory));
-  }, [memory, projectId]);
-
-  // Save conversation history to localStorage
-  useEffect(() => {
-    localStorage.setItem(`promptForgeConversationHistory_${projectId || 'global'}`, JSON.stringify(conversationHistory));
-  }, [conversationHistory, projectId]);
-
-  // Memory handlers
-  const handleMemoryChange = (newMemory: MemoryConfig) => {
-    setMemory(newMemory);
-  };
-
-  const handleClearHistory = () => {
-    setConversationHistory([]);
-  };
-
-  const handleDeleteMessage = (index: number) => {
-    setConversationHistory(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const addToConversationHistory = (role: 'human' | 'ai' | 'system', content: string, metadata?: Record<string, any>) => {
-    if (memory.enabled) {
-      const newMessage: ConversationMessage = {
-        role,
-        content,
-        timestamp: new Date(),
-        metadata
-      };
-      setConversationHistory(prev => [...prev, newMessage]);
-    }
-  };
 
   // Initialize prompt management
   const {
@@ -414,6 +357,8 @@ const PromptForge = () => {
 
   useEffect(() => {
     localStorage.setItem(`promptForgeSystemMessage_${projectId || 'global'}`, systemMessage);
+    // Sync with canvas system message
+    localStorage.setItem(`canvas_${projectId || 'default'}_systemMessage`, systemMessage);
   }, [systemMessage, projectId]);
 
   useEffect(() => {
@@ -431,6 +376,18 @@ const PromptForge = () => {
   useEffect(() => {
     localStorage.setItem(`promptForgeAutoTestResults_${projectId || 'global'}`, JSON.stringify(autoTestResults));
   }, [autoTestResults, projectId]);
+
+  // Poll for system message changes from canvas
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const canvasSystemMessage = localStorage.getItem(`canvas_${projectId || 'default'}_systemMessage`);
+      if (canvasSystemMessage !== null && canvasSystemMessage !== systemMessage) {
+        setSystemMessage(canvasSystemMessage);
+      }
+    }, 1000); // Check every second
+
+    return () => clearInterval(interval);
+  }, [systemMessage, projectId]);
 
   const models = [
     // OpenAI models (direct API)
@@ -729,15 +686,6 @@ const PromptForge = () => {
     const processedPrompt = replaceVariables(currentVersion?.content || '');
     console.log('Processed prompt:', processedPrompt);
     
-    // Add user message to conversation history if memory is enabled
-    if (memory.enabled) {
-      addToConversationHistory('human', processedPrompt, {
-        models: selectedModels,
-        temperature: 0.7,
-        variables: Object.fromEntries(variables.map(v => [v.name, v.value]))
-      });
-    }
-    
     const TIMEOUT_MS = 20000;
     const withTimeout = (promise: Promise<any>, ms: number) => {
       return Promise.race([
@@ -793,16 +741,6 @@ const PromptForge = () => {
         });
         console.log(`✅ Run added to history for model ${modelId}`);
         
-        // Add AI response to conversation history if memory is enabled
-        if (memory.enabled) {
-          addToConversationHistory('ai', output, {
-            model: modelId,
-            tokenUsage: result.usage,
-            executionTime,
-            score
-          });
-        }
-        
         if (selectedModels[0] === modelId) {
           setCurrentOutput(output);
           setCurrentModel(modelId);
@@ -819,15 +757,6 @@ const PromptForge = () => {
           executionTime: Date.now() - startTime,
           tokenUsage: { input: 0, output: 0, total: 0 }
         });
-        
-        // Add error message to conversation history if memory is enabled
-        if (memory.enabled) {
-          addToConversationHistory('system', errorMessage, {
-            model: modelId,
-            error: error instanceof Error ? error.message : 'Unknown error',
-            timestamp: Date.now()
-          });
-        }
       }
     }));
     
@@ -854,15 +783,6 @@ const PromptForge = () => {
       const processedPrompt = replaceVariables(currentVersion?.content || '');
       console.log('Processed prompt:', processedPrompt);
       
-      // Add user message to conversation history if memory is enabled
-      if (memory.enabled) {
-        addToConversationHistory('human', processedPrompt, {
-          model: currentModel,
-          temperature: 0.7,
-          variables: Object.fromEntries(variables.map(v => [v.name, v.value]))
-        });
-      }
-      
       console.log('📞 Calling API service...');
       const result = await apiService.generateCompletion(
         currentModel,
@@ -876,15 +796,6 @@ const PromptForge = () => {
       const executionTime = Date.now() - startTime;
       setCurrentOutput(result.content);
       console.log('✅ Output set:', result.content);
-      
-      // Add AI response to conversation history if memory is enabled
-      if (memory.enabled) {
-        addToConversationHistory('ai', result.content, {
-          model: currentModel,
-          tokenUsage: result.usage,
-          executionTime
-        });
-      }
       
       // Add run to version history
       console.log('📝 Adding run to version history...');
@@ -904,14 +815,6 @@ const PromptForge = () => {
     } catch (error) {
       console.error('❌ Error running prompt:', error);
       setCurrentOutput('Error: Failed to generate response');
-      
-      // Add error message to conversation history if memory is enabled
-      if (memory.enabled) {
-        addToConversationHistory('system', 'Error: Failed to generate response', {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          timestamp: Date.now()
-        });
-      }
     } finally {
       setIsRunning(false);
       console.log('🏁 handleRunPrompt completed');
@@ -1430,11 +1333,6 @@ const PromptForge = () => {
                   selectedModels={selectedModelsForAutoTest}
                   onAutoTestComplete={handleAutoTestComplete}
                   onAutoTestRunningChange={handleAutoTestRunningChange}
-                  memory={memory}
-                  onMemoryChange={handleMemoryChange}
-                  conversationHistory={conversationHistory}
-                  onClearHistory={handleClearHistory}
-                  onDeleteMessage={handleDeleteMessage}
                 />
               </div>
 

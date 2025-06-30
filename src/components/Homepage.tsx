@@ -15,10 +15,10 @@ const Homepage = () => {
             <a href="#features" className="text-gray-600 hover:text-black transition-colors">Features</a>
             <a href="#about" className="text-gray-600 hover:text-black transition-colors">About</a>
             <Link 
-              to="/app" 
+              to="/auth" 
               className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-all duration-200 flex items-center space-x-2"
             >
-              <span>Launch App</span>
+              <span>Login</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -44,7 +44,7 @@ const Homepage = () => {
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link 
-              to="/app" 
+              to="/auth" 
               className="group bg-black text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-800 transition-all duration-300 flex items-center space-x-2"
             >
               <span>Start Building</span>
@@ -276,7 +276,7 @@ const Homepage = () => {
               Join thousands of developers who are already building amazing things with LangForge.
             </p>
             <Link 
-              to="/app" 
+              to="/auth" 
               className="inline-flex items-center space-x-2 bg-black text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-800 transition-all duration-300"
             >
               <span>Get Started Now</span>

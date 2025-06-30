@@ -23,7 +23,8 @@ import {
   Hash,
   Plus,
   Search,
-  Sparkles
+  Sparkles,
+  FileText
 } from 'lucide-react';
 import { PromptNode, PromptScore, InputVariable, OutputVariable, ChainHealthIssue } from '../types';
 import PromptAutoTest, { AutoTestResult } from './PromptAutoTest';
@@ -48,28 +49,28 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
   const [autoTestResult, setAutoTestResult] = useState<AutoTestResult | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const models = [
-    { id: 'gpt-4', name: 'GPT-4' },
-    { id: 'gpt-3.5-turbo', name: 'GPT-3.5' },
-    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT' },
-    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp' },
-    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp' },
-    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT' },
-    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant' },
-    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile' },
-    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B' },
-    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B' },
-    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528' },
-    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B' },
-    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base' },
-    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B' },
-    { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B' },
-    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN' },
-    { id: 'whisper-large-v3', name: 'Whisper Large v3' },
-    { id: 'whisper-large-v3-turbo', name: 'Whisper Large v3 Turbo' },
-    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B' },
-    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct' },
-    { id: 'minimax/minimax-m1', name: 'MiniMax M1' },
+  const models: Model[] = [
+    { id: 'gpt-4', name: 'GPT-4', description: 'OpenAI GPT-4', provider: 'OpenAI', enabled: true },
+    { id: 'gpt-3.5-turbo', name: 'GPT-3.5', description: 'OpenAI GPT-3.5 Turbo', provider: 'OpenAI', enabled: true },
+    { id: 'gemma2-9b-it', name: 'Gemma 2 9B IT', description: 'Google Gemma 2 9B IT', provider: 'Google', enabled: true },
+    { id: 'google/gemini-2.5-pro-exp-03-25', name: 'Gemini 2.5 Pro Exp', description: 'Google Gemini 2.5 Pro Experimental', provider: 'Google', enabled: true },
+    { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash Exp', description: 'Google Gemini 2.0 Flash Experimental', provider: 'Google', enabled: true },
+    { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 12B IT', description: 'Google Gemma 3 12B IT', provider: 'Google', enabled: true },
+    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant', description: 'Meta Llama 3.1 8B Instant', provider: 'Meta', enabled: true },
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile', description: 'Meta Llama 3.3 70B Versatile', provider: 'Meta', enabled: true },
+    { id: 'meta-llama/llama-guard-4-12b', name: 'Llama Guard 4 12B', description: 'Meta Llama Guard 4 12B', provider: 'Meta', enabled: true },
+    { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill Llama 70B', description: 'DeepSeek R1 Distill Llama 70B', provider: 'DeepSeek', enabled: true },
+    { id: 'deepseek/deepseek-r1-0528:free', name: 'DeepSeek R1 0528', description: 'DeepSeek R1 0528', provider: 'DeepSeek', enabled: true },
+    { id: 'deepseek/deepseek-r1-0528-qwen3-8b:free', name: 'DeepSeek R1 0528 Qwen3 8B', description: 'DeepSeek R1 0528 Qwen3 8B', provider: 'DeepSeek', enabled: true },
+    { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base', description: 'DeepSeek V3 Base', provider: 'DeepSeek', enabled: true },
+    { id: 'qwen-qwq-32b', name: 'Qwen QWQ 32B', description: 'Qwen QWQ 32B', provider: 'Qwen', enabled: true },
+    { id: 'qwen/qwen3-32b', name: 'Qwen 3 32B', description: 'Qwen 3 32B', provider: 'Qwen', enabled: true },
+    { id: 'distil-whisper-large-v3-en', name: 'Distil Whisper Large v3 EN', description: 'Distil Whisper Large v3 EN', provider: 'OpenAI', enabled: true },
+    { id: 'whisper-large-v3', name: 'Whisper Large v3', description: 'OpenAI Whisper Large v3', provider: 'OpenAI', enabled: true },
+    { id: 'whisper-large-v3-turbo', name: 'Whisper Large v3 Turbo', description: 'OpenAI Whisper Large v3 Turbo', provider: 'OpenAI', enabled: true },
+    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron Super 49B', description: 'NVIDIA Llama 3.3 Nemotron Super 49B', provider: 'NVIDIA', enabled: true },
+    { id: 'mistralai/mistral-small-3.2-24b-instruct:free', name: 'Mistral Small 3.2 24B Instruct', description: 'Mistral Small 3.2 24B Instruct', provider: 'Mistral', enabled: true },
+    { id: 'minimax/minimax-m1', name: 'MiniMax M1', description: 'MiniMax M1', provider: 'MiniMax', enabled: true },
   ];
 
   const handleTitleSave = () => {
@@ -249,6 +250,27 @@ const PromptNodeComponent: React.FC<NodeProps<PromptNodeData>> = ({ id, data }) 
               title="Run Auto-Test"
             >
               <Sparkles className="w-4 h-4" />
+            </button>
+            
+            <button
+              onClick={() => {
+                // Store the current prompt data in localStorage for the editor
+                const editorData = {
+                  prompt: data.prompt,
+                  variables: data.variables,
+                  model: data.model,
+                  temperature: data.temperature,
+                  title: data.title,
+                  fromCanvas: true,
+                  nodeId: id
+                };
+                localStorage.setItem('canvasToEditorData', JSON.stringify(editorData));
+                window.open('/app?fromCanvas=true', '_blank');
+              }}
+              className="text-gray-400 hover:text-blue-500 transition-colors"
+              title="Edit in Editor"
+            >
+              <FileText className="w-4 h-4" />
             </button>
             
             <button

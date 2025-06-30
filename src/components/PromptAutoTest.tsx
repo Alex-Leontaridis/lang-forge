@@ -348,34 +348,34 @@ Only return the JSON, no additional text.`;
 
   return (
     <div className={`bg-white border border-gray-200 rounded-lg shadow-sm ${className}`}>
-      <div className="p-3 sm:p-4 border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="p-2 sm:p-3 border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center justify-between w-full">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center space-x-2 text-left"
+              className="flex items-center space-x-1 text-left"
             >
               {isExpanded ? (
-                <ChevronDown className="w-4 h-4 text-gray-500" />
+                <ChevronDown className="w-3 h-3 text-gray-500" />
               ) : (
-                <ChevronRight className="w-4 h-4 text-gray-500" />
+                <ChevronRight className="w-3 h-3 text-gray-500" />
               )}
-              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
-              <span className="font-semibold text-gray-900 text-sm sm:text-base">Prompt Auto-Test</span>
-              <span className="text-xs sm:text-sm text-gray-500">({selectedModels.length} models)</span>
+              <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600" />
+              <span className="font-semibold text-gray-900 text-xs sm:text-sm">Prompt Auto-Test</span>
+              <span className="text-xs text-gray-500">({selectedModels.length} models)</span>
             </button>
             
             <button
               onClick={runAutoTest}
               disabled={!prompt.trim() || isRunningTests || isRunning}
-              className="flex items-center justify-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-700 transition-colors text-sm sm:text-base"
+              className="flex items-center justify-center space-x-1 px-2 py-1 bg-purple-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-700 transition-colors text-xs"
             >
               {isRunningTests ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3 h-3 animate-spin" />
               ) : (
-                <Play className="w-4 h-4" />
+                <Play className="w-3 h-3" />
               )}
-              <span>{isRunningTests ? 'Running Tests...' : 'Run Auto-Test'}</span>
+              <span>{isRunningTests ? 'Running...' : 'Run Auto-Test'}</span>
             </button>
           </div>
         </div>

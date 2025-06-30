@@ -68,8 +68,46 @@ const PromptChainCanvasInner = () => {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [selectedEdge, setSelectedEdge] = useState<ConditionalEdge | null>(null);
   const [showConditionEditor, setShowConditionEditor] = useState(false);
+  const [systemMessage, setSystemMessage] = useState('');
+  const [showSystemMessage, setShowSystemMessage] = useState(false);
 
   const reactFlowInstance = useReactFlow();
+
+  // Check for updated data from editor
+  React.useEffect(() => {
+    const editorData = localStorage.getItem('editorToCanvasData');
+    if (editorData) {
+      try {
+        const data = JSON.parse(editorData);
+        if (data.updated && data.nodeId) {
+          // Update the corresponding node
+          setNodes((nds) =>
+            nds.map((node) =>
+              node.id === data.nodeId
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      prompt: data.prompt,
+                      variables: data.variables,
+                      model: data.model,
+                      temperature: data.temperature,
+                      title: data.title
+                    }
+                  }
+                : node
+            )
+          );
+          
+          // Clear the localStorage data
+          localStorage.removeItem('editorToCanvasData');
+        }
+      } catch (error) {
+        console.error('Error loading editor data:', error);
+        localStorage.removeItem('editorToCanvasData');
+      }
+    }
+  }, [setNodes]);
 
   // Initialize default condition
   const getDefaultCondition = (): ConnectionCondition => ({
@@ -300,7 +338,7 @@ const PromptChainCanvasInner = () => {
       const result = await apiService.generateCompletion(
         node.data.model,
         processedPrompt,
-        undefined,
+        systemMessage || undefined,
         node.data.temperature || 0.7,
         node.data.maxTokens || 1000
       );
@@ -461,6 +499,7 @@ const PromptChainCanvasInner = () => {
   const saveChain = () => {
     const chainData = {
       name: chainName,
+      systemMessage,
       nodes: nodes.map(node => ({
         id: node.id,
         position: node.position,
@@ -500,6 +539,7 @@ const PromptChainCanvasInner = () => {
       try {
         const chainData = JSON.parse(e.target?.result as string);
         setChainName(chainData.name || 'Untitled Chain');
+        setSystemMessage(chainData.systemMessage || '');
         
         const loadedNodes = chainData.nodes.map((nodeData: any) => ({
           id: nodeData.id,
@@ -703,6 +743,18 @@ export { runChain };
 
         <div className="flex items-center space-x-3">
           <button
+            onClick={() => setShowSystemMessage(!showSystemMessage)}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+              showSystemMessage 
+                ? 'bg-black text-white' 
+                : 'bg-gray-100 hover:bg-gray-200'
+            }`}
+          >
+            <SettingsIcon className="w-4 h-4" />
+            <span>System</span>
+          </button>
+
+          <button
             onClick={() => setShowVisualization(!showVisualization)}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
               showVisualization 
@@ -860,6 +912,32 @@ export { runChain };
                     return sourceNode?.data.variables || {};
                   })()}
                 />
+              </Panel>
+            )}
+
+            {/* System Message Panel */}
+            {showSystemMessage && (
+              <Panel position="top-left" className="ml-4 mt-4 z-50">
+                <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-80">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-gray-900">System Message</h3>
+                    <button
+                      onClick={() => setShowSystemMessage(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <textarea
+                    value={systemMessage}
+                    onChange={(e) => setSystemMessage(e.target.value)}
+                    placeholder="Enter a system message that will be applied to all nodes in this chain..."
+                    className="w-full h-32 p-3 text-sm bg-gray-50 border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
+                  />
+                  <div className="mt-2 text-xs text-gray-500">
+                    This system message will be applied to all prompt nodes in the chain.
+                  </div>
+                </div>
               </Panel>
             )}
           </ReactFlow>

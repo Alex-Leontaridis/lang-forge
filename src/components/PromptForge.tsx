@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow, Menu, X, Search, ChevronRight, ChevronDown, Clock, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Zap, BarChart3, GitBranch, Settings, Workflow, Menu, X, Search, ChevronRight, ChevronDown, Clock, MessageSquare, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import PromptEditor from './PromptEditor';
 import ModelOutput from './ModelOutput';
 import PromptScore from './PromptScore';
@@ -16,6 +17,7 @@ import { Model, Variable, InputVariable, OutputVariable, VariableFlow, ChainHeal
 import apiService from '../services/apiService';
 
 const PromptForge = () => {
+  const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<'editor' | 'analytics' | 'compare' | 'canvas'>('editor');
   const [variables, setVariables] = useState<Variable[]>([]);
   const [inputVariables, setInputVariables] = useState<InputVariable[]>([]);
@@ -33,6 +35,8 @@ const PromptForge = () => {
   const [showVariableFlow, setShowVariableFlow] = useState(true);
   const [selectedModelsForAutoTest, setSelectedModelsForAutoTest] = useState<string[]>(['gpt-4']);
   const [autoTestResults, setAutoTestResults] = useState<AutoTestResult[]>([]);
+  const [fromCanvas, setFromCanvas] = useState(false);
+  const [canvasNodeId, setCanvasNodeId] = useState<string | null>(null);
 
   const {
     versions,
@@ -50,6 +54,43 @@ const PromptForge = () => {
 
   const currentVersion = getCurrentVersion();
   const currentRuns = getRunsForVersion(currentVersionId);
+
+  // Check for data from canvas on component mount
+  React.useEffect(() => {
+    const canvasData = localStorage.getItem('canvasToEditorData');
+    if (canvasData) {
+      try {
+        const data = JSON.parse(canvasData);
+        if (data.fromCanvas) {
+          setFromCanvas(true);
+          setCanvasNodeId(data.nodeId);
+          setCurrentModel(data.model);
+          
+          // Create a new version with the canvas data
+          const newVersion = createVersion(
+            data.prompt,
+            data.variables,
+            `Canvas Node: ${data.title}`,
+            'Imported from canvas'
+          );
+          setCurrentVersionId(newVersion.id);
+          
+          // Convert variables to the expected format
+          const canvasVariables = Object.entries(data.variables).map(([name, value]) => ({
+            name,
+            value: value as string
+          }));
+          setVariables(canvasVariables);
+          
+          // Clear the localStorage data
+          localStorage.removeItem('canvasToEditorData');
+        }
+      } catch (error) {
+        console.error('Error loading canvas data:', error);
+        localStorage.removeItem('canvasToEditorData');
+      }
+    }
+  }, [createVersion, setCurrentVersionId]);
 
   const models: Model[] = [
     { id: 'gpt-4', name: 'GPT-4', description: 'Most capable model', provider: 'OpenAI', logo: '/src/logo/openai.png', enabled: true },
@@ -348,6 +389,39 @@ const PromptForge = () => {
                   </button>
                 );
               })}
+              
+              {fromCanvas && (
+                <button
+                  onClick={() => {
+                    // Save the current prompt data back to canvas
+                    const updatedData = {
+                      prompt: currentVersion?.content || '',
+                      variables: Object.fromEntries(variables.map(v => [v.name, v.value])),
+                      model: currentModel,
+                      temperature: 0.7,
+                      title: currentVersion?.title || 'Updated Node',
+                      fromCanvas: true,
+                      nodeId: canvasNodeId,
+                      updated: true
+                    };
+                    localStorage.setItem('editorToCanvasData', JSON.stringify(updatedData));
+                    window.close();
+                  }}
+                  className="flex items-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                >
+                  <Workflow className="w-4 h-4" />
+                  <span className="hidden sm:inline">Save to Canvas</span>
+                </button>
+              )}
+
+              {/* Logout Button */}
+              <button
+                onClick={signOut}
+                className="flex items-center space-x-2 px-3 sm:px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg font-medium transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Logout</span>
+              </button>
             </div>
           </div>
 
@@ -370,6 +444,30 @@ const PromptForge = () => {
                 </button>
               );
             })}
+            
+            {fromCanvas && (
+              <button
+                onClick={() => {
+                  // Save the current prompt data back to canvas
+                  const updatedData = {
+                    prompt: currentVersion?.content || '',
+                    variables: Object.fromEntries(variables.map(v => [v.name, v.value])),
+                    model: currentModel,
+                    temperature: 0.7,
+                    title: currentVersion?.title || 'Updated Node',
+                    fromCanvas: true,
+                    nodeId: canvasNodeId,
+                    updated: true
+                  };
+                  localStorage.setItem('editorToCanvasData', JSON.stringify(updatedData));
+                  window.close();
+                }}
+                className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors whitespace-nowrap"
+              >
+                <Workflow className="w-4 h-4" />
+                <span className="text-sm">Save to Canvas</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -428,6 +526,15 @@ const PromptForge = () => {
                     />
                   </div>
                 </div>
+
+                {/* Logout Button */}
+                <button
+                  onClick={signOut}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg font-medium transition-colors border border-red-200"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
               </div>
             </div>
 
@@ -468,6 +575,15 @@ const PromptForge = () => {
                   />
                 )}
               </div>
+
+              {/* Logout Button */}
+              <button
+                onClick={signOut}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg font-medium transition-colors border border-red-200"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </button>
             </div>
 
             {/* Main Content */}

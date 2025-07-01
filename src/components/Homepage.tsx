@@ -268,7 +268,6 @@ const Homepage = () => {
           <div className="text-center">
             <div className="bg-white border border-gray-200 rounded-2xl p-8 max-w-2xl mx-auto">
               <h3 className="text-2xl font-semibold text-black mb-4">
-                <Brain className="inline w-6 h-6 mr-2" />
                 Exports clean, production-ready Python and JS for Langchain
               </h3>
               <p className="text-gray-600">
@@ -284,7 +283,6 @@ const Homepage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
-              <CheckCircle className="inline w-8 h-8 mr-3" />
               Smarter Prompt Engineering
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -331,7 +329,6 @@ const Homepage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
-              <Sparkles className="inline w-8 h-8 mr-3" />
               Start From Templates or Build from Scratch
             </h2>
           </div>
@@ -384,7 +381,7 @@ const Homepage = () => {
               Ready to forge better LangChain applications?
             </h2>
             <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              Join thousands of developers who are already building amazing things with 🦜 LangForge.
+              Join thousands of developers who are already building amazing things with LangForge.
             </p>
             <Link 
               to="/auth" 

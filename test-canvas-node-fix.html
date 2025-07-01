@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas Node Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-step {
+            margin: 15px 0;
+            padding: 10px;
+            border-left: 4px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .success {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .info {
+            border-left-color: #17a2b8;
+            background-color: #d1ecf1;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Canvas Node Fix Test</h1>
+        <p>This test verifies that the canvas no longer creates default nodes automatically.</p>
+        
+        <div class="test-step info">
+            <h3>Test Steps:</h3>
+            <ol>
+                <li>Open the application in a new browser tab</li>
+                <li>Create a new project</li>
+                <li>Navigate to the Canvas tab</li>
+                <li>Check if any nodes appear automatically</li>
+                <li>Verify that nodes only appear when manually created</li>
+            </ol>
+        </div>
+
+        <div class="test-step">
+            <h3>Expected Behavior:</h3>
+            <ul>
+                <li>✅ Canvas should start empty with no nodes</li>
+                <li>✅ No default "Prompt 1" node should appear</li>
+                <li>✅ Nodes should only appear when user explicitly creates them</li>
+                <li>✅ User should be able to add nodes using the "+" button or templates</li>
+            </ul>
+        </div>
+
+        <div class="test-step">
+            <h3>What Was Fixed:</h3>
+            <p>The issue was in the <code>handlePromptChange</code> function in <code>PromptForge.tsx</code>. 
+            When the component initialized and there were no prompts or versions, it automatically created 
+            a default prompt called "Prompt 1". This caused a node to appear in the canvas before the user 
+            actually created one.</p>
+            
+            <p>The fix removed the automatic prompt creation logic, so now prompts (and their corresponding 
+            canvas nodes) are only created when the user explicitly creates them.</p>
+        </div>
+
+        <div class="test-step">
+            <h3>Test Results:</h3>
+            <div id="test-results">
+                <p>Run the test steps above and record your results here:</p>
+                <button onclick="recordResult('pass', 'Canvas starts empty')">✅ Pass - Canvas starts empty</button>
+                <button onclick="recordResult('pass', 'No default nodes')">✅ Pass - No default nodes</button>
+                <button onclick="recordResult('pass', 'Nodes only appear when created')">✅ Pass - Nodes only appear when created</button>
+                <button onclick="recordResult('fail', 'Issue still exists')">❌ Fail - Issue still exists</button>
+            </div>
+            <div id="results-log" class="log"></div>
+        </div>
+
+        <div class="test-step">
+            <h3>Manual Verification:</h3>
+            <p>To manually verify the fix:</p>
+            <ol>
+                <li>Clear your browser's localStorage for the application</li>
+                <li>Refresh the page</li>
+                <li>Create a new project</li>
+                <li>Go to Canvas tab immediately</li>
+                <li>Canvas should be completely empty</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function recordResult(status, message) {
+            const log = document.getElementById('results-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const statusIcon = status === 'pass' ? '✅' : '❌';
+            const logEntry = `[${timestamp}] ${statusIcon} ${message}\n`;
+            log.textContent += logEntry;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Auto-clear localStorage for testing
+        function clearStorage() {
+            localStorage.clear();
+            alert('localStorage cleared. Refresh the page to test with a clean state.');
+        }
+    </script>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <button onclick="clearStorage()" style="background-color: #dc3545;">Clear localStorage for Testing</button>
+    </div>
+</body>
+</html> 

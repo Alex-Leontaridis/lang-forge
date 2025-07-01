@@ -204,6 +204,12 @@ const PromptForge = () => {
             localStorage.setItem(`tempPromptToRealPrompt_${data.data.promptId}`, newPrompt.id);
             
             console.log(`Mapped temp prompt ${data.data.promptId} to real prompt ${newPrompt.id}`);
+            
+            // Automatically switch to Editor tab to show the new prompt
+            setActiveTab('editor');
+            
+            // Notify user that a new prompt was created
+            alert(`New prompt "${newPrompt.title}" created from canvas node. Switched to Editor tab.`);
           } else {
             console.error('Failed to create prompt from canvas data');
           }
@@ -336,6 +342,12 @@ const PromptForge = () => {
                 localStorage.setItem(`tempPromptToRealPrompt_${nodeData.promptId}`, newPrompt.id);
                 
                 console.log(`Mapped pending temp prompt ${nodeData.promptId} to real prompt ${newPrompt.id}`);
+                
+                // Automatically switch to Editor tab to show the new prompt
+                setActiveTab('editor');
+                
+                // Notify user that a new prompt was created
+                alert(`New prompt "${newPrompt.title}" created from pending canvas node. Switched to Editor tab.`);
               }
             }
           }
@@ -621,24 +633,8 @@ const PromptForge = () => {
       if (newVersion) {
         setCurrentVersionId(newVersion.id);
       }
-    } else {
-      // Create a new prompt and version if none exist
-      const newPromptObj = createPrompt('Prompt 1', 'Initial prompt');
-      if (newPromptObj) {
-        setCurrentPromptId(newPromptObj.id);
-        
-        const variablesRecord = Object.fromEntries(variables.map(v => [v.name, v.value]));
-        const newVersion = createVersion(
-          newPrompt,
-          variablesRecord,
-          'Prompt 1',
-          'Initial version'
-        );
-        if (newVersion) {
-          setCurrentVersionId(newVersion.id);
-        }
-      }
     }
+    // Removed automatic prompt creation - let user create prompts explicitly
   };
 
   const handleVariableChange = (name: string, value: string) => {

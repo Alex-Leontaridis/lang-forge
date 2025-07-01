@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas-Prompt Synchronization Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-step {
+            margin: 15px 0;
+            padding: 10px;
+            border-left: 4px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .success {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .info {
+            border-left-color: #17a2b8;
+            background-color: #d1ecf1;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .test-case {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Canvas-Prompt Synchronization Test</h1>
+        <p>This test verifies that new nodes created in the canvas are properly synchronized with the Prompts section.</p>
+        
+        <div class="test-step info">
+            <h3>Test Cases:</h3>
+            <ol>
+                <li>Adding a new node via the "+" button</li>
+                <li>Adding a node via template selection</li>
+                <li>Verifying prompt creation and tab switching</li>
+                <li>Checking prompt editability</li>
+            </ol>
+        </div>
+
+        <div class="test-case">
+            <h3>Test Case 1: Add Node via "+" Button</h3>
+            <div class="test-step">
+                <h4>Steps:</h4>
+                <ol>
+                    <li>Open the application in a new browser tab</li>
+                    <li>Create a new project</li>
+                    <li>Navigate to the Canvas tab</li>
+                    <li>Click the "Add Node" button (+)</li>
+                    <li>Check if a notification appears</li>
+                    <li>Verify that the app switches to Editor tab</li>
+                    <li>Check if a new prompt appears in the Prompts section</li>
+                    <li>Verify the prompt is editable</li>
+                </ol>
+            </div>
+            <div class="test-step">
+                <h4>Expected Results:</h4>
+                <ul>
+                    <li>✅ Node appears in canvas</li>
+                    <li>✅ Alert notification shows "New prompt created from canvas node"</li>
+                    <li>✅ App automatically switches to Editor tab</li>
+                    <li>✅ New prompt appears in Prompts section</li>
+                    <li>✅ Prompt is editable in the editor</li>
+                </ul>
+            </div>
+            <div id="test1-results">
+                <button onclick="recordResult('test1', 'pass', 'Node added via + button')">✅ Pass</button>
+                <button onclick="recordResult('test1', 'fail', 'Node added via + button')">❌ Fail</button>
+            </div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test Case 2: Add Node via Template</h3>
+            <div class="test-step">
+                <h4>Steps:</h4>
+                <ol>
+                    <li>In the Canvas tab, look for template options</li>
+                    <li>Select a template (e.g., "Translation Assistant")</li>
+                    <li>Check if a notification appears</li>
+                    <li>Verify that the app switches to Editor tab</li>
+                    <li>Check if a new prompt appears in the Prompts section</li>
+                    <li>Verify the prompt contains the template content</li>
+                    <li>Check if variables are properly set up</li>
+                </ol>
+            </div>
+            <div class="test-step">
+                <h4>Expected Results:</h4>
+                <ul>
+                    <li>✅ Template node appears in canvas</li>
+                    <li>✅ Alert notification shows "New prompt created from canvas node"</li>
+                    <li>✅ App automatically switches to Editor tab</li>
+                    <li>✅ New prompt appears in Prompts section</li>
+                    <li>✅ Prompt contains template content</li>
+                    <li>✅ Variables are properly configured</li>
+                </ul>
+            </div>
+            <div id="test2-results">
+                <button onclick="recordResult('test2', 'pass', 'Node added via template')">✅ Pass</button>
+                <button onclick="recordResult('test2', 'fail', 'Node added via template')">❌ Fail</button>
+            </div>
+        </div>
+
+        <div class="test-case">
+            <h3>Test Case 3: Prompt Editability</h3>
+            <div class="test-step">
+                <h4>Steps:</h4>
+                <ol>
+                    <li>Create a node in canvas (any method)</li>
+                    <li>Switch to Editor tab</li>
+                    <li>Select the newly created prompt</li>
+                    <li>Try to edit the prompt content</li>
+                    <li>Try to change the prompt title</li>
+                    <li>Try to modify variables</li>
+                    <li>Switch back to Canvas tab</li>
+                    <li>Verify changes are reflected in the canvas node</li>
+                </ol>
+            </div>
+            <div class="test-step">
+                <h4>Expected Results:</h4>
+                <ul>
+                    <li>✅ Prompt content is editable</li>
+                    <li>✅ Prompt title can be changed</li>
+                    <li>✅ Variables can be modified</li>
+                    <li>✅ Changes sync back to canvas node</li>
+                </ul>
+            </div>
+            <div id="test3-results">
+                <button onclick="recordResult('test3', 'pass', 'Prompt is editable')">✅ Pass</button>
+                <button onclick="recordResult('test3', 'fail', 'Prompt is editable')">❌ Fail</button>
+            </div>
+        </div>
+
+        <div class="test-step">
+            <h3>What Was Fixed:</h3>
+            <ul>
+                <li><strong>Automatic Tab Switching:</strong> When a new node is created in canvas, the app now automatically switches to the Editor tab</li>
+                <li><strong>User Notifications:</strong> Added alert notifications to inform users when new prompts are created</li>
+                <li><strong>Template Synchronization:</strong> Fixed template selection to properly create corresponding prompts in the editor</li>
+                <li><strong>Bidirectional Sync:</strong> Ensured changes in editor sync back to canvas nodes</li>
+            </ul>
+        </div>
+
+        <div class="test-step">
+            <h3>Test Results Summary:</h3>
+            <div id="results-log" class="log"></div>
+        </div>
+
+        <div class="test-step">
+            <h3>Manual Verification:</h3>
+            <p>To manually verify the synchronization:</p>
+            <ol>
+                <li>Clear browser localStorage</li>
+                <li>Create a new project</li>
+                <li>Add a node in canvas</li>
+                <li>Verify prompt appears in editor</li>
+                <li>Edit the prompt</li>
+                <li>Check if changes sync back to canvas</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const testResults = {
+            test1: { pass: 0, fail: 0, details: [] },
+            test2: { pass: 0, fail: 0, details: [] },
+            test3: { pass: 0, fail: 0, details: [] }
+        };
+
+        function recordResult(testCase, status, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const statusIcon = status === 'pass' ? '✅' : '❌';
+            
+            testResults[testCase][status]++;
+            testResults[testCase].details.push({ timestamp, status, message });
+            
+            const log = document.getElementById('results-log');
+            const logEntry = `[${timestamp}] ${statusIcon} ${testCase.toUpperCase()}: ${message}\n`;
+            log.textContent += logEntry;
+            log.scrollTop = log.scrollHeight;
+            
+            // Update summary
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const log = document.getElementById('results-log');
+            let summary = '\n--- SUMMARY ---\n';
+            
+            Object.entries(testResults).forEach(([testCase, results]) => {
+                const total = results.pass + results.fail;
+                const passRate = total > 0 ? Math.round((results.pass / total) * 100) : 0;
+                summary += `${testCase.toUpperCase()}: ${results.pass}/${total} passed (${passRate}%)\n`;
+            });
+            
+            // Remove old summary if it exists
+            const lines = log.textContent.split('\n');
+            const summaryStartIndex = lines.findIndex(line => line.includes('--- SUMMARY ---'));
+            if (summaryStartIndex !== -1) {
+                lines.splice(summaryStartIndex);
+                log.textContent = lines.join('\n');
+            }
+            
+            log.textContent += summary;
+        }
+
+        // Auto-clear localStorage for testing
+        function clearStorage() {
+            localStorage.clear();
+            alert('localStorage cleared. Refresh the page to test with a clean state.');
+        }
+    </script>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <button onclick="clearStorage()" style="background-color: #dc3545;">Clear localStorage for Testing</button>
+    </div>
+</body>
+</html> 

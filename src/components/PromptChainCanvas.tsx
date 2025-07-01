@@ -849,12 +849,15 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
 
   // LangChain Template Functions
   const handleTemplateSelect = (template: LangChainTemplate) => {
+    const nodeId = `node_${Date.now()}`;
+    const tempPromptId = `template_${template.id}_${Date.now()}`;
+    
     const newNode: Node = {
-      id: `node_${Date.now()}`,
+      id: nodeId,
       type: 'promptNode',
       position: { x: Math.random() * 400 + 100, y: Math.random() * 400 + 100 },
       data: {
-        promptId: `template_${template.id}_${Date.now()}`,
+        promptId: tempPromptId,
         title: template.name,
         prompt: template.template,
         model: 'gpt-4',
@@ -890,7 +893,74 @@ const PromptChainCanvasInner = ({ projectId, projectName }: PromptChainCanvasPro
         onDelete: (id: string) => deleteNode(id),
       }
     };
+    
     setNodes((nds) => [...nds, newNode]);
+    
+    // Automatically create a prompt in the editor for this template node
+    const editorData = {
+      action: 'createPromptFromCanvas',
+      data: {
+        nodeId,
+        promptId: tempPromptId,
+        title: template.name,
+        prompt: template.template,
+        model: 'gpt-4',
+        temperature: 0.7,
+        variables: template.variables.reduce((acc, variable) => {
+          acc[variable] = '';
+          return acc;
+        }, {} as Record<string, string>),
+        position: newNode.position
+      },
+      updated: true
+    };
+    localStorage.setItem('canvasToEditorData', JSON.stringify(editorData));
+    
+    // Also store the node data in project-specific storage
+    const projectKey = `canvasNodes_${canvasProjectId || 'default'}`;
+    const existingNodes = localStorage.getItem(projectKey);
+    const canvasNodes = existingNodes ? JSON.parse(existingNodes) : [];
+    canvasNodes.push({
+      ...newNode.data,
+      id: nodeId,
+      position: newNode.position
+    });
+    localStorage.setItem(projectKey, JSON.stringify(canvasNodes));
+    
+    // Set up a retry mechanism to ensure the prompt gets created
+    let retryCount = 0;
+    const maxRetries = 5;
+    const checkPromptCreated = () => {
+      const realPromptId = localStorage.getItem(`tempPromptToRealPrompt_${tempPromptId}`);
+      if (realPromptId) {
+        setNodes((nds) =>
+          nds.map((node) =>
+            node.id === nodeId
+              ? { ...node, data: { ...node.data, promptId: realPromptId } }
+              : node
+          )
+        );
+        localStorage.removeItem(`tempPromptToRealPrompt_${tempPromptId}`);
+        console.log(`Template node ${nodeId} successfully linked to prompt ${realPromptId}`);
+      } else if (retryCount < maxRetries) {
+        retryCount++;
+        console.log(`Retrying prompt creation for template node ${nodeId}, attempt ${retryCount}`);
+        localStorage.setItem('canvasToEditorData', JSON.stringify(editorData));
+        setTimeout(checkPromptCreated, 1000);
+      } else {
+        console.warn(`Failed to create prompt for template node ${nodeId} after ${maxRetries} attempts`);
+        const fallbackPromptId = `fallback_prompt_${Date.now()}`;
+        setNodes((nds) =>
+          nds.map((node) =>
+            node.id === nodeId
+              ? { ...node, data: { ...node.data, promptId: fallbackPromptId } }
+              : node
+          )
+        );
+      }
+    };
+    
+    setTimeout(checkPromptCreated, 500);
   };
 
   const getCategoryIcon = (category: string) => {
@@ -1449,12 +1519,12 @@ console.log(formattedPrompt);`;
 
   // Helper function to get the appropriate LangChain chat model class
   const getLangChainChatModel = (modelName: string): { import: string; class: string; config: string } => {
-    // OpenAI models (gpt-*)
+    // OpenAI models (gpt-*) - now routed through OpenRouter
     if (modelName.startsWith('gpt-')) {
       return {
-        import: 'from langchain.chat_models import ChatOpenAI',
-        class: 'ChatOpenAI',
-        config: `model_name="${modelName}"`
+        import: 'from langchain_openrouter import ChatOpenRouter',
+        class: 'ChatOpenRouter',
+        config: `model="openai/${modelName}"`
       };
     }
     
@@ -1478,11 +1548,11 @@ console.log(formattedPrompt);`;
       };
     }
     
-    // Default to ChatOpenAI for unknown models
+    // Default to OpenRouter for unknown models
     return {
-      import: 'from langchain.chat_models import ChatOpenAI',
-      class: 'ChatOpenAI',
-      config: `model_name="${modelName}"`
+      import: 'from langchain_openrouter import ChatOpenRouter',
+      class: 'ChatOpenRouter',
+      config: `model="openai/gpt-4o"`
     };
   };
 
@@ -1573,12 +1643,12 @@ def run_chain(inputs: Dict[str, Any]) -> Dict[str, Any]:
 
   // Helper function to get the appropriate LangChain chat model class for JavaScript
   const getLangChainChatModelJS = (modelName: string): { import: string; class: string; config: string } => {
-    // OpenAI models (gpt-*)
+    // OpenAI models (gpt-*) - now routed through OpenRouter
     if (modelName.startsWith('gpt-')) {
       return {
-        import: 'import { ChatOpenAI } from "langchain/chat_models/openai"',
-        class: 'ChatOpenAI',
-        config: `modelName: "${modelName}"`
+        import: 'import { ChatOpenRouter } from "@langchain/openrouter"',
+        class: 'ChatOpenRouter',
+        config: `model: "openai/${modelName}"`
       };
     }
     
@@ -1602,11 +1672,11 @@ def run_chain(inputs: Dict[str, Any]) -> Dict[str, Any]:
       };
     }
     
-    // Default to ChatOpenAI for unknown models
+    // Default to OpenRouter for unknown models
     return {
-      import: 'import { ChatOpenAI } from "langchain/chat_models/openai"',
-      class: 'ChatOpenAI',
-      config: `modelName: "${modelName}"`
+      import: 'import { ChatOpenRouter } from "@langchain/openrouter"',
+      class: 'ChatOpenRouter',
+      config: `model: "openai/gpt-4o"`
     };
   };
 

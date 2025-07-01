@@ -112,8 +112,8 @@ const Dashboard = () => {
         lastUpdated: new Date(),
         status: 'Draft',
         exportType: 'None',
-        promptCount: 0,
-        versionCount: 0,
+        promptCount: 2, // Default prompts will be created
+        versionCount: 2, // Each prompt will have one version
         totalTokens: 0
       };
       const updatedProjects = [newProject, ...projects];
@@ -122,7 +122,68 @@ const Dashboard = () => {
       setShowNewProjectModal(false);
       setNewProjectData({ name: '', type: 'blank' });
 
-      // Do NOT create any default prompt node for the new project
+      // Create default prompts for the new project
+      const defaultPrompts = [
+        {
+          id: `p${Date.now()}_1`,
+          projectId: newProject.id,
+          title: 'Main Prompt',
+          description: 'Your primary prompt for this project',
+          createdAt: new Date()
+        },
+        {
+          id: `p${Date.now()}_2`,
+          projectId: newProject.id,
+          title: 'Assistant Prompt',
+          description: 'Helper prompt for additional functionality',
+          createdAt: new Date()
+        }
+      ];
+
+      // Save default prompts to localStorage
+      const savedPrompts = localStorage.getItem('prompts');
+      const allPrompts = savedPrompts ? JSON.parse(savedPrompts) : [];
+      allPrompts.push(...defaultPrompts);
+      localStorage.setItem('prompts', JSON.stringify(allPrompts));
+
+      // Create default versions for each prompt
+      const defaultVersions = [
+        {
+          id: `v${Date.now()}_1`,
+          projectId: newProject.id,
+          promptId: defaultPrompts[0].id,
+          title: 'Initial Version',
+          content: 'You are a helpful AI assistant. Please help with the following task:\n\n{{task}}',
+          variables: { task: 'Describe what you need help with' },
+          createdAt: new Date(),
+          parentId: '',
+          message: 'Initial version created'
+        },
+        {
+          id: `v${Date.now()}_2`,
+          projectId: newProject.id,
+          promptId: defaultPrompts[1].id,
+          title: 'Initial Version',
+          content: 'You are an assistant that helps with {{assistant_type}} tasks. Please provide assistance with:\n\n{{request}}',
+          variables: { assistant_type: 'general', request: 'What do you need help with?' },
+          createdAt: new Date(),
+          parentId: '',
+          message: 'Initial version created'
+        }
+      ];
+
+      // Save default versions to localStorage
+      const savedVersions = localStorage.getItem('promptVersions');
+      const allVersions = savedVersions ? JSON.parse(savedVersions) : [];
+      allVersions.push(...defaultVersions);
+      localStorage.setItem('promptVersions', JSON.stringify(allVersions));
+
+      // Set current prompt and version IDs
+      localStorage.setItem(`currentPromptId_${newProject.id}`, defaultPrompts[0].id);
+      localStorage.setItem(`currentVersionId_${newProject.id}_${defaultPrompts[0].id}`, defaultVersions[0].id);
+      localStorage.setItem(`currentVersionId_${newProject.id}_${defaultPrompts[1].id}`, defaultVersions[1].id);
+
+      // Initialize empty canvas
       localStorage.setItem(`canvas_${newProject.id}_nodes`, JSON.stringify([]));
       localStorage.setItem(`canvas_${newProject.id}_edges`, JSON.stringify([]));
 

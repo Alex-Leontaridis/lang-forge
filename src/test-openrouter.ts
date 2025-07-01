@@ -1,5 +1,5 @@
 // Test OpenRouter API with verified models
-const OPENROUTER_API_KEY = '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';
+const OPENROUTER_API_KEY = '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';
 
 // Verified OpenRouter models that work
 const VERIFIED_MODELS = [

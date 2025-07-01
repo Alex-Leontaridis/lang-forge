@@ -10,7 +10,7 @@ export async function callOpenRouterAPI(
   let apiKey: string;
   
   if (model.startsWith('gpt-4')) {
-    apiKey = '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';
+    apiKey = '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';
   } else {
     apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
   }

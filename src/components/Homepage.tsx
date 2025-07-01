@@ -88,12 +88,11 @@ const Homepage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
-              <Beaker className="inline w-8 h-8 mr-3" />
-              Build Smarter with 🦜 LangForge
+              Build Smarter with LangForge
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              🦜 LangForge is your unified workspace for creating, testing, and refining prompt-powered applications.
-              Whether you're building with LangChain, LangGraph, or custom agents, 🦜 LangForge gives you the precision of code with the clarity of visual design.
+              LangForge is your unified workspace for creating, testing, and refining prompt-powered applications.
+              Whether you're building with LangChain, LangGraph, or custom agents, LangForge gives you the precision of code with the clarity of visual design.
             </p>
           </div>
         </div>
@@ -104,7 +103,6 @@ const Homepage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
-              <Palette className="inline w-8 h-8 mr-3" />
               Two Views, One Engine
             </h2>
           </div>
@@ -148,7 +146,6 @@ const Homepage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
-              <Sparkles className="inline w-8 h-8 mr-3" />
               Advanced Features
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -225,11 +222,10 @@ const Homepage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-black mb-6">
-              <GitBranch className="inline w-8 h-8 mr-3" />
               Built for LangChain & LangGraph
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              🦜 LangForge natively supports LangChain and LangGraph structures:
+              LangForge natively supports LangChain and LangGraph structures:
             </p>
           </div>
           
@@ -401,14 +397,14 @@ const Homepage = () => {
             <div className="flex items-center space-x-2 mb-4 md:mb-0">
               <span className="text-lg font-semibold text-black">🦜 LangForge</span>
             </div>
-                          <p className="text-gray-600">&copy; 2025 🦜 LangForge. Built with AI in mind.</p>
+                          <p className="text-gray-600">&copy; 2025 LangForge. Built with AI in mind.</p>
           </div>
           
           {/* Disclaimer */}
           <div className="border-t border-gray-200 pt-8">
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-4xl mx-auto">
               <p className="text-sm text-yellow-800 text-center">
-                <strong>Disclaimer:</strong> 🦜 LangForge is not affiliated with, endorsed by, or connected to LangChain, LangGraph, or any of their associated companies or products. 🦜 LangForge is an independent tool designed to work with LangChain and LangGraph frameworks.
+                <strong>Disclaimer:</strong> LangForge is not affiliated with, endorsed by, or connected to LangChain, LangGraph, or any of their associated companies or products. LangForge is an independent tool designed to work with LangChain and LangGraph frameworks.
               </p>
             </div>
           </div>

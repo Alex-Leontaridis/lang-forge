@@ -207,9 +207,6 @@ const PromptForge = () => {
             
             // Automatically switch to Editor tab to show the new prompt
             setActiveTab('editor');
-            
-            // Notify user that a new prompt was created
-            alert(`New prompt "${newPrompt.title}" created from canvas node. Switched to Editor tab.`);
           } else {
             console.error('Failed to create prompt from canvas data');
           }
@@ -345,9 +342,6 @@ const PromptForge = () => {
                 
                 // Automatically switch to Editor tab to show the new prompt
                 setActiveTab('editor');
-                
-                // Notify user that a new prompt was created
-                alert(`New prompt "${newPrompt.title}" created from pending canvas node. Switched to Editor tab.`);
               }
             }
           }
@@ -870,7 +864,13 @@ const PromptForge = () => {
 
   // Prompt management handlers
   const handleCreatePrompt = (title: string, description?: string) => {
-    const newPrompt = createPrompt(title, description);
+    // Use "Main Prompt" as the default title if no title is provided
+    let promptTitle = title;
+    if (!title || title.trim() === '') {
+      promptTitle = `Main Prompt`;
+    }
+    
+    const newPrompt = createPrompt(promptTitle, description);
     
     // Automatically create a canvas node for the new prompt
     if (newPrompt) {

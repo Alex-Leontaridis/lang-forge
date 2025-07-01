@@ -65,12 +65,11 @@ const PromptManager: React.FC<PromptManagerProps> = ({
   }, []);
 
   const handleCreatePrompt = () => {
-    if (newTitle.trim()) {
-      onCreatePrompt(newTitle.trim(), newDescription.trim());
-      setNewTitle('');
-      setNewDescription('');
-      setShowCreateForm(false);
-    }
+    // Allow creating prompt with empty title (will be auto-numbered)
+    onCreatePrompt(newTitle.trim(), newDescription.trim());
+    setNewTitle('');
+    setNewDescription('');
+    setShowCreateForm(false);
   };
 
   const handleDeletePrompt = (promptId: string, e: React.MouseEvent) => {

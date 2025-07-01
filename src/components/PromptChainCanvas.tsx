@@ -1236,7 +1236,9 @@ console.log(formattedPrompt);`;
 
   const addPromptNode = useCallback(() => {
     const nodeId = `node_${Date.now()}`;
-    const nodeTitle = `Node ${Date.now()}`;
+    
+    // Use "Main Prompt" as the default title
+    const nodeTitle = `Main Prompt`;
     const tempPromptId = `temp_prompt_${Date.now()}`;
     
     const newNode: Node = {
